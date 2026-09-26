@@ -1,0 +1,245 @@
+@import 'tailwindcss';
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+@source '../**/*.blade.php';
+@source '../**/*.js';
+
+@theme {
+    --font-sans: 'Inter', 'Segoe UI', ui-sans-serif, system-ui, sans-serif;
+    --color-ink-50: #f5f7fa;
+    --color-ink-100: #e9edf3;
+    --color-ink-200: #d5dce7;
+    --color-ink-300: #b1bed0;
+    --color-ink-400: #8495ad;
+    --color-ink-500: #647791;
+    --color-ink-600: #4e6079;
+    --color-ink-700: #414e63;
+    --color-ink-800: #293548;
+    --color-ink-900: #1b2537;
+    --color-ink-950: #111827;
+    --color-flame-50: #fff8ed;
+    --color-flame-100: #ffefd4;
+    --color-flame-200: #ffdba8;
+    --color-flame-300: #ffc171;
+    --color-flame-400: #ff9f38;
+    --color-flame-500: #fb8017;
+    --color-flame-600: #ea620a;
+    --color-flame-700: #c44909;
+    --color-flame-800: #9a3810;
+    --color-flame-900: #7c3110;
+    --color-mint-50: #ecfdf5;
+    --color-mint-100: #d1fae5;
+    --color-mint-500: #10b981;
+    --color-mint-600: #059669;
+    --color-mint-700: #047857;
+    --color-sky-soft: #eaf6ff;
+    --shadow-panel: 0 1px 2px rgb(16 24 40 / 0.04), 0 8px 24px rgb(16 24 40 / 0.05);
+}
+
+@layer base {
+    html {
+        scroll-behavior: smooth;
+    }
+
+    body {
+        min-width: 320px;
+        background: #f8fafc;
+        color: var(--color-ink-900);
+        font-family: var(--font-sans);
+        -webkit-font-smoothing: antialiased;
+    }
+
+    [x-cloak] {
+        display: none !important;
+    }
+
+    button,
+    a,
+    input,
+    select,
+    textarea {
+        outline-color: var(--color-flame-500);
+        outline-offset: 2px;
+    }
+
+    button,
+    a {
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    ::selection {
+        background: var(--color-flame-200);
+        color: var(--color-ink-950);
+    }
+}
+
+@layer components {
+    .page-shell {
+        @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
+    }
+
+    .panel {
+        @apply rounded-lg border border-ink-200 bg-white shadow-panel;
+    }
+
+    .panel-flat {
+        @apply rounded-lg border border-ink-200 bg-white;
+    }
+
+    .section-kicker {
+        @apply text-xs font-bold tracking-[0.14em] text-flame-700 uppercase;
+    }
+
+    .data-table {
+        @apply min-w-full divide-y divide-ink-200 text-left text-sm;
+    }
+
+    .data-table thead {
+        @apply bg-ink-50 text-xs font-semibold tracking-wide text-ink-600 uppercase;
+    }
+
+    .data-table th {
+        @apply px-4 py-3 whitespace-nowrap;
+    }
+
+    .data-table td {
+        @apply px-4 py-4 align-middle text-ink-700;
+    }
+
+    .data-table tbody {
+        @apply divide-y divide-ink-100;
+    }
+
+    .data-table tbody tr {
+        @apply transition-colors hover:bg-ink-50/70;
+    }
+
+    .form-label {
+        @apply mb-1.5 block text-sm font-semibold text-ink-800;
+    }
+
+    .form-control {
+        @apply block min-h-11 w-full rounded-md border border-ink-300 bg-white px-3.5 py-2.5 text-sm text-ink-900 shadow-sm transition placeholder:text-ink-400 focus:border-flame-500 focus:ring-3 focus:ring-flame-100 focus:outline-none disabled:cursor-not-allowed disabled:bg-ink-100;
+    }
+
+    .form-control-error {
+        @apply border-red-400 focus:border-red-500 focus:ring-red-100;
+    }
+
+    .action-link {
+        @apply inline-flex items-center justify-center gap-2 text-sm font-semibold text-ink-700 transition hover:text-flame-700 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-flame-600;
+    }
+
+    .subtle-grid {
+        background-image: linear-gradient(to right, rgb(152 162 179 / 0.12) 1px, transparent 1px),
+            linear-gradient(to bottom, rgb(152 162 179 / 0.12) 1px, transparent 1px);
+        background-size: 32px 32px;
+    }
+
+    .design-toolbar {
+        scrollbar-width: thin;
+    }
+
+    /* Horizontally scrollable regions must be containing blocks. Screen-reader-only
+       labels inside wide tables are `position: absolute`; without a positioned
+       ancestor they resolve against the viewport and silently widen the document,
+       which produces a horizontal scrollbar on the whole page on small screens. */
+    .overflow-x-auto {
+        position: relative;
+    }
+
+    .editor-toolbar-tab {
+        @apply inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-md px-3 text-xs font-bold text-ink-600 transition hover:bg-white;
+    }
+
+    .editor-toolbar-tab-active {
+        @apply bg-white text-violet-700 shadow-sm ring-1 ring-ink-200;
+    }
+
+    .editor-icon-button,
+    .editor-toolbar-button,
+    .editor-mini-button,
+    .editor-layer-button {
+        @apply inline-flex min-h-9 min-w-9 items-center justify-center gap-1.5 rounded-md border border-transparent px-2.5 text-xs font-bold text-ink-600 transition hover:bg-ink-100 hover:text-ink-950 disabled:cursor-not-allowed disabled:opacity-40;
+    }
+
+    .editor-toolbar-button {
+        @apply border-ink-200 bg-white;
+    }
+
+    .editor-icon-button-active,
+    .editor-mini-button-active {
+        @apply bg-violet-100 text-violet-700;
+    }
+
+    .editor-mini-button {
+        @apply min-h-8 min-w-8;
+    }
+
+    .editor-layer-button {
+        @apply border-ink-200 bg-white;
+    }
+
+    .editor-action-card {
+        @apply flex min-h-20 flex-col items-center justify-center gap-2 rounded-xl border border-ink-200 bg-white px-2 py-3 text-center text-[11px] font-bold text-ink-700 transition hover:border-violet-300 hover:bg-violet-50 hover:text-violet-700 active:scale-[0.98];
+    }
+
+    .editor-secondary-button {
+        @apply inline-flex min-h-10 items-center gap-2 rounded-lg border border-ink-200 bg-white px-3 py-2 text-xs font-bold text-ink-700 transition hover:border-violet-300 hover:bg-violet-50 hover:text-violet-700;
+    }
+
+    .editor-control-label {
+        @apply text-[11px] font-extrabold tracking-wide text-ink-600 uppercase;
+    }
+
+    .design-canvas-host {
+        aspect-ratio: 10 / 7;
+        min-height: 320px;
+        background-position: center;
+        background-repeat: no-repeat;
+        background-size: cover;
+        isolation: isolate;
+    }
+
+    /* Fabric wraps the canvas and sets inline width/height, so the wrapper must be
+       forced to fill the host. The editor then measures the real box and calls
+       setDimensions(), keeping the canvas crisp on every breakpoint. */
+    .design-canvas-host .canvas-container {
+        position: absolute !important;
+        inset: 0;
+        z-index: 2;
+        width: 100% !important;
+        height: 100% !important;
+    }
+
+    .design-canvas-host .canvas-container canvas {
+        width: 100% !important;
+        height: 100% !important;
+    }
+
+    .design-canvas-host canvas {
+        touch-action: none;
+    }
+}
+
+@media (max-width: 640px) {
+    .design-canvas-host {
+        min-height: 300px;
+    }
+}
+
+@media print {
+    .no-print {
+        display: none !important;
+    }
+
+    body {
+        background: white !important;
+    }
+
+    .print-sheet {
+        border: 0 !important;
+        box-shadow: none !important;
+    }
+}

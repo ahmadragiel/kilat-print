@@ -1,0 +1,5 @@
+@extends('errors.layout')
+@section('title', 'Layanan sedang dipelihara')
+@section('code', '503')
+@section('heading', 'Layanan sedang dipelihara')
+@section('message', 'Kilat Print sedang menjalani pemeliharaan singkat. Silakan kembali beberapa saat lagi.')

@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 700" role="img" aria-labelledby="title desc">
+  <title id="title">Mockup belakang produk Kilat Print</title>
+  <desc id="desc">Permukaan cetak putih dengan area desain aman di tengah.</desc>
+  <defs>
+    <linearGradient id="bg" x1="1" y1="0" x2="0" y2="1"><stop stop-color="#eef2f7"/><stop offset="1" stop-color="#e2e8f0"/></linearGradient>
+    <linearGradient id="paper" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#f8fafc"/><stop offset="1" stop-color="#ffffff"/></linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="160%"><feDropShadow dx="0" dy="18" stdDeviation="22" flood-color="#0f172a" flood-opacity=".16"/></filter>
+  </defs>
+  <rect width="1000" height="700" rx="36" fill="url(#bg)"/>
+  <ellipse cx="500" cy="627" rx="360" ry="36" fill="#64748b" opacity=".14"/>
+  <g filter="url(#shadow)">
+    <rect x="80" y="55" width="840" height="560" rx="18" fill="url(#paper)" stroke="#cbd5e1" stroke-width="3"/>
+    <rect x="105" y="80" width="790" height="510" rx="10" fill="none" stroke="#e2e8f0" stroke-width="2" stroke-dasharray="10 10"/>
+  </g>
+  <g transform="translate(126 112)">
+    <rect width="42" height="8" rx="4" fill="#0891b2" opacity=".9"/>
+    <text x="0" y="42" font-family="Arial, sans-serif" font-size="20" font-weight="700" fill="#334155">AREA DESAIN</text>
+  </g>
+  <text x="500" y="656" text-anchor="middle" font-family="Arial, sans-serif" font-size="15" font-weight="600" fill="#64748b">SISI BELAKANG</text>
+</svg>

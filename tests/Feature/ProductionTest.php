@@ -1,0 +1,130 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Enums\DesignStatus;
+use App\Enums\OrderStatus;
+use App\Enums\ProductionStatus;
+use App\Services\ProductionService;
+use Illuminate\Support\Facades\Notification;
+use Tests\TestCase;
+
+class ProductionTest extends TestCase
+{
+    protected function setUp(): void
+    {
+        parent::setUp();
+        Notification::fake();
+    }
+
+    public function test_admin_assigns_job_and_operator_runs_production_through_quality_check_pass(): void
+    {
+        $admin = $this->makeAdmin();
+        $customer = $this->makeCustomer();
+        $operator = $this->makeOperator();
+        $order = $this->makeOrder($customer, ['status' => OrderStatus::DESIGN_APPROVED]);
+        $this->makeDesign($order, ['status' => DesignStatus::APPROVED]);
+        $production = $this->makeProduction($order);
+
+        $this->actingAs($admin)
+            ->post(route('admin.production.assign', $production), [
+                'operator_id' => $operator->id,
+                'deadline' => now()->addDays(2)->toDateString(),
+            ])
+            ->assertSessionHas('success');
+
+        $production->refresh();
+        $this->assertSame($operator->id, $production->operator_id);
+        $this->assertNotNull($production->assigned_at);
+        $this->assertDatabaseHas('production_assignments', [
+            'production_order_id' => $production->id,
+            'operator_id' => $operator->id,
+            'assigned_by' => $admin->id,
+            'is_current' => true,
+        ]);
+        $this->assertSame(OrderStatus::WAITING_PRODUCTION, $order->fresh()->status);
+
+        $this->actingAs($operator->user)
+            ->post(route('operator.jobs.start', $production))
+            ->assertSessionHas('success');
+        $this->actingAs($operator->user)
+            ->post(route('operator.jobs.finishing', $production), ['progress' => 80])
+            ->assertSessionHas('success');
+        $this->actingAs($operator->user)
+            ->post(route('operator.jobs.complete', $production))
+            ->assertSessionHas('success');
+        $this->actingAs($operator->user)
+            ->post(route('operator.jobs.quality-check', $production), [
+                'result' => 'PASS',
+                'notes' => 'Color and dimensions match proof.',
+            ])
+            ->assertSessionHas('success');
+
+        $production->refresh();
+        $this->assertSame(ProductionStatus::READY, $production->status);
+        $this->assertSame(100, $production->progress);
+        $this->assertNotNull($production->started_at);
+        $this->assertNotNull($production->finished_at);
+        $this->assertSame(OrderStatus::READY, $order->fresh()->status);
+        $this->assertDatabaseHas('quality_checks', [
+            'production_order_id' => $production->id,
+            'result' => 'PASS',
+            'notes' => 'Color and dimensions match proof.',
+        ]);
+        $this->assertDatabaseCount('production_status_histories', 4);
+    }
+
+    public function test_failed_quality_check_returns_job_to_production_for_rework(): void
+    {
+        $admin = $this->makeAdmin();
+        $customer = $this->makeCustomer();
+        $operator = $this->makeOperator();
+        $order = $this->makeOrder($customer, ['status' => OrderStatus::DESIGN_APPROVED]);
+        $this->makeDesign($order, ['status' => DesignStatus::APPROVED]);
+        $production = $this->makeProduction($order);
+        app(ProductionService::class)->assign($production, $operator, $admin);
+
+        $this->actingAs($operator->user)->post(route('operator.jobs.start', $production));
+        $this->actingAs($operator->user)->post(route('operator.jobs.finishing', $production));
+        $this->actingAs($operator->user)->post(route('operator.jobs.complete', $production));
+        $this->actingAs($operator->user)
+            ->post(route('operator.jobs.rework', $production), [
+                'result' => 'FAIL',
+                'notes' => 'Please replace the damaged panel.',
+            ])
+            ->assertSessionHas('success');
+
+        $production->refresh();
+        $this->assertSame(ProductionStatus::IN_PRODUCTION, $production->status);
+        $this->assertSame(OrderStatus::IN_PRODUCTION, $order->fresh()->status);
+        $this->assertDatabaseHas('quality_checks', [
+            'production_order_id' => $production->id,
+            'result' => 'FAIL',
+        ]);
+        $this->assertDatabaseHas('production_status_histories', [
+            'production_order_id' => $production->id,
+            'old_status' => ProductionStatus::QUALITY_CHECK->value,
+            'new_status' => ProductionStatus::IN_PRODUCTION->value,
+        ]);
+    }
+
+    public function test_operator_cannot_start_or_finish_a_job_after_assignment_is_removed(): void
+    {
+        $admin = $this->makeAdmin();
+        $customer = $this->makeCustomer();
+        $operator = $this->makeOperator();
+        $order = $this->makeOrder($customer, ['status' => OrderStatus::DESIGN_APPROVED]);
+        $this->makeDesign($order, ['status' => DesignStatus::APPROVED]);
+        $production = $this->makeProduction($order);
+        app(ProductionService::class)->assign($production, $operator, $admin);
+        $production->update(['operator_id' => null]);
+
+        $this->actingAs($operator->user)
+            ->post(route('operator.jobs.start', $production))
+            ->assertForbidden();
+        $this->actingAs($operator->user)
+            ->post(route('operator.jobs.finishing', $production))
+            ->assertForbidden();
+        $this->assertSame(OrderStatus::WAITING_PRODUCTION, $order->fresh()->status);
+    }
+}

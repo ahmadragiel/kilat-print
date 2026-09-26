@@ -1,0 +1,5 @@
+@extends('errors.layout')
+@section('title', 'Kesalahan server')
+@section('code', '500')
+@section('heading', 'Terjadi kendala server')
+@section('message', 'Data Anda tidak ditampilkan. Silakan coba kembali atau hubungi administrator bila kendala berlanjut.')
