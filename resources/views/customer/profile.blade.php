@@ -12,11 +12,11 @@
 
     <div class="mt-8 grid items-start gap-8 lg:grid-cols-[280px_1fr]">
         <aside class="panel p-5 text-center">
-            <span class="mx-auto grid h-20 w-20 place-items-center rounded-lg bg-ink-950 text-2xl font-black text-white">{{ strtoupper(substr(auth()->user()->name ?? 'P', 0, 1)) }}</span>
+            <span class="mx-auto grid h-20 w-20 place-items-center rounded-2xl bg-brand-600 text-2xl font-black text-white shadow-brand">{{ strtoupper(substr(auth()->user()->name ?? 'P', 0, 1)) }}</span>
             <h2 class="mt-4 font-extrabold text-ink-950">{{ auth()->user()->name ?? 'Pelanggan' }}</h2>
             <p class="mt-1 truncate text-sm text-ink-500">{{ auth()->user()->email ?? '' }}</p>
             <div class="mt-5 border-t border-ink-100 pt-5 text-left">
-                <p class="text-xs font-semibold text-ink-500">Pelanggan sejak</p>
+                <p class="text-2xs font-extrabold tracking-[0.1em] text-ink-600 uppercase">Pelanggan sejak</p>
                 <p class="mt-1 text-sm font-bold text-ink-800">{{ auth()->user()->created_at?->format('F Y') ?? 'Belum tersedia' }}</p>
             </div>
         </aside>
@@ -33,7 +33,7 @@
                 </div>
 
                 <div class="border-t border-ink-200 pt-6">
-                    <h3 class="font-bold text-ink-900">Ubah kata sandi</h3>
+                    <h3 class="font-bold text-ink-950">Ubah kata sandi</h3>
                     <p class="mt-1 text-sm text-ink-500">Isi bagian berikut hanya jika ingin mengganti kata sandi.</p>
                     <div class="mt-5 grid gap-5 sm:grid-cols-2">
                         <x-input name="current_password" label="Kata sandi saat ini" type="password" autocomplete="current-password" />

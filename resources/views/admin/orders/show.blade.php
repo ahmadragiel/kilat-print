@@ -44,7 +44,7 @@
     <div class="grid items-start gap-7 xl:grid-cols-[1fr_350px]">
         <div class="space-y-7">
             <section class="panel overflow-hidden">
-                <div class="border-b border-ink-200 bg-ink-50 px-5 py-4"><h2 class="font-extrabold text-ink-950">Item pesanan</h2></div>
+                <div class="panel-head"><h2 class="font-extrabold text-ink-950">Item pesanan</h2></div>
                 @if($orderItems->isNotEmpty())
                     <div class="overflow-x-auto">
                         <table class="data-table">
@@ -59,7 +59,7 @@
                             <tbody>
                                 @foreach($orderItems as $item)
                                     <tr>
-                                        <td class="font-semibold text-ink-900">
+                                        <td class="font-semibold text-ink-950">
                                             {{ data_get($item, 'product_name', data_get($item, 'product.name', 'Produk')) }}
                                         </td>
                                         <td>
@@ -71,12 +71,12 @@
                                                         ->count();
                                                 @endphp
                                                 <span class="mt-1.5 block">
-                                                    <x-badge color="purple">Editor v{{ data_get($item, 'customDesignDraft.version') }} &middot; {{ $draftElements }} elemen</x-badge>
+                                                    <x-badge color="brand">Editor v{{ data_get($item, 'customDesignDraft.version') }} &middot; {{ $draftElements }} elemen</x-badge>
                                                 </span>
                                             @endif
                                         </td>
                                         <td>{{ data_get($item, 'quantity', 1) }}</td>
-                                        <td class="text-right font-bold">
+                                        <td class="text-right font-extrabold text-brand-600">
                                             <x-money :value="data_get($item, 'line_total', data_get($item, 'subtotal', data_get($item, 'total')))" />
                                         </td>
                                     </tr>
@@ -85,12 +85,19 @@
                         </table>
                     </div>
                 @else<x-empty-state compact title="Item belum tersedia" icon="package" />@endif
-                <div class="space-y-3 border-t border-ink-200 bg-ink-50/60 p-5 text-sm"><div class="flex justify-between text-ink-600"><span>Subtotal</span><span class="font-semibold"><x-money :value="data_get($order, 'subtotal')" /></span></div><div class="flex justify-between text-ink-600"><span>Ongkos kirim</span><span class="font-semibold"><x-money :value="data_get($order, 'shipping_fee', data_get($order, 'shipping_cost'))" /></span></div><div class="flex justify-between border-t border-ink-200 pt-3 text-base font-extrabold text-ink-950"><span>Total</span><span><x-money :value="data_get($order, 'grand_total', data_get($order, 'total'))" /></span></div></div>
+                <div class="space-y-3 border-t border-ink-200 bg-ink-50/60 p-5 text-sm">
+                    <div class="flex justify-between text-ink-600"><span>Subtotal</span><span class="font-semibold text-ink-900"><x-money :value="data_get($order, 'subtotal')" /></span></div>
+                    <div class="flex justify-between text-ink-600"><span>Ongkos kirim</span><span class="font-semibold text-ink-900"><x-money :value="data_get($order, 'shipping_fee', data_get($order, 'shipping_cost'))" /></span></div>
+                    <div class="flex items-end justify-between gap-4 rounded-lg bg-white px-4 py-3 ring-1 ring-ink-200">
+                        <span class="text-2xs font-extrabold tracking-[0.14em] text-brand-600 uppercase">Total</span>
+                        <span class="text-xl font-black text-brand-600"><x-money :value="data_get($order, 'grand_total', data_get($order, 'total'))" /></span>
+                    </div>
+                </div>
             </section>
 
             <section class="panel p-5 sm:p-6">
                 <h2 class="font-extrabold text-ink-950">Alamat pengiriman</h2>
-                <address class="mt-4 text-sm not-italic leading-6 text-ink-600"><strong class="block text-ink-900">{{ data_get($order, 'address.recipient', data_get($order, 'shipping_address.recipient_name', 'Belum tersedia')) }}</strong>{{ data_get($order, 'address.phone', data_get($order, 'phone')) }}<br>{{ data_get($order, 'address.address', data_get($order, 'shipping_address.address_line1')) }}<br>@if(data_get($order, 'address.district')){{ data_get($order, 'address.district') }}<br>@endif{{ data_get($order, 'address.city', data_get($order, 'city')) }}, {{ data_get($order, 'address.province', data_get($order, 'province')) }} {{ data_get($order, 'address.postal_code', data_get($order, 'postal_code')) }}</address>
+                <address class="mt-4 text-sm not-italic leading-6 text-ink-600"><strong class="block text-ink-950">{{ data_get($order, 'address.recipient', data_get($order, 'shipping_address.recipient_name', 'Belum tersedia')) }}</strong>{{ data_get($order, 'address.phone', data_get($order, 'phone')) }}<br>{{ data_get($order, 'address.address', data_get($order, 'shipping_address.address_line1')) }}<br>@if(data_get($order, 'address.district')){{ data_get($order, 'address.district') }}<br>@endif{{ data_get($order, 'address.city', data_get($order, 'city')) }}, {{ data_get($order, 'address.province', data_get($order, 'province')) }} {{ data_get($order, 'address.postal_code', data_get($order, 'postal_code')) }}</address>
             </section>
 
             <section class="panel p-5 sm:p-6">

@@ -25,7 +25,7 @@
                                 <td>{{ data_get($production, 'order.customer.user.name', data_get($production, 'customer_name', 'Pelanggan')) }}</td>
                                 <td>{{ data_get($production, 'operator.user.name', data_get($production, 'operator_name', 'Belum ditugaskan')) }}</td>
                                 <td><x-status-badge :status="data_get($production, 'status')" /></td>
-                                <td>{{ data_get($production, 'deadline')?->format('d M Y') ?? 'Belum ditentukan' }}</td>
+                                <td>@if(data_get($production, 'deadline'))<span class="inline-flex items-center gap-1.5 rounded-full bg-accent-100 px-2.5 py-1 text-xs font-bold text-accent-800 ring-1 ring-inset ring-accent-300"><x-icon name="clock" class="h-3.5 w-3.5" /> {{ data_get($production, 'deadline')->format('d M Y') }}</span>@else<span class="text-ink-500">Belum ditentukan</span>@endif</td>
                                 <td>
                                     <form method="POST" action="{{ $assignUrl }}" class="flex flex-wrap items-center gap-2">
                                         @csrf

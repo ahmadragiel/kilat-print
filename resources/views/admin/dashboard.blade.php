@@ -32,8 +32,8 @@
                 $chartDatasets[] = [
                     'label' => $label,
                     'data' => is_object($values) && method_exists($values, 'all') ? $values->values()->all() : $values,
-                    'borderColor' => $key === 'revenue' ? '#fb8017' : ($key === 'orders' ? '#111827' : '#059669'),
-                    'backgroundColor' => $key === 'revenue' ? 'rgba(251, 128, 23, .12)' : ($key === 'orders' ? 'rgba(17, 24, 39, .08)' : 'rgba(5, 150, 105, .10)'),
+                    'borderColor' => $key === 'revenue' ? '#e11d2e' : ($key === 'orders' ? '#10151c' : '#059669'),
+                    'backgroundColor' => $key === 'revenue' ? 'rgba(225, 29, 46, .12)' : ($key === 'orders' ? 'rgba(16, 21, 28, .08)' : 'rgba(5, 150, 105, .10)'),
                     'tension' => 0.35,
                 ];
             }
@@ -79,7 +79,7 @@
         </div>
 
         <div class="panel overflow-hidden">
-            <div class="flex items-center justify-between gap-3 border-b border-ink-200 bg-ink-50 px-5 py-4">
+            <div class="panel-head">
                 <div>
                     <p class="section-kicker">Aktivitas</p>
                     <h2 class="mt-1 font-extrabold text-ink-950">Pesanan terbaru</h2>
@@ -90,7 +90,7 @@
                 <div class="divide-y divide-ink-100">
                     @foreach ($dashboardOrders as $order)
                         <a href="{{ route('admin.orders.show', $order) }}" class="flex items-center gap-3 px-5 py-4 transition hover:bg-ink-50">
-                            <span class="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-ink-100 text-ink-600"><x-icon name="shopping-bag" class="h-4 w-4" /></span>
+                            <span class="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-ink-100 text-ink-600"><x-icon name="shopping-bag" class="h-4 w-4" /></span>
                             <span class="min-w-0 flex-1">
                                 <span class="block truncate text-sm font-bold text-ink-900">#{{ data_get($order, 'number', data_get($order, 'order_number', data_get($order, 'id'))) }}</span>
                                 <span class="mt-0.5 block text-xs text-ink-500">{{ data_get($order, 'customer.user.name', data_get($order, 'customer.name', data_get($order, 'customer_name', 'Pelanggan'))) }}</span>
@@ -107,7 +107,7 @@
 
     <section class="grid gap-6 xl:grid-cols-3" aria-label="Queue operasional">
         <div class="panel overflow-hidden">
-            <div class="flex items-center justify-between gap-3 border-b border-ink-200 bg-ink-50 px-5 py-4">
+            <div class="panel-head">
                 <div>
                     <p class="section-kicker">Payment</p>
                     <h2 class="mt-1 font-extrabold text-ink-950">Menunggu pembayaran</h2>
@@ -130,7 +130,7 @@
         </div>
 
         <div class="panel overflow-hidden">
-            <div class="flex items-center justify-between gap-3 border-b border-ink-200 bg-ink-50 px-5 py-4">
+            <div class="panel-head">
                 <div>
                     <p class="section-kicker">Design</p>
                     <h2 class="mt-1 font-extrabold text-ink-950">Menunggu review</h2>
@@ -154,7 +154,7 @@
         </div>
 
         <div class="panel overflow-hidden">
-            <div class="flex items-center justify-between gap-3 border-b border-ink-200 bg-ink-50 px-5 py-4">
+            <div class="panel-head">
                 <div>
                     <p class="section-kicker">Production</p>
                     <h2 class="mt-1 font-extrabold text-ink-950">Produksi berjalan</h2>

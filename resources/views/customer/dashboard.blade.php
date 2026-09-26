@@ -12,10 +12,10 @@
 
     @php
         $dashboardStats = $stats ?? array_values(array_filter([
-            ['label' => 'Total pesanan', 'value' => $totalOrders ?? null, 'icon' => 'shopping-bag'],
-            ['label' => 'Pesanan aktif', 'value' => $activeOrders ?? null, 'icon' => 'clock'],
-            ['label' => 'Pesanan selesai', 'value' => $completedOrders ?? null, 'icon' => 'check-circle'],
-            ['label' => 'Menunggu pembayaran', 'value' => $pendingPayments ?? null, 'icon' => 'wallet'],
+            ['label' => 'Total pesanan', 'value' => $totalOrders ?? null, 'icon' => 'shopping-bag', 'tone' => 'brand'],
+            ['label' => 'Pesanan aktif', 'value' => $activeOrders ?? null, 'icon' => 'clock', 'tone' => 'brand'],
+            ['label' => 'Pesanan selesai', 'value' => $completedOrders ?? null, 'icon' => 'check-circle', 'tone' => 'neutral'],
+            ['label' => 'Menunggu pembayaran', 'value' => $pendingPayments ?? null, 'icon' => 'wallet', 'tone' => 'accent'],
         ], fn ($stat) => $stat['value'] !== null));
         $dashboardOrders = $recentOrders ?? $orders ?? [];
     @endphp
@@ -29,14 +29,22 @@
                 $statHint = $statIsObject ? data_get($stat, 'hint') : null;
                 $statIcon = $statIsObject ? data_get($stat, 'icon', 'chart') : 'chart';
                 $statHref = $statIsObject ? data_get($stat, 'href') : null;
+                $statTone = $statIsObject ? data_get($stat, 'tone', 'brand') : 'brand';
             @endphp
-            <x-stat-card :label="$statLabel" :value="$statValue ?? 'Belum tersedia'" :hint="$statHint" :icon="$statIcon" :href="$statHref" />
+            <x-stat-card :label="$statLabel" :value="$statValue ?? 'Belum tersedia'" :hint="$statHint" :icon="$statIcon" :href="$statHref" :tone="$statTone" />
         @empty
             <div class="panel sm:col-span-2 xl:col-span-4">
                 <x-empty-state compact title="Ringkasan belum tersedia" description="Statistik pesanan akan muncul setelah backend menyediakan data." icon="chart" />
             </div>
         @endforelse
     </section>
+
+    @if (($pendingPayments ?? null))
+        <div class="accent-callout mt-4 flex flex-wrap items-center justify-between gap-3">
+            <p class="flex items-center gap-2 font-bold"><x-icon name="wallet" class="h-4 w-4 text-accent-600" /> Anda punya {{ $pendingPayments }} pesanan yang menunggu pembayaran.</p>
+            <a href="{{ route('customer.orders.index') }}" class="action-link !text-accent-900">Lihat pesanan <x-icon name="arrow-right" class="h-4 w-4" /></a>
+        </div>
+    @endif>
 
     <section class="mt-8" aria-labelledby="recent-orders-title">
         <div class="mb-4 flex items-center justify-between gap-4">
@@ -61,7 +69,7 @@
                                         @if (data_get($order, 'items_count'))<p class="mt-0.5 text-xs text-ink-500">{{ data_get($order, 'items_count') }} item</p>@endif
                                     </td>
                                     <td class="whitespace-nowrap">{{ data_get($order, 'created_at')?->format('d M Y, H:i') ?? 'Belum tersedia' }}</td>
-                                    <td class="font-semibold text-ink-900"><x-money :value="data_get($order, 'grand_total', data_get($order, 'total'))" /></td>
+                                    <td class="font-semibold text-brand-600"><x-money :value="data_get($order, 'grand_total', data_get($order, 'total'))" /></td>
                                     <td><x-status-badge :status="data_get($order, 'status')" /></td>
                                     <td class="text-right"><a href="{{ route('customer.orders.show', $order) }}" class="action-link"><span class="sr-only">Lihat</span><x-icon name="chevron-right" class="h-4 w-4" /></a></td>
                                 </tr>

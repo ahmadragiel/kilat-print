@@ -6,7 +6,7 @@
 @php
     $styles = [
         'success' => ['border-emerald-200 bg-emerald-50 text-emerald-900', 'check-circle'],
-        'error' => ['border-red-200 bg-red-50 text-red-900', 'x-circle'],
+        'error' => ['border-danger-200 bg-danger-50 text-danger-900', 'x-circle'],
         'warning' => ['border-amber-200 bg-amber-50 text-amber-900', 'alert'],
         'info' => ['border-blue-200 bg-blue-50 text-blue-900', 'info'],
     ];

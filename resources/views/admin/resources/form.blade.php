@@ -56,7 +56,7 @@
                         <div class="rounded-lg border border-ink-200 bg-ink-50 p-3">
                             <x-input :name="$field" :label="$label" type="file" accept=".jpg,.jpeg,.png,.webp" />
                             @if(data_get($record, $field))
-                                <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url(data_get($record, $field)) }}" alt="{{ $label }}" class="mt-3 h-24 w-full rounded-md border border-ink-200 bg-white object-contain">
+                                <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url(data_get($record, $field)) }}" alt="{{ $label }}" class="mt-3 h-24 w-full rounded-lg border border-ink-200 bg-white object-contain">
                             @endif
                         </div>
                     @endforeach

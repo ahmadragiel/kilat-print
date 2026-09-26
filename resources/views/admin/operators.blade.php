@@ -7,7 +7,7 @@
     <x-page-header title="Operator" description="Kelola akun operator produksi." eyebrow="Laporan" />
 
     <form method="GET" action="{{ \Illuminate\Support\Facades\Route::has('admin.operators') ? route('admin.operators') : route('admin.operators.index') }}" class="panel flex flex-col gap-3 p-4 sm:flex-row" aria-label="Cari operator">
-        <div class="relative flex-1"><label for="search" class="sr-only">Cari operator</label><x-icon name="search" class="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400" /><input id="search" name="search" value="{{ request('search') }}" class="form-control pl-10" placeholder="Nama atau email operator"></div>
+        <div class="relative flex-1"><label for="search" class="sr-only">Cari operator</label><x-icon name="search" class="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-500" /><input id="search" name="search" value="{{ request('search') }}" class="form-control pl-10" placeholder="Nama atau email operator"></div>
         <x-button type="submit"><x-icon name="filter" class="h-4 w-4" /> Cari</x-button>
     </form>
 

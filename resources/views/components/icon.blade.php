@@ -164,6 +164,9 @@
         @case('star')
             <path d="m12 2 3 6 7 .9-5 4.7 1.3 6.9L12 17.2l-6.3 3.3L7 13.6 2 8.9 9 8Z"/>
             @break
+        @case('zap')
+            <path d="M13.2 2 5 13h6l-.8 9L19 10h-6l.2-8Z"/>
+            @break
         @default
             <circle cx="12" cy="12" r="9"/>
     @endswitch

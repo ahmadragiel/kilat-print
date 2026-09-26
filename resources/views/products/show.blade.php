@@ -23,10 +23,10 @@
 
 <div class="page-shell py-6 sm:py-8">
     <nav class="mb-6 flex flex-wrap items-center gap-2 text-sm text-ink-500" aria-label="Breadcrumb">
-        <a href="{{ route('products.index') }}" class="hover:text-flame-700">Katalog</a>
+        <a href="{{ route('products.index') }}" class="hover:text-brand-700">Katalog</a>
         <x-icon name="chevron-right" class="h-3.5 w-3.5" />
         @if (data_get($product, 'category'))
-            <a href="{{ route('products.index', ['category' => data_get($product, 'category.slug', data_get($product, 'category.id'))]) }}" class="hover:text-flame-700">{{ data_get($product, 'category.name', 'Kategori') }}</a>
+            <a href="{{ route('products.index', ['category' => data_get($product, 'category.slug', data_get($product, 'category.id'))]) }}" class="hover:text-brand-700">{{ data_get($product, 'category.name', 'Kategori') }}</a>
             <x-icon name="chevron-right" class="h-3.5 w-3.5" />
         @endif
         <span class="max-w-56 truncate font-medium text-ink-700">{{ data_get($product, 'name', 'Produk') }}</span>
@@ -47,15 +47,15 @@
             <div class="lg:sticky lg:top-24">
                 <div class="flex flex-wrap items-center gap-2">
                     @if (data_get($product, 'category.name'))
-                        <x-badge color="orange">{{ data_get($product, 'category.name') }}</x-badge>
+                        <x-badge color="brand">{{ data_get($product, 'category.name') }}</x-badge>
                     @endif
                     @if (data_get($product, 'sku'))
                         <x-badge color="gray">SKU {{ data_get($product, 'sku') }}</x-badge>
                     @endif
                 </div>
                 <h1 class="mt-4 text-3xl font-extrabold tracking-tight text-ink-950 sm:text-4xl">{{ data_get($product, 'name', 'Produk') }}</h1>
-                <p class="mt-3 text-sm font-medium text-ink-500">Harga mulai dari</p>
-                <p class="mt-1 text-2xl font-black text-ink-950"><x-money :value="$price" /></p>
+                <p class="mt-3 text-2xs font-extrabold tracking-[0.14em] text-ink-600 uppercase">Harga mulai dari</p>
+                <p class="mt-1 text-3xl font-black text-brand-600"><x-money :value="$price" /></p>
 
                 <form method="POST" action="{{ \Illuminate\Support\Facades\Route::has('customer.cart.store') ? route('customer.cart.store') : route('cart.store') }}" class="mt-8 space-y-5 border-y border-ink-200 py-6" aria-label="Tambah produk ke keranjang">
                     @csrf
@@ -88,14 +88,22 @@
                     <x-input name="design_file" label="Referensi desain (opsional)" type="file" accept=".jpg,.jpeg,.png,.pdf" />
 
                     <div class="grid gap-3 sm:grid-cols-2">
-                        <x-button type="submit" class="w-full"><x-icon name="cart" class="h-4 w-4" /> Tambah ke keranjang</x-button>
-                        <x-button :href="route('products.customize', $product)" variant="secondary" class="w-full"><x-icon name="edit" class="h-4 w-4" /> Buka editor desain</x-button>
+                        <x-button type="submit" size="lg" class="w-full"><x-icon name="cart" class="h-4 w-4" /> Tambah ke keranjang</x-button>
+                        <x-button :href="route('products.customize', $product)" variant="outline" size="lg" class="w-full"><x-icon name="edit" class="h-4 w-4" /> Buka editor desain</x-button>
                     </div>
                 </form>
 
-                <div class="mt-6 flex items-center gap-3 text-sm text-ink-600">
-                    <x-icon name="shield" class="h-5 w-5 text-emerald-600" />
-                    <span>Spesifikasi produk</span>
+                <div class="mt-6 grid gap-3 sm:grid-cols-3">
+                    @foreach ([
+                        ['icon' => 'shield', 'text' => 'QC sebelum kirim'],
+                        ['icon' => 'truck', 'text' => data_get($product, 'production_days') ? data_get($product, 'production_days').' hari produksi' : 'Produksi cepat'],
+                        ['icon' => 'palette', 'text' => 'Bebas desain'],
+                    ] as $assurance)
+                        <div class="flex items-center gap-2 rounded-lg border border-ink-200 bg-ink-50 px-3 py-2.5 text-xs font-semibold text-ink-700">
+                            <x-icon :name="$assurance['icon']" class="h-4 w-4 shrink-0 text-brand-600" />
+                            {{ $assurance['text'] }}
+                        </div>
+                    @endforeach
                 </div>
                 <dl class="mt-4 grid grid-cols-2 gap-x-5 gap-y-3 text-sm">
                     @if (data_get($product, 'minimum_order'))

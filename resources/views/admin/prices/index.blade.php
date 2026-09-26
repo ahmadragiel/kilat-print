@@ -34,11 +34,11 @@
                                     : data_get($priceRule, 'pricing_type', 'Belum tersedia');
                             @endphp
                             <tr>
-                                <td class="font-semibold text-ink-900">{{ data_get($priceRule, 'product.name', data_get($priceRule, 'product_name', 'Produk')) }}</td>
+                                <td class="font-semibold text-ink-950">{{ data_get($priceRule, 'product.name', data_get($priceRule, 'product_name', 'Produk')) }}</td>
                                 <td>{{ data_get($priceRule, 'name', 'Aturan harga') }}</td>
                                 <td>{{ $pricingLabel }}</td>
                                 <td>{{ data_get($priceRule, 'min_quantity', 'Tidak ada') }}</td>
-                                <td class="font-bold text-ink-900"><x-money :value="data_get($priceRule, 'price', data_get($priceRule, 'amount'))" /></td>
+                                <td class="font-extrabold text-brand-600"><x-money :value="data_get($priceRule, 'price', data_get($priceRule, 'amount'))" /></td>
                                 <td><x-status-badge :status="data_get($priceRule, 'active') === false ? 'inactive' : 'active'" /></td>
                                 <td class="text-right">
                                     <div class="flex items-center justify-end gap-2">
@@ -46,7 +46,7 @@
                                         <form method="POST" action="{{ $deleteRoute($priceRule) }}" x-data="confirmAction('Hapus aturan harga ini?')" x-on:submit="confirm">
                                             @csrf
                                             @method('DELETE')
-                                            <button type="submit" class="grid h-9 w-9 place-items-center rounded-md text-ink-400 transition hover:bg-red-50 hover:text-red-600" aria-label="Hapus aturan harga"><x-icon name="trash" class="h-4 w-4" /></button>
+                                            <button type="submit" class="grid h-9 w-9 place-items-center rounded-lg text-ink-500 transition hover:bg-danger-50 hover:text-danger-600" aria-label="Hapus aturan harga"><x-icon name="trash" class="h-4 w-4" /></button>
                                         </form>
                                     </div>
                                 </td>

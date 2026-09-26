@@ -18,7 +18,7 @@
 
 <div class="page-shell py-8 sm:py-10">
     <nav class="mb-6 flex items-center gap-2 text-sm text-ink-500" aria-label="Breadcrumb">
-        <a href="{{ route('customer.orders.index') }}" class="hover:text-flame-700">Pesanan</a>
+        <a href="{{ route('customer.orders.index') }}" class="hover:text-brand-700">Pesanan</a>
         <x-icon name="chevron-right" class="h-3.5 w-3.5" />
         <span class="font-medium text-ink-700">#{{ data_get($order, 'order_number', data_get($order, 'id')) }}</span>
     </nav>
@@ -41,21 +41,21 @@
     <div class="mt-8 grid items-start gap-8 lg:grid-cols-[1fr_360px]">
         <div class="space-y-6">
             <section class="panel overflow-hidden" aria-labelledby="order-items-title">
-                <div class="border-b border-ink-200 bg-ink-50 px-5 py-4">
+                <div class="panel-head">
                     <h2 id="order-items-title" class="font-extrabold text-ink-950">Item pesanan</h2>
                 </div>
                 @if ($orderItems->isNotEmpty())
                     <div class="divide-y divide-ink-100">
                         @foreach ($orderItems as $item)
                             <div class="flex items-center gap-4 p-4 sm:p-5">
-                                <div class="w-16 shrink-0 overflow-hidden rounded-md border border-ink-200 sm:w-20">
+                                <div class="w-16 shrink-0 overflow-hidden rounded-lg border border-ink-200 sm:w-20">
                                     <x-product-image :src="data_get($item, 'image_url') ?? data_get($item, 'product.thumbnail_url') ?? data_get($item, 'product.image_url') ?? data_get($item, 'product.thumbnail') ?? data_get($item, 'product.image')" :alt="''" class="aspect-square" />
                                 </div>
                                 <div class="min-w-0 flex-1">
                                     <p class="font-bold text-ink-900">{{ data_get($item, 'product_name', data_get($item, 'product.name', 'Produk')) }}</p>
                                     <p class="mt-1 text-xs text-ink-500">{{ data_get($item, 'quantity', 1) }}+ item</p>
                                     @if (data_get($item, 'specification'))<p class="mt-1 text-xs text-ink-500">{{ data_get($item, 'specification') }}</p>@endif
-                                    @if(data_get($item, 'customDesignDraft'))<span class="mt-1.5 inline-flex"><x-badge color="purple">Desain editor v{{ data_get($item, 'customDesignDraft.version') }}</x-badge></span>@endif
+                                    @if(data_get($item, 'customDesignDraft'))<span class="mt-1.5 inline-flex"><x-badge color="brand">Desain editor v{{ data_get($item, 'customDesignDraft.version') }}</x-badge></span>@endif
                                 </div>
                                 <p class="shrink-0 text-sm font-bold text-ink-900"><x-money :value="data_get($item, 'line_total', data_get($item, 'subtotal', data_get($item, 'total')))" /></p>
                             </div>
@@ -67,7 +67,10 @@
                 <div class="space-y-3 border-t border-ink-200 bg-ink-50/60 p-5 text-sm">
                     <div class="flex justify-between text-ink-600"><span>Subtotal</span><span class="font-semibold text-ink-900"><x-money :value="data_get($order, 'subtotal')" /></span></div>
                     <div class="flex justify-between text-ink-600"><span>Ongkos kirim</span><span class="font-semibold text-ink-900"><x-money :value="data_get($order, 'shipping_fee', data_get($order, 'shipping_cost'))" /></span></div>
-                    <div class="flex justify-between border-t border-ink-200 pt-3 text-base font-extrabold text-ink-950"><span>Total</span><span><x-money :value="data_get($order, 'grand_total', data_get($order, 'total'))" /></span></div>
+                    <div class="flex items-end justify-between gap-4 rounded-lg bg-white px-4 py-3 ring-1 ring-ink-200">
+                        <span class="text-xs font-extrabold tracking-[0.14em] text-brand-600 uppercase">Total</span>
+                        <span class="text-xl font-black text-brand-600"><x-money :value="data_get($order, 'grand_total', data_get($order, 'total'))" /></span>
+                    </div>
                 </div>
             </section>
 
@@ -75,20 +78,27 @@
                 <h2 id="order-timeline-title" class="font-extrabold text-ink-950">Riwayat pesanan</h2>
                 @if (collect($timelineEvents)->isNotEmpty())
                     <ol class="mt-5 space-y-0">
-                        @foreach ($timelineEvents as $event)
+                        @foreach ($timelineEvents as $eventIndex => $event)
                             @php
                                 $eventActive = data_get($event, 'active', data_get($event, 'completed', true));
                                 $eventDate = data_get($event, 'timestamp', data_get($event, 'created_at'));
+                                /* The latest reached step is the "current" step: red with white icon. */
+                                $eventIsCurrent = $eventActive && $eventIndex === collect($timelineEvents)->search(fn ($item) => data_get($item, 'active', data_get($item, 'completed', true)));
                             @endphp
                             <li class="relative flex gap-4 pb-6 last:pb-0">
                                 @if (!$loop->last)<span class="absolute left-[11px] top-6 h-[calc(100%-1.5rem)] w-px bg-ink-200"></span>@endif
-                                <span class="relative z-10 mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full {{ $eventActive ? 'bg-flame-500 text-ink-950' : 'border-2 border-ink-300 bg-white text-ink-400' }}">
+                                <span @class([
+                                    'relative z-10 mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full',
+                                    'bg-brand-600 text-white ring-4 ring-brand-100' => $eventIsCurrent,
+                                    'bg-emerald-500 text-white' => $eventActive && ! $eventIsCurrent,
+                                    'border-2 border-ink-300 bg-white text-ink-500' => ! $eventActive,
+                                ])>
                                     @if($eventActive)<x-icon name="check" class="h-3.5 w-3.5" />@else<span class="h-1.5 w-1.5 rounded-full bg-current"></span>@endif
                                 </span>
                                 <div class="min-w-0">
-                                    <p class="text-sm font-bold text-ink-800">{{ data_get($event, 'title', data_get($event, 'status_label', data_get($event, 'status', 'Pembaruan pesanan'))) }}</p>
+                                    <p @class(['text-sm font-bold', $eventIsCurrent ? 'text-brand-700' : 'text-ink-800'])>{{ data_get($event, 'title', data_get($event, 'status_label', data_get($event, 'status', 'Pembaruan pesanan'))) }}</p>
                                     @if (data_get($event, 'description'))<p class="mt-1 text-sm leading-6 text-ink-500">{{ data_get($event, 'description') }}</p>@endif
-                                    @if (is_object($eventDate) && method_exists($eventDate, 'format'))<p class="mt-1 text-xs text-ink-400">{{ $eventDate->format('d M Y, H:i') }}</p>@endif
+                                    @if (is_object($eventDate) && method_exists($eventDate, 'format'))<p class="mt-1 text-xs text-ink-500">{{ $eventDate->format('d M Y, H:i') }}</p>@endif
                                 </div>
                             </li>
                         @endforeach

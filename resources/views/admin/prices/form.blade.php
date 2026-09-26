@@ -35,7 +35,7 @@
             <x-input name="min_quantity" label="Jumlah minimum" type="number" min="1" :value="data_get($priceRule, 'min_quantity', 1)" required />
             <x-input name="price" label="Harga" type="number" step="0.01" min="0" :value="data_get($priceRule, 'price', data_get($priceRule, 'amount'))" required />
             <div class="sm:col-span-2">
-                <label class="flex items-center gap-2.5 text-sm font-medium text-ink-700"><input type="checkbox" name="active" value="1" class="h-4 w-4 rounded border-ink-300 text-flame-500 focus:ring-flame-300" @checked(!$editing || data_get($priceRule, 'active', true))> Aktif digunakan</label>
+                <label class="flex items-center gap-2.5 text-sm font-medium text-ink-700"><input type="checkbox" name="active" value="1" class="form-check rounded" @checked(!$editing || data_get($priceRule, 'active', true))> Aktif digunakan</label>
             </div>
         </div>
         <div class="mt-6 flex justify-end border-t border-ink-100 pt-5"><x-button type="submit">Simpan harga</x-button></div>

@@ -6,29 +6,43 @@
 ])
 
 @php
+    /* Brand button system
+       primary  = merah solid, teks putih (CTA utama)
+       accent   = kuning solid, teks gelap (CTA sekunder / highlight)
+       outline  = putih + border merah (aksi sekunder)
+       ghost    = transparan (link-ish)
+       soft     = merah muda (aksen halus)
+       dark     = charcoal solid
+       danger   = merah tua destructive (terbaca berbeda dari primary)
+       success  = hijau (semantic success) */
     $variants = [
-        'primary' => 'bg-flame-500 text-ink-950 hover:bg-flame-400 focus-visible:outline-flame-600 shadow-sm',
-        'dark' => 'bg-ink-950 text-white hover:bg-ink-800 focus-visible:outline-ink-950',
-        'secondary' => 'border border-ink-300 bg-white text-ink-800 hover:border-ink-400 hover:bg-ink-50 focus-visible:outline-ink-700',
+        'primary' => 'bg-brand-600 text-white hover:bg-brand-700 active:bg-brand-800 focus-visible:outline-brand-700 shadow-brand',
+        'accent' => 'bg-accent-400 text-ink-950 hover:bg-accent-500 active:bg-accent-600 focus-visible:outline-accent-600 shadow-accent',
+        'outline' => 'border border-brand-200 bg-white text-brand-700 hover:border-brand-500 hover:bg-brand-50 active:bg-brand-100 focus-visible:outline-brand-600',
+        'soft' => 'bg-brand-50 text-brand-700 hover:bg-brand-100 active:bg-brand-200 focus-visible:outline-brand-600',
         'ghost' => 'text-ink-700 hover:bg-ink-100 hover:text-ink-950 focus-visible:outline-ink-700',
-        'danger' => 'bg-red-600 text-white hover:bg-red-700 focus-visible:outline-red-700',
-        'success' => 'bg-mint-600 text-white hover:bg-mint-700 focus-visible:outline-mint-700',
+        'dark' => 'bg-ink-950 text-white hover:bg-ink-800 active:bg-ink-900 focus-visible:outline-ink-950',
+        'danger' => 'bg-danger-700 text-white hover:bg-danger-800 active:bg-danger-900 focus-visible:outline-danger-800 shadow-sm',
+        'success' => 'bg-emerald-600 text-white hover:bg-emerald-700 active:bg-emerald-800 focus-visible:outline-emerald-700',
     ];
+    /* Backwards-compatible alias: `secondary` === `outline`. */
+    $variants['secondary'] = $variants['outline'];
+
     $sizes = [
         'sm' => 'min-h-9 px-3 py-1.5 text-xs',
         'md' => 'min-h-11 px-4 py-2.5 text-sm',
-        'lg' => 'min-h-12 px-5 py-3 text-sm',
+        'lg' => 'min-h-12 px-6 py-3 text-base',
         'icon' => 'h-10 w-10 p-0',
     ];
-    $classes = 'inline-flex items-center justify-center gap-2 rounded-md font-bold transition disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2';
+    $classes = 'btn-base '.($variants[$variant] ?? $variants['primary']).' '.($sizes[$size] ?? $sizes['md']);
 @endphp
 
 @if ($href)
-    <a href="{{ $href }}" {{ $attributes->class([$classes, $variants[$variant] ?? $variants['primary'], $sizes[$size] ?? $sizes['md']]) }}>
+    <a href="{{ $href }}" {{ $attributes->class([$classes]) }}>
         {{ $slot }}
     </a>
 @else
-    <button @if($type) type="{{ $type }}" @else type="button" @endif {{ $attributes->class([$classes, $variants[$variant] ?? $variants['primary'], $sizes[$size] ?? $sizes['md']]) }}>
+    <button @if($type) type="{{ $type }}" @else type="button" @endif {{ $attributes->class([$classes]) }}>
         {{ $slot }}
     </button>
 @endif

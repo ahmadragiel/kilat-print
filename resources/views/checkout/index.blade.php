@@ -38,6 +38,32 @@
 @endphp
 
 <div class="page-shell py-8 sm:py-10">
+    {{-- Checkout step rail: red for reached steps, yellow for the current one --}}
+    <nav class="mb-6 flex flex-wrap items-center gap-2 text-xs font-bold sm:gap-3" aria-label="Tahapan checkout">
+        @foreach ([
+            ['label' => 'Keranjang', 'state' => 'done'],
+            ['label' => 'Alamat & pengiriman', 'state' => 'current'],
+            ['label' => 'Pembayaran', 'state' => 'todo'],
+            ['label' => 'Selesai', 'state' => 'todo'],
+        ] as $stepIndex => $step)
+            <span @class([
+                'inline-flex items-center gap-2 rounded-full px-3 py-1.5',
+                'bg-brand-600 text-white' => $step['state'] === 'done',
+                'bg-accent-400 text-ink-950 ring-1 ring-inset ring-accent-500' => $step['state'] === 'current',
+                'bg-ink-100 text-ink-500' => $step['state'] === 'todo',
+            ])>
+                <span @class([
+                    'grid h-4 w-4 place-items-center rounded-full text-[10px] font-black',
+                    'bg-white/20' => $step['state'] === 'done',
+                    'bg-ink-950' => $step['state'] === 'current',
+                    'bg-ink-300 text-ink-600' => $step['state'] === 'todo',
+                ])>{{ $stepIndex + 1 }}</span>
+                {{ $step['label'] }}
+            </span>
+            @if (! $loop->last)<x-icon name="chevron-right" class="hidden h-3.5 w-3.5 text-ink-300 sm:block" />@endif
+        @endforeach
+    </nav>
+
     <x-page-header title="Checkout" description="Pilih alamat pengiriman dan metode pengiriman." eyebrow="Pesanan" />
 
     @if ($checkoutCartItems->isEmpty())
@@ -67,10 +93,10 @@
                     @if ($addressRows->isNotEmpty())
                         <div class="mt-5 grid gap-3 sm:grid-cols-2">
                             @foreach ($addressRows as $address)
-                                <label class="relative flex cursor-pointer gap-3 rounded-md border p-4 transition" :class="String(selected.id) === String({{ json_encode($address['id']) }}) ? 'border-flame-500 bg-flame-50/50' : 'border-ink-200 hover:bg-ink-50'">
-                                    <input type="radio" name="address_id" value="{{ $address['id'] }}" x-model="selected.id" x-on:change="chooseAddress({{ json_encode($address['id']) }})" class="mt-1 h-4 w-4 border-ink-300 text-flame-500 focus:ring-flame-300" required>
+                                <label class="relative flex cursor-pointer gap-3 rounded-lg border p-4 transition" :class="String(selected.id) === String({{ json_encode($address['id']) }}) ? 'border-brand-500 bg-brand-50' : 'border-ink-200 hover:border-brand-300 hover:bg-ink-50'">
+                                    <input type="radio" name="address_id" value="{{ $address['id'] }}" x-model="selected.id" x-on:change="chooseAddress({{ json_encode($address['id']) }})" class="form-check mt-1" required>
                                     <span class="min-w-0 text-sm">
-                                        <span class="flex flex-wrap items-center gap-2 font-bold text-ink-900">{{ $address['label'] }} @if($address['is_primary'])<x-badge color="orange">Utama</x-badge>@endif</span>
+                                        <span class="flex flex-wrap items-center gap-2 font-bold text-ink-950">{{ $address['label'] }} @if($address['is_primary'])<x-badge color="accent">Utama</x-badge>@endif</span>
                                         <span class="mt-1 block font-medium text-ink-700">{{ $address['recipient_name'] }}</span>
                                         <span class="mt-1 block leading-5 text-ink-500">{{ $address['address_line1'] }}@if($address['district']), {{ $address['district'] }}@endif @if($address['address_line2']), {{ $address['address_line2'] }}@endif<br>{{ $address['city'] }}, {{ $address['province'] }} {{ $address['postal_code'] }}</span>
                                     </span>
@@ -107,8 +133,8 @@
                                 $methodLabel = data_get($method, 'label', data_get($method, 'name', $methodValue));
                                 $methodCost = data_get($method, 'cost', data_get($method, 'price'));
                             @endphp
-                            <label class="flex cursor-pointer items-center gap-3 rounded-md border border-ink-200 p-4 transition hover:bg-ink-50 has-checked:border-flame-500">
-                                <input type="radio" name="shipping_method" value="{{ $methodValue }}" class="h-4 w-4 border-ink-300 text-flame-500 focus:ring-flame-300" @checked(old('shipping_method') === (string) $methodValue) required>
+                            <label class="flex cursor-pointer items-center gap-3 rounded-lg border border-ink-200 p-4 transition hover:border-brand-300 hover:bg-ink-50 has-checked:border-brand-500 has-checked:bg-brand-50">
+                                <input type="radio" name="shipping_method" value="{{ $methodValue }}" class="form-check" @checked(old('shipping_method') === (string) $methodValue) required>
                                 <span class="min-w-0 flex-1 text-sm font-semibold text-ink-800">{{ $methodLabel }}</span>
                                 <span class="shrink-0 text-sm font-bold text-ink-900"><x-money :value="$methodCost" /></span>
                             </label>
@@ -121,7 +147,7 @@
             </div>
 
             <aside class="panel overflow-hidden lg:sticky lg:top-24" aria-labelledby="checkout-summary-title">
-                <div class="border-b border-ink-200 bg-ink-50 px-5 py-4">
+                <div class="panel-head">
                     <h2 id="checkout-summary-title" class="font-extrabold text-ink-950">Ringkasan pesanan</h2>
                 </div>
                 <div class="max-h-72 divide-y divide-ink-100 overflow-y-auto px-5">
@@ -138,11 +164,14 @@
                 <div class="space-y-3 border-t border-ink-200 p-5 text-sm">
                     <div class="flex justify-between gap-4 text-ink-600"><span>Subtotal</span><span class="font-semibold text-ink-900"><x-money :value="$checkoutSubtotal ?? $checkoutCartItems->sum('price_at_addition')" /></span></div>
                     <div class="flex justify-between gap-4 text-ink-600"><span>Ongkos kirim</span><span class="font-semibold text-ink-900"><x-money :value="$checkoutShipping" /></span></div>
-                    <div class="flex justify-between gap-4 border-t border-ink-200 pt-3 text-base font-extrabold text-ink-950"><span>Total</span><span><x-money :value="$checkoutTotal" /></span></div>
+                    <div class="flex items-end justify-between gap-4 rounded-lg bg-accent-100 px-4 py-3">
+                        <span class="text-xs font-extrabold tracking-[0.14em] text-accent-800 uppercase">Total</span>
+                        <span class="text-xl font-black text-brand-600"><x-money :value="$checkoutTotal" /></span>
+                    </div>
                 </div>
                 <div class="border-t border-ink-200 p-5">
-                    <x-button type="submit" class="w-full" x-bind:disabled="addresses.length === 0">Buat pesanan <x-icon name="arrow-right" class="h-4 w-4" /></x-button>
-                    <p class="mt-3 text-center text-xs leading-5 text-ink-500">Periksa kembali alamat dan metode pengiriman sebelum melanjutkan.</p>
+                    <x-button type="submit" size="lg" class="w-full" x-bind:disabled="addresses.length === 0">Buat pesanan <x-icon name="arrow-right" class="h-4 w-4" /></x-button>
+                    <p class="mt-3 flex items-start gap-2 text-xs leading-5 text-accent-900"><x-icon name="info" class="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent-600" /> Periksa kembali alamat dan metode pengiriman sebelum melanjutkan.</p>
                 </div>
             </aside>
         </form>

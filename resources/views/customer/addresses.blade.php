@@ -14,7 +14,7 @@
                         <div class="min-w-0">
                             <div class="flex flex-wrap items-center gap-2">
                                 <h2 class="font-extrabold text-ink-950">{{ data_get($address, 'label', data_get($address, 'name', 'Alamat')) }}</h2>
-                                @if(data_get($address, 'is_primary'))<x-badge color="orange">Alamat utama</x-badge>@endif
+                                @if(data_get($address, 'is_primary'))<x-badge color="accent">Alamat utama</x-badge>@endif
                             </div>
                             <p class="mt-3 text-sm font-semibold text-ink-800">{{ data_get($address, 'recipient', data_get($address, 'recipient_name', data_get($address, 'name'))) }}</p>
                             <address class="mt-1 text-sm not-italic leading-6 text-ink-500">
@@ -29,7 +29,7 @@
                             <form method="POST" action="{{ \Illuminate\Support\Facades\Route::has('customer.addresses.setPrimary') ? route('customer.addresses.setPrimary', $address) : route('customer.addresses.primary', $address) }}">
                                 @csrf
                                 @if(\Illuminate\Support\Facades\Route::has('customer.addresses.setPrimary')) @method('PATCH') @endif
-                                <button type="submit" class="shrink-0 text-xs font-bold text-flame-700 hover:text-flame-800">Jadikan utama</button>
+                                <button type="submit" class="shrink-0 text-xs font-bold text-brand-700 hover:text-brand-800">Jadikan utama</button>
                             </form>
                         @endif
                     </div>
@@ -52,7 +52,7 @@
                             <x-input name="city" label="Kota/kabupaten" :value="data_get($address, 'city')" required />
                             <x-input name="province" label="Provinsi" :value="data_get($address, 'province')" required />
                             <label class="flex items-center gap-2.5 text-sm font-medium text-ink-700 sm:col-span-2">
-                                <input type="checkbox" name="is_primary" value="1" class="h-4 w-4 rounded border-ink-300 text-flame-500 focus:ring-flame-300" @checked(data_get($address, 'is_primary'))>
+                                <input type="checkbox" name="is_primary" value="1" class="form-check rounded" @checked(data_get($address, 'is_primary'))>
                                 Jadikan alamat utama
                             </label>
                             <div class="flex flex-wrap items-center justify-between gap-3 border-t border-ink-100 pt-4 sm:col-span-2">
@@ -64,7 +64,7 @@
                     <form method="POST" action="{{ route('customer.addresses.destroy', $address) }}" class="mt-4 flex justify-end border-t border-ink-100 pt-4" x-data="confirmAction('Hapus alamat ini?')" x-on:submit="confirm">
                         @csrf
                         @method('DELETE')
-                        <button type="submit" class="inline-flex items-center gap-1.5 text-xs font-bold text-red-600 hover:text-red-700"><x-icon name="trash" class="h-4 w-4" /> Hapus alamat</button>
+                        <button type="submit" class="inline-flex items-center gap-1.5 text-xs font-bold text-danger-600 transition hover:text-danger-700"><x-icon name="trash" class="h-4 w-4" /> Hapus alamat</button>
                     </form>
                 </article>
             @empty
@@ -90,7 +90,7 @@
                 </div>
                 <x-input name="postal_code" label="Kode pos" required />
                 <label class="flex items-center gap-2.5 text-sm font-medium text-ink-700">
-                    <input type="checkbox" name="is_primary" value="1" class="h-4 w-4 rounded border-ink-300 text-flame-500 focus:ring-flame-300" @checked(collect($addresses ?? [])->isEmpty())>
+                    <input type="checkbox" name="is_primary" value="1" class="form-check rounded" @checked(collect($addresses ?? [])->isEmpty())>
                     Jadikan alamat utama
                 </label>
                 <x-button type="submit" class="w-full"><x-icon name="plus" class="h-4 w-4" /> Tambah alamat</x-button>

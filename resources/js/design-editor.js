@@ -772,9 +772,9 @@ function resolveCartSubmitter(event) {
 
 function styleEditorObject(object) {
     object.set({
-        borderColor: '#c2410c',
+        borderColor: '#e11d2e',
         cornerColor: '#ffffff',
-        cornerStrokeColor: '#c2410c',
+        cornerStrokeColor: '#e11d2e',
         cornerStyle: 'circle',
         transparentCorners: false,
         cornerSize: 10,
@@ -1740,8 +1740,8 @@ export function createDesignEditor(configuration = {}) {
                 preserveObjectStacking: false,
                 controlsAboveOverlay: true,
                 selection: true,
-                selectionColor: 'rgba(194, 65, 12, 0.08)',
-                selectionBorderColor: '#c2410c',
+                selectionColor: 'rgba(225, 29, 46, 0.10)',
+                selectionBorderColor: '#e11d2e',
                 selectionLineWidth: 1,
                 uniformScaling: true,
                 uniScaleKey: 'shiftKey',

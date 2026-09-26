@@ -21,11 +21,11 @@
                 @foreach ($notifications as $notification)
                     <article @class([
                         'flex gap-4 p-4 sm:p-5',
-                        'bg-flame-50/40' => !data_get($notification, 'read_at'),
+                        'bg-brand-50/40' => !data_get($notification, 'read_at'),
                     ])>
                         <span @class([
-                            'mt-0.5 grid h-10 w-10 shrink-0 place-items-center rounded-md',
-                            'bg-flame-100 text-flame-700' => !data_get($notification, 'read_at'),
+                            'mt-0.5 grid h-10 w-10 shrink-0 place-items-center rounded-lg',
+                            'bg-brand-100 text-brand-700' => !data_get($notification, 'read_at'),
                             'bg-ink-100 text-ink-500' => (bool) data_get($notification, 'read_at'),
                         ])>
                             <x-icon :name="data_get($notification, 'icon', data_get($notification, 'type') === 'production' ? 'factory' : 'bell')" class="h-5 w-5" />
@@ -33,7 +33,7 @@
                         <div class="min-w-0 flex-1">
                             <div class="flex flex-wrap items-start justify-between gap-2">
                                 <h2 class="font-bold text-ink-900">{{ data_get($notification, 'data.title', data_get($notification, 'title', 'Pembaruan pesanan')) }}</h2>
-                                <time class="shrink-0 text-xs text-ink-400" @if(data_get($notification, 'created_at')) datetime="{{ data_get($notification, 'created_at')?->toIso8601String() }}" @endif>{{ data_get($notification, 'created_at')?->diffForHumans() ?? 'Waktu belum tersedia' }}</time>
+                                <time class="shrink-0 text-xs text-ink-500" @if(data_get($notification, 'created_at')) datetime="{{ data_get($notification, 'created_at')?->toIso8601String() }}" @endif>{{ data_get($notification, 'created_at')?->diffForHumans() ?? 'Waktu belum tersedia' }}</time>
                             </div>
                             <p class="mt-1 text-sm leading-6 text-ink-600">{{ data_get($notification, 'data.message', data_get($notification, 'message', data_get($notification, 'data.body', 'Tidak ada detail notifikasi.'))) }}</p>
                             @if(data_get($notification, 'data.url') || data_get($notification, 'data.order_id') || data_get($notification, 'order_id'))

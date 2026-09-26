@@ -20,7 +20,7 @@
     @if ($label)
         <label for="{{ $name }}" class="form-label">
             {{ $label }}
-            @if($required)<span class="text-red-500" aria-hidden="true">*</span>@endif
+            @if($required)<span class="text-danger-600" aria-hidden="true">*</span>@endif
         </label>
     @endif
     <input
@@ -38,6 +38,6 @@
         <p id="{{ $name }}-help" class="mt-1.5 text-xs text-ink-500">{{ $help }}</p>
     @endif
     @if ($inputError)
-        <p id="{{ $name }}-error" class="mt-1.5 text-xs font-medium text-red-600">{{ $inputError }}</p>
+        <p id="{{ $name }}-error" class="mt-1.5 text-xs font-medium text-danger-600">{{ $inputError }}</p>
     @endif
 </div>

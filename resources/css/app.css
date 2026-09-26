@@ -1,53 +1,127 @@
 @import 'tailwindcss';
 
-@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
-@source '../../storage/framework/views/*.php';
 @source '../**/*.blade.php';
 @source '../**/*.js';
 
+/* ==========================================================================
+   KILAT PRINT — CENTRALIZED DESIGN SYSTEM
+   --------------------------------------------------------------------------
+   Brand identity: MERAH (primary) + KUNING (accent) + netral putih/abu/charcoal.
+
+   Hierarchy rules enforced across the UI:
+     RED     = primary brand  → primary CTA, active state, headings, price
+     YELLOW  = accent only    → small highlights, badges, attention, secondary CTA
+     WHITE   = clean space    → content background, cards, navbar
+     CHARCOAL= text           → headings / body copy
+     GRAY    = secondary bg   → muted surfaces, table heads, disabled states
+
+   Never use brand red for every status. Semantic status colors stay distinct
+   (emerald = success, amber/yellow = pending/warning, red = danger,
+   blue = info, ink = neutral) so meaning is preserved.
+   ========================================================================== */
+
 @theme {
-    --font-sans: 'Inter', 'Segoe UI', ui-sans-serif, system-ui, sans-serif;
-    --color-ink-50: #f5f7fa;
-    --color-ink-100: #e9edf3;
-    --color-ink-200: #d5dce7;
-    --color-ink-300: #b1bed0;
-    --color-ink-400: #8495ad;
-    --color-ink-500: #647791;
-    --color-ink-600: #4e6079;
-    --color-ink-700: #414e63;
-    --color-ink-800: #293548;
-    --color-ink-900: #1b2537;
-    --color-ink-950: #111827;
-    --color-flame-50: #fff8ed;
-    --color-flame-100: #ffefd4;
-    --color-flame-200: #ffdba8;
-    --color-flame-300: #ffc171;
-    --color-flame-400: #ff9f38;
-    --color-flame-500: #fb8017;
-    --color-flame-600: #ea620a;
-    --color-flame-700: #c44909;
-    --color-flame-800: #9a3810;
-    --color-flame-900: #7c3110;
-    --color-mint-50: #ecfdf5;
-    --color-mint-100: #d1fae5;
-    --color-mint-500: #10b981;
-    --color-mint-600: #059669;
-    --color-mint-700: #047857;
-    --color-sky-soft: #eaf6ff;
-    --shadow-panel: 0 1px 2px rgb(16 24 40 / 0.04), 0 8px 24px rgb(16 24 40 / 0.05);
+    /* ---- Typography ---------------------------------------------------- */
+    --font-sans: 'Plus Jakarta Sans', 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --font-mono: ui-monospace, 'SFMono-Regular', 'Cascadia Mono', Menlo, Consolas, monospace;
+
+    --text-2xs: 0.6875rem;
+    --text-2xs--line-height: 1rem;
+
+    /* ---- Neutral ramp (charcoal-leaning, cool but warm-neutral) --------
+       ink-400 is reserved for non-text affordances (icons, dividers);
+       ink-500 is the lightest step cleared for body-size text (AA 4.5:1). */
+    --color-ink-50: #f6f7f9;
+    --color-ink-100: #eceef2;
+    --color-ink-200: #dde1e8;
+    --color-ink-300: #c2c9d6;
+    --color-ink-400: #7a8494;
+    --color-ink-500: #65707f;
+    --color-ink-600: #556174;
+    --color-ink-700: #414b5b;
+    --color-ink-800: #2b3340;
+    --color-ink-900: #1a2029;
+    --color-ink-950: #10151c;
+
+    /* ---- BRAND: merah (primary) ---------------------------------------- */
+    --color-brand-50: #fff1f2;
+    --color-brand-100: #ffe0e3;
+    --color-brand-200: #fec5ca;
+    --color-brand-300: #fd9aa3;
+    --color-brand-400: #fb6673;
+    --color-brand-500: #f43f50;
+    --color-brand-600: #e11d2e;
+    --color-brand-700: #bc1524;
+    --color-brand-800: #9d1622;
+    --color-brand-900: #831a23;
+    --color-brand-950: #4a0a10;
+
+    /* ---- ACCENT: kuning (warm, secondary/highlight) ------------------- */
+    --color-accent-50: #fffbeb;
+    --color-accent-100: #fef4c7;
+    --color-accent-200: #fde68a;
+    --color-accent-300: #fcd44b;
+    --color-accent-400: #fbbf24;
+    --color-accent-500: #f5a524;
+    --color-accent-600: #d97706;
+    --color-accent-700: #a95c07;
+    --color-accent-800: #8a4708;
+    --color-accent-900: #733b0d;
+
+    /* ---- DESTRUCTIVE (deep red, distinct from brand primary) ----------- */
+    --color-danger-50: #fef2f2;
+    --color-danger-100: #fee2e2;
+    --color-danger-200: #fecaca;
+    --color-danger-300: #fca5a5;
+    --color-danger-400: #f87171;
+    --color-danger-500: #ef4444;
+    --color-danger-600: #dc2626;
+    --color-danger-700: #b91c1c;
+    --color-danger-800: #991b1b;
+    --color-danger-900: #7f1d1d;
+
+    /* ---- Semantic surface / text tokens -------------------------------- */
+    --color-surface: #ffffff;
+    --color-surface-muted: #f6f7f9;
+    --color-surface-subtle: #fbfbfc;
+    --color-line: #dde1e8;
+    --color-line-strong: #c2c9d6;
+    --color-primary: #1a2029;
+    --color-secondary: #556174;
+    --color-muted: #6f7b90;
+
+    /* ---- Shadows (subtle, never heavy) --------------------------------- */
+    --shadow-panel: 0 1px 2px rgb(16 21 28 / 0.04), 0 6px 20px rgb(16 21 28 / 0.05);
+    --shadow-panel-lg: 0 2px 4px rgb(16 21 28 / 0.04), 0 18px 44px rgb(16 21 28 / 0.10);
+    --shadow-brand: 0 10px 26px -10px rgb(225 29 46 / 0.55);
+    --shadow-accent: 0 10px 24px -12px rgb(245 165 36 / 0.65);
+
+    /* ---- Motion -------------------------------------------------------- */
+    --ease-brand: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 @layer base {
     html {
         scroll-behavior: smooth;
+        -webkit-tap-highlight-color: transparent;
     }
 
     body {
         min-width: 320px;
-        background: #f8fafc;
-        color: var(--color-ink-900);
+        background: var(--color-surface-muted);
+        color: var(--color-primary);
         font-family: var(--font-sans);
         -webkit-font-smoothing: antialiased;
+        text-rendering: optimizeLegibility;
+    }
+
+    h1, h2, h3, h4 {
+        text-wrap: balance;
+        letter-spacing: -0.02em;
+    }
+
+    p {
+        text-wrap: pretty;
     }
 
     [x-cloak] {
@@ -59,7 +133,7 @@
     input,
     select,
     textarea {
-        outline-color: var(--color-flame-500);
+        outline-color: var(--color-brand-500);
         outline-offset: 2px;
     }
 
@@ -69,34 +143,97 @@
     }
 
     ::selection {
-        background: var(--color-flame-200);
+        background: var(--color-brand-200);
         color: var(--color-ink-950);
+    }
+
+    /* Numbers (prices, KPIs, invoice totals) read better tabular. */
+    .tabular,
+    [class*='font-black'],
+    [class*='font-extrabold'] {
+        font-variant-numeric: tabular-nums;
     }
 }
 
 @layer components {
+    /* ================================================================
+       LAYOUT
+       ================================================================ */
     .page-shell {
         @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
     }
 
+    /* ================================================================
+       SURFACES
+       ================================================================ */
     .panel {
-        @apply rounded-lg border border-ink-200 bg-white shadow-panel;
+        @apply rounded-xl border border-ink-200 bg-white shadow-panel;
     }
 
     .panel-flat {
-        @apply rounded-lg border border-ink-200 bg-white;
+        @apply rounded-xl border border-ink-200 bg-white;
     }
 
+    /* Card header strip used across admin/operator/customer lists. */
+    .panel-head {
+        @apply flex flex-wrap items-center justify-between gap-3 border-b border-ink-200 bg-ink-50 px-5 py-4;
+    }
+
+    /* ================================================================
+       TYPE
+       ================================================================ */
     .section-kicker {
-        @apply text-xs font-bold tracking-[0.14em] text-flame-700 uppercase;
+        @apply text-2xs font-extrabold tracking-[0.18em] text-brand-600 uppercase;
     }
 
+    .page-title {
+        @apply text-2xl font-extrabold tracking-tight text-ink-950 sm:text-3xl;
+    }
+
+    .price {
+        @apply font-extrabold text-brand-600;
+    }
+
+    .price-lg {
+        @apply text-2xl font-black text-brand-600;
+    }
+
+    /* ================================================================
+       BUTTONS (see x-button for the canonical variant map)
+       ================================================================ */
+    .btn-base {
+        @apply inline-flex items-center justify-center gap-2 rounded-lg font-bold whitespace-nowrap transition duration-150 select-none disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 active:translate-y-px;
+    }
+
+    /* ================================================================
+       FORMS
+       ================================================================ */
+    .form-label {
+        @apply mb-1.5 block text-sm font-semibold text-ink-800;
+    }
+
+    .form-control {
+        @apply block min-h-11 w-full rounded-lg border border-ink-300 bg-white px-3.5 py-2.5 text-sm text-ink-900 shadow-xs transition placeholder:text-ink-500 focus:border-brand-500 focus:ring-3 focus:ring-brand-100 focus:outline-none disabled:cursor-not-allowed disabled:bg-ink-100;
+    }
+
+    .form-control-error {
+        @apply border-danger-400 focus:border-danger-500 focus:ring-danger-100;
+    }
+
+    /* Checkbox / radio — brand red when selected. */
+    .form-check {
+        @apply h-4 w-4 shrink-0 rounded border-ink-300 text-brand-600 transition focus:ring-2 focus:ring-brand-300 focus:ring-offset-0;
+    }
+
+    /* ================================================================
+       TABLES
+       ================================================================ */
     .data-table {
         @apply min-w-full divide-y divide-ink-200 text-left text-sm;
     }
 
     .data-table thead {
-        @apply bg-ink-50 text-xs font-semibold tracking-wide text-ink-600 uppercase;
+        @apply bg-ink-50 text-2xs font-extrabold tracking-[0.1em] text-ink-600 uppercase;
     }
 
     .data-table th {
@@ -115,26 +252,56 @@
         @apply transition-colors hover:bg-ink-50/70;
     }
 
-    .form-label {
-        @apply mb-1.5 block text-sm font-semibold text-ink-800;
+    /* Branded table head — admin reports, printable invoice. */
+    .data-table-brand thead {
+        @apply bg-brand-600 text-white;
     }
 
-    .form-control {
-        @apply block min-h-11 w-full rounded-md border border-ink-300 bg-white px-3.5 py-2.5 text-sm text-ink-900 shadow-sm transition placeholder:text-ink-400 focus:border-flame-500 focus:ring-3 focus:ring-flame-100 focus:outline-none disabled:cursor-not-allowed disabled:bg-ink-100;
+    .data-table-brand tbody tr:hover {
+        @apply bg-brand-50/40;
     }
 
-    .form-control-error {
-        @apply border-red-400 focus:border-red-500 focus:ring-red-100;
-    }
-
+    /* ================================================================
+       LINKS / SMALL TEXT ACTIONS
+       ================================================================ */
     .action-link {
-        @apply inline-flex items-center justify-center gap-2 text-sm font-semibold text-ink-700 transition hover:text-flame-700 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-flame-600;
+        @apply inline-flex items-center justify-center gap-2 text-sm font-semibold text-ink-700 transition hover:text-brand-700 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand-600;
     }
 
+    /* ================================================================
+       BRAND SURFACES
+       ================================================================ */
+    /* Red dominant panel — hero, auth, sidebar. Decorative only; text stays white. */
+    .brand-surface {
+        @apply relative overflow-hidden bg-brand-600 text-white;
+    }
+
+    /* Soft red tint used for highlighted blocks (selected address, current step). */
+    .brand-tint {
+        @apply border-brand-500 bg-brand-50;
+    }
+
+    /* Small yellow attention strip / callout. */
+    .accent-callout {
+        @apply rounded-lg border border-accent-200 bg-accent-50 px-4 py-3 text-sm text-accent-900;
+    }
+
+    /* ================================================================
+       BACKGROUND TEXTURES
+       ================================================================ */
     .subtle-grid {
-        background-image: linear-gradient(to right, rgb(152 162 179 / 0.12) 1px, transparent 1px),
-            linear-gradient(to bottom, rgb(152 162 179 / 0.12) 1px, transparent 1px);
+        background-image: linear-gradient(to right, rgb(148 159 178 / 0.14) 1px, transparent 1px),
+            linear-gradient(to bottom, rgb(148 159 178 / 0.14) 1px, transparent 1px);
         background-size: 32px 32px;
+    }
+
+    /* Faint diagonal red lines layered on red panels — energetic, print-like. */
+    .brand-stripes {
+        background-image: repeating-linear-gradient(
+            -45deg,
+            rgb(255 255 255 / 0.07) 0 2px,
+            transparent 2px 14px
+        );
     }
 
     .design-toolbar {
@@ -149,19 +316,22 @@
         position: relative;
     }
 
+    /* ================================================================
+       DESIGN EDITOR
+       ================================================================ */
     .editor-toolbar-tab {
         @apply inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-md px-3 text-xs font-bold text-ink-600 transition hover:bg-white;
     }
 
     .editor-toolbar-tab-active {
-        @apply bg-white text-violet-700 shadow-sm ring-1 ring-ink-200;
+        @apply bg-brand-600 text-white shadow-sm;
     }
 
     .editor-icon-button,
     .editor-toolbar-button,
     .editor-mini-button,
     .editor-layer-button {
-        @apply inline-flex min-h-9 min-w-9 items-center justify-center gap-1.5 rounded-md border border-transparent px-2.5 text-xs font-bold text-ink-600 transition hover:bg-ink-100 hover:text-ink-950 disabled:cursor-not-allowed disabled:opacity-40;
+        @apply inline-flex min-h-9 min-w-9 items-center justify-center gap-1.5 rounded-lg border border-transparent px-2.5 text-xs font-bold text-ink-600 transition hover:bg-ink-100 hover:text-ink-950 disabled:cursor-not-allowed disabled:opacity-40;
     }
 
     .editor-toolbar-button {
@@ -170,7 +340,7 @@
 
     .editor-icon-button-active,
     .editor-mini-button-active {
-        @apply bg-violet-100 text-violet-700;
+        @apply bg-brand-600 text-white;
     }
 
     .editor-mini-button {
@@ -182,15 +352,15 @@
     }
 
     .editor-action-card {
-        @apply flex min-h-20 flex-col items-center justify-center gap-2 rounded-xl border border-ink-200 bg-white px-2 py-3 text-center text-[11px] font-bold text-ink-700 transition hover:border-violet-300 hover:bg-violet-50 hover:text-violet-700 active:scale-[0.98];
+        @apply flex min-h-20 flex-col items-center justify-center gap-2 rounded-xl border border-ink-200 bg-white px-2 py-3 text-center text-[11px] font-bold text-ink-700 transition hover:border-brand-400 hover:bg-brand-50 hover:text-brand-700 active:scale-[0.98];
     }
 
     .editor-secondary-button {
-        @apply inline-flex min-h-10 items-center gap-2 rounded-lg border border-ink-200 bg-white px-3 py-2 text-xs font-bold text-ink-700 transition hover:border-violet-300 hover:bg-violet-50 hover:text-violet-700;
+        @apply inline-flex min-h-10 items-center gap-2 rounded-lg border border-brand-200 bg-white px-3 py-2 text-xs font-bold text-brand-700 transition hover:border-brand-500 hover:bg-brand-50;
     }
 
     .editor-control-label {
-        @apply text-[11px] font-extrabold tracking-wide text-ink-600 uppercase;
+        @apply text-2xs font-extrabold tracking-wide text-ink-600 uppercase;
     }
 
     .design-canvas-host {

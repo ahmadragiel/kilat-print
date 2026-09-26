@@ -22,11 +22,11 @@
                                 $proofUrl = data_get($payment, 'proof_url') ?? (data_get($payment, 'proof_path') && \Illuminate\Support\Facades\Route::has('admin.payments.proof') ? route('admin.payments.proof', $paymentOrder) : null);
                             @endphp
                             <tr>
-                                <td class="font-semibold text-ink-900">#{{ data_get($paymentOrder, 'number', data_get($paymentOrder, 'order_number', data_get($paymentOrder, 'id'))) }}</td>
+                                <td class="font-semibold text-ink-950">#{{ data_get($paymentOrder, 'number', data_get($paymentOrder, 'order_number', data_get($paymentOrder, 'id'))) }}</td>
                                 <td>{{ data_get($paymentOrder, 'customer.user.name', data_get($paymentOrder, 'customer.name', data_get($paymentOrder, 'customer_name', 'Pelanggan'))) }}</td>
                                 <td>{{ data_get($payment, 'method', 'Belum tersedia') }}</td>
-                                <td class="font-semibold"><x-money :value="data_get($payment, 'amount', data_get($payment, 'total'))" /></td>
-                                <td>@if($proofUrl)<a href="{{ $proofUrl }}" target="_blank" rel="noopener" class="action-link">Lihat</a>@else<span class="text-xs text-ink-400">Tidak ada</span>@endif</td>
+                                <td class="font-extrabold text-brand-600"><x-money :value="data_get($payment, 'amount', data_get($payment, 'total'))" /></td>
+                                <td>@if($proofUrl)<a href="{{ $proofUrl }}" target="_blank" rel="noopener" class="action-link">Lihat</a>@else<span class="text-xs text-ink-500">Tidak ada</span>@endif</td>
                                 <td><x-status-badge :status="data_get($payment, 'status')" /></td>
                                 <td>
                                     <div class="flex items-center gap-2">

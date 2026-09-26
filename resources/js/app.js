@@ -117,8 +117,10 @@ Alpine.data('kilatChart', (configuration) => ({
                             labels: {
                                 boxWidth: 12,
                                 boxHeight: 12,
-                                color: '#64748b',
+                                usePointStyle: true,
+                                color: '#556174',
                                 padding: 18,
+                                font: { family: "'Plus Jakarta Sans', system-ui, sans-serif" },
                             },
                         },
                         ...plugins,

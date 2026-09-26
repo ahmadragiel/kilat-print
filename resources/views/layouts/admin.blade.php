@@ -8,7 +8,10 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="robots" content="noindex">
     <title>@yield('title', 'Admin') · Kilat Print</title>
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    <meta name="theme-color" content="#e11d2e">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">    @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body x-data="{ sidebar: false }" @keydown.escape.window="sidebar = false" class="bg-ink-50">
     <div class="min-h-screen lg:grid lg:grid-cols-[264px_1fr]">
@@ -18,8 +21,10 @@
         </aside>
 
         <div class="min-w-0">
-            <header class="sticky top-0 z-30 flex h-16 items-center border-b border-ink-200 bg-white/95 px-4 backdrop-blur sm:px-6 lg:px-8">
-                <button type="button" class="mr-3 grid h-10 w-10 place-items-center rounded-md border border-ink-200 text-ink-700 lg:hidden" x-on:click="sidebar = !sidebar" aria-label="Buka sidebar">
+            <header class="sticky top-0 z-30 border-b border-ink-200 bg-white/95 backdrop-blur">
+                <div class="h-1 bg-linear-to-r from-brand-700 via-brand-500 to-accent-400"></div>
+                <div class="flex h-16 items-center px-4 sm:px-6 lg:px-8">
+                <button type="button" class="mr-3 grid h-10 w-10 place-items-center rounded-lg border border-ink-200 text-ink-700 transition hover:border-brand-300 hover:bg-brand-50 hover:text-brand-700 lg:hidden" x-on:click="sidebar = !sidebar" aria-label="Buka sidebar">
                     <x-icon name="menu" class="h-5 w-5" />
                 </button>
                 <div class="min-w-0 flex-1">
@@ -27,10 +32,11 @@
                     <p class="hidden text-xs text-ink-500 sm:block">Kelola operasional Kilat Print</p>
                 </div>
                 <div class="flex items-center gap-2">
-                    <a href="{{ \Illuminate\Support\Facades\Route::has('admin.reports') ? route('admin.reports') : route('admin.reports.index') }}" class="hidden items-center gap-2 rounded-md px-3 py-2 text-sm font-semibold text-ink-600 transition hover:bg-ink-100 hover:text-ink-950 sm:flex">
+                    <a href="{{ \Illuminate\Support\Facades\Route::has('admin.reports') ? route('admin.reports') : route('admin.reports.index') }}" class="hidden items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-ink-600 transition hover:bg-brand-50 hover:text-brand-700 sm:flex">
                         <x-icon name="chart" class="h-4 w-4" /> Laporan
                     </a>
-                    <span class="grid h-9 w-9 place-items-center rounded-md bg-ink-950 text-xs font-bold text-white">{{ strtoupper(substr(auth()->user()?->name ?? 'A', 0, 1)) }}</span>
+                    <span class="grid h-9 w-9 place-items-center rounded-lg bg-brand-600 text-xs font-bold text-white">{{ strtoupper(substr(auth()->user()?->name ?? 'A', 0, 1)) }}</span>
+                </div>
                 </div>
             </header>
 

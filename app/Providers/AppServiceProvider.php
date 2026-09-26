@@ -16,6 +16,7 @@ use App\Policies\OrderPolicy;
 use App\Policies\ProductionOrderPolicy;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
@@ -35,6 +36,11 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(ProductionOrder::class, ProductionOrderPolicy::class);
         Gate::policy(CustomDesignDraft::class, CustomDesignDraftPolicy::class);
         Gate::policy(CustomDesignAsset::class, CustomDesignAssetPolicy::class);
+
+        // Presentation only: paginate with the Kilat Print brand pagination view
+        // instead of the framework default (neutral gray / blue focus rings).
+        Paginator::defaultView('pagination.brand');
+        Paginator::defaultSimpleView('pagination.brand');
 
         RateLimiter::for('login', fn (Request $request) => [
             Limit::perMinute(5)->by(mb_strtolower((string) $request->input('email')).'|'.$request->ip()),

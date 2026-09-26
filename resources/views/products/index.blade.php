@@ -24,7 +24,7 @@
         <div class="lg:col-span-4">
             <label for="search" class="form-label">Cari produk</label>
             <div class="relative">
-                <x-icon name="search" class="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400" />
+                <x-icon name="search" class="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-500" />
                 <input id="search" name="search" value="{{ $activeFilters['search'] ?? request('q') }}" class="form-control pl-10" placeholder="Nama produk">
             </div>
         </div>
@@ -67,7 +67,7 @@
             <div class="flex flex-wrap gap-2">
                 @if(request('q'))<x-badge color="gray">Pencarian: {{ request('q') }}</x-badge>@endif
                 @if(request('category'))<x-badge color="gray">Kategori: {{ request('category') }}</x-badge>@endif
-                @if(request('sort'))<x-badge color="orange">Urut: {{ request('sort') }}</x-badge>@endif
+                @if(request('sort'))<x-badge color="gray">Urut: {{ request('sort') }}</x-badge>@endif
             </div>
         @endif
     </div>
