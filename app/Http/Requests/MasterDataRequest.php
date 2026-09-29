@@ -43,6 +43,7 @@ class MasterDataRequest extends FormRequest
                 'category_id' => ['required', 'exists:categories,id'],
                 'slug' => ['nullable', 'string', 'max:255', 'alpha_dash', Rule::unique('products', 'slug')->ignore($id)],
                 'specifications' => ['nullable', 'array'],
+                'is_featured' => ['nullable', 'boolean'],
                 'minimum_order' => ['required', 'integer', 'min:1', 'max:100000'],
                 'production_days' => ['required', 'integer', 'min:1', 'max:365'],
                 'thumbnail' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],

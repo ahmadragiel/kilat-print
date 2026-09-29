@@ -42,6 +42,10 @@
             </x-select>
 
             @if($resourceType === 'products')
+                <label class="flex items-center gap-3 rounded-xl border border-ink-200 bg-ink-50 px-3 py-3 text-sm font-medium text-ink-800">
+                    <input type="checkbox" name="is_featured" value="1" class="form-check rounded" @checked((bool) data_get($record, 'is_featured', false))>
+                    <span>Tampilkan sebagai featured di homepage</span>
+                </label>
                 <x-input name="slug" label="Slug" :value="data_get($record, 'slug')" placeholder="Dibuat otomatis jika kosong" />
                 <x-select name="category_id" label="Kategori" :value="data_get($record, 'category_id')" placeholder="Pilih kategori" required>
                     @foreach (($categories ?? []) as $category)

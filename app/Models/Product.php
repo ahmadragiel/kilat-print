@@ -25,6 +25,7 @@ class Product extends Model
         'back_mockup',
         'base_price',
         'status',
+        'is_featured',
         'minimum_order',
         'production_days',
         'popularity_count',
@@ -38,6 +39,7 @@ class Product extends Model
             'minimum_order' => 'integer',
             'production_days' => 'integer',
             'popularity_count' => 'integer',
+            'is_featured' => 'boolean',
         ];
     }
 
