@@ -1,10 +1,10 @@
 @extends('layouts.admin')
 
-@section('title', 'Dasbor Admin')
+@section('title', 'Dashboard Admin')
 
 @section('content')
 <div class="space-y-7">
-    <x-page-header title="Dasbor operasional" description="Ringkasan data dari Kilat Print." eyebrow="Admin">
+    <x-page-header title="Dashboard operasional" description="Ringkasan data dari Kilat Print." eyebrow="Admin">
         <x-slot:actions>
             <x-button :href="route('admin.orders.index')" variant="secondary"><x-icon name="shopping-bag" class="h-4 w-4" /> Pesanan</x-button>
             <x-button :href="\Illuminate\Support\Facades\Route::has('admin.resources.form') ? route('admin.resources.form', ['resourceType' => 'products']) : route('admin.products.create')"><x-icon name="plus" class="h-4 w-4" /> Produk baru</x-button>
@@ -55,7 +55,7 @@
             @endphp
             <x-stat-card :label="$statLabel" :value="$statValue ?? 'Belum tersedia'" :hint="$statHint" :icon="$statIcon" :href="$statHref" />
         @empty
-            <div class="panel sm:col-span-2 xl:col-span-4"><x-empty-state compact title="Statistik belum tersedia" description="Dasbor akan menampilkan angka dari basis data." icon="chart" /></div>
+            <div class="panel sm:col-span-2 xl:col-span-4"><x-empty-state compact title="Statistik belum tersedia" description="Dashboard akan menampilkan angka dari basis data." icon="chart" /></div>
         @endforelse
     </section>
 
@@ -109,7 +109,7 @@
         <div class="panel overflow-hidden">
             <div class="panel-head">
                 <div>
-                    <p class="section-kicker">Payment</p>
+                    <p class="section-kicker">Pembayaran</p>
                     <h2 class="mt-1 font-extrabold text-ink-950">Menunggu pembayaran</h2>
                 </div>
                 <a href="{{ route('admin.payments.index') }}" class="action-link text-xs">Kelola</a>
@@ -132,7 +132,7 @@
         <div class="panel overflow-hidden">
             <div class="panel-head">
                 <div>
-                    <p class="section-kicker">Design</p>
+                    <p class="section-kicker">Desain</p>
                     <h2 class="mt-1 font-extrabold text-ink-950">Menunggu review</h2>
                 </div>
                 <a href="{{ route('admin.designs.index') }}" class="action-link text-xs">Review</a>
@@ -156,7 +156,7 @@
         <div class="panel overflow-hidden">
             <div class="panel-head">
                 <div>
-                    <p class="section-kicker">Production</p>
+                    <p class="section-kicker">Produksi</p>
                     <h2 class="mt-1 font-extrabold text-ink-950">Produksi berjalan</h2>
                 </div>
                 <a href="{{ route('admin.production.index') }}" class="action-link text-xs">Monitor</a>

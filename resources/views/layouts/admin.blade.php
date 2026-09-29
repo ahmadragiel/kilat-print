@@ -28,7 +28,7 @@
                     <x-icon name="menu" class="h-5 w-5" />
                 </button>
                 <div class="min-w-0 flex-1">
-                    <p class="truncate text-sm font-bold text-ink-900">@yield('title', 'Dasbor Admin')</p>
+                    <p class="truncate text-sm font-bold text-ink-900">@yield('title', 'Dashboard Admin')</p>
                     <p class="hidden text-xs text-ink-500 sm:block">Kelola operasional Kilat Print</p>
                 </div>
                 <div class="flex items-center gap-2">

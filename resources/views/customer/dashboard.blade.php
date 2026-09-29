@@ -1,10 +1,10 @@
 @extends('layouts.app')
 
-@section('title', 'Dasbor Pelanggan')
+@section('title', 'Dashboard Pelanggan')
 
 @section('content')
 <div class="page-shell py-8 sm:py-10">
-    <x-page-header title="Halo, {{ auth()->user()->name }}" description="Pantau pesanan dan aktivitas akun Anda." eyebrow="Dasbor pelanggan">
+    <x-page-header title="Halo, {{ auth()->user()->name }}" description="Pantau pesanan dan aktivitas akun Anda." eyebrow="Dashboard pelanggan">
         <x-slot:actions>
             <x-button :href="route('products.index')"><x-icon name="plus" class="h-4 w-4" /> Produk baru</x-button>
         </x-slot:actions>

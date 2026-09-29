@@ -1,10 +1,10 @@
 @extends('layouts.operator')
 
-@section('title', 'Dasbor Operator')
+@section('title', 'Dashboard Operator')
 
 @section('content')
 <div class="space-y-7">
-    <x-page-header title="Dasbor produksi" description="Pilih pekerjaan yang ditugaskan dan pantau tahapnya." eyebrow="Operator">
+    <x-page-header title="Dashboard produksi" description="Pilih pekerjaan yang ditugaskan dan pantau tahapnya." eyebrow="Operator">
         <x-slot:actions><x-button :href="route('operator.jobs.index')"><x-icon name="factory" class="h-4 w-4" /> Semua pekerjaan</x-button></x-slot:actions>
     </x-page-header>
 

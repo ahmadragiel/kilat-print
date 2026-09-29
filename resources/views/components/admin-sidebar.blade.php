@@ -22,7 +22,7 @@
         <div>
             <p class="mb-2 px-3 text-[10px] font-bold tracking-[0.16em] text-brand-100 uppercase">Ringkasan</p>
             <a href="{{ route('admin.dashboard') }}" class="{{ $link }} {{ $active(['admin.dashboard']) ? $linkActive : '' }} @if($active(['admin.dashboard'])) before:absolute before:inset-y-2 before:left-0 before:w-1 before:rounded-full before:bg-accent-400 @endif">
-                <x-icon name="home" class="h-5 w-5" /> Dasbor
+                <x-icon name="home" class="h-5 w-5" /> Dashboard
             </a>
             <a href="{{ route('admin.orders.index') }}" class="{{ $link }} {{ $active(['admin.orders.*']) ? $linkActive : '' }} @if($active(['admin.orders.*'])) before:absolute before:inset-y-2 before:left-0 before:w-1 before:rounded-full before:bg-accent-400 @endif">
                 <x-icon name="shopping-bag" class="h-5 w-5" /> Pesanan

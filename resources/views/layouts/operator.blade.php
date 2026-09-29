@@ -25,7 +25,7 @@
                 <nav class="flex-1 space-y-1 px-3 py-5" aria-label="Navigasi operator">
                     @php $opLink = 'group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold transition text-brand-100 hover:bg-brand-800/60 hover:text-white'; @endphp
                     <a href="{{ route('operator.dashboard') }}" class="{{ $opLink }} {{ request()->routeIs('operator.dashboard') ? 'bg-brand-800 text-white shadow-sm before:absolute before:inset-y-2 before:left-0 before:w-1 before:rounded-full before:bg-accent-400' : '' }}">
-                        <x-icon name="home" class="h-5 w-5" /> Dasbor
+                        <x-icon name="home" class="h-5 w-5" /> Dashboard
                     </a>
                     <a href="{{ route('operator.jobs.index') }}" class="{{ $opLink }} {{ request()->routeIs('operator.jobs.*') ? 'bg-brand-800 text-white shadow-sm before:absolute before:inset-y-2 before:left-0 before:w-1 before:rounded-full before:bg-accent-400' : '' }}">
                         <x-icon name="factory" class="h-5 w-5" /> Pekerjaan
@@ -57,7 +57,7 @@
                     <x-icon name="menu" class="h-5 w-5" />
                 </button>
                 <div class="min-w-0 flex-1">
-                    <p class="truncate text-sm font-bold text-ink-900">@yield('title', 'Dasbor Operator')</p>
+                    <p class="truncate text-sm font-bold text-ink-900">@yield('title', 'Dashboard Operator')</p>
                     <p class="hidden text-xs text-ink-500 sm:block">Ruang kerja produksi Kilat Print</p>
                 </div>
                 <x-status-badge :status="auth()->user()?->status ?? 'active'" />
