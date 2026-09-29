@@ -23,7 +23,9 @@
         @if($editing) @method('PUT') @endif
         <div class="grid gap-5 sm:grid-cols-2">
             <x-select name="product_id" label="Produk" :value="data_get($priceRule, 'product_id')" placeholder="Pilih produk" required>
-                @foreach (($products ?? []) as $product)<option value="{{ data_get($product, 'id') }}">{{ data_get($product, 'name', 'Produk') }}</option>@endforeach
+                @foreach (($products ?? []) as $product)
+                    <option value="{{ data_get($product, 'id') }}" @selected((string) old('product_id', data_get($priceRule, 'product_id')) === (string) data_get($product, 'id'))>{{ data_get($product, 'name', 'Produk') }}</option>
+                @endforeach
             </x-select>
             <x-input name="name" label="Nama aturan" :value="data_get($priceRule, 'name')" placeholder="Contoh: Harga standar" required />
             <x-select name="pricing_type" label="Jenis harga" :value="data_get($priceRule, 'pricing_type')" placeholder="Pilih jenis harga" required>
@@ -34,6 +36,7 @@
             </x-select>
             <x-input name="min_quantity" label="Jumlah minimum" type="number" min="1" :value="data_get($priceRule, 'min_quantity', 1)" required />
             <x-input name="price" label="Harga" type="number" step="0.01" min="0" :value="data_get($priceRule, 'price', data_get($priceRule, 'amount'))" required />
+            <x-input name="discount_percent" label="Diskon (%)" type="number" step="0.01" min="0" max="100" :value="data_get($priceRule, 'discount_percent', 0) ?? 0" />
             <div class="sm:col-span-2">
                 <label class="flex items-center gap-2.5 text-sm font-medium text-ink-700"><input type="checkbox" name="active" value="1" class="form-check rounded" @checked(!$editing || data_get($priceRule, 'active', true))> Aktif digunakan</label>
             </div>

@@ -62,6 +62,33 @@ class RenderedMarkupTest extends TestCase
         }
     }
 
+    public function test_admin_navbar_hides_customer_navigation_and_actions(): void
+    {
+        $admin = $this->makeAdmin();
+        $response = $this->actingAs($admin)->get('/');
+
+        $response->assertOk();
+        preg_match('/<header\b[^>]*>.*?<\/header>/s', $response->getContent(), $matches);
+        $this->assertNotEmpty($matches, 'The page should render a navbar header.');
+
+        $navbar = $matches[0];
+        foreach ([
+            'id="nav-search"',
+            'id="nav-search-mobile"',
+            'aria-label="Keranjang"',
+            'aria-label="Notifikasi"',
+            'customer/orders',
+            'customer/profile',
+        ] as $customerFeature) {
+            $this->assertStringNotContainsString($customerFeature, $navbar);
+        }
+
+        $this->assertStringContainsString('id="product-dropdown"', $navbar);
+        $this->assertStringContainsString('id="mobile-product-categories"', $navbar);
+        $this->assertStringContainsString('admin/dashboard', $navbar);
+        $this->assertStringContainsString('Keluar', $navbar);
+    }
+
     public function test_admin_order_detail_renders_without_leaked_components(): void
     {
         $admin = $this->makeAdmin();

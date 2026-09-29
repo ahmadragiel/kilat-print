@@ -52,7 +52,9 @@ class AuthAndAuthorizationTest extends TestCase
             ])->assertRedirect($destination);
 
             $this->assertAuthenticatedAs($user);
-            $this->post(route('logout'))->assertRedirect(route('home'));
+            $this->post(route('logout'))
+                ->assertRedirect(route('home'))
+                ->assertSessionHas('logout_notice', 'Anda telah logout.');
             $this->assertGuest();
         }
     }

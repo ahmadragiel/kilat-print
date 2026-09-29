@@ -113,6 +113,9 @@
         @case('chevron-right')
             <path d="m9 18 6-6-6-6"/>
             @break
+        @case('chevron-down')
+            <path d="m6 9 6 6 6-6"/>
+            @break
         @case('map-pin')
             <path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/>
             @break

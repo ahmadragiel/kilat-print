@@ -66,7 +66,7 @@ class PriceCalculationService
                 $seenBase[$type->value] = true;
             }
 
-            $charge = (int) round((float) $rule->price * $multiplier);
+            $charge = (int) round($rule->discounted_price * $multiplier);
             $charges += $charge;
             $breakdown['product'] += $charge;
         }

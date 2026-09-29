@@ -11,7 +11,7 @@
     $price = data_get($product, 'starting_price') ?? data_get($product, 'min_price') ?? data_get($product, 'base_price') ?? data_get($product, 'price');
     $priceRules = data_get($product, 'priceRules');
     if ($price === null && is_object($priceRules) && method_exists($priceRules, 'min')) {
-        $price = $priceRules->min('price');
+        $price = $priceRules->min(fn ($rule) => data_get($rule, 'discounted_price', data_get($rule, 'price')));
     }
     $productionMethods = $productionMethods ?? [
         ['value' => 'digital', 'label' => 'Digital'],

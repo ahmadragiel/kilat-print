@@ -48,7 +48,7 @@ class AuthenticatedSessionController extends Controller
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return redirect()->route('home');
+        return redirect()->route('home')->with('logout_notice', 'Anda telah logout.');
     }
 
     private function destination($user): string

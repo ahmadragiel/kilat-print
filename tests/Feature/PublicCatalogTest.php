@@ -44,6 +44,23 @@ class PublicCatalogTest extends TestCase
         $response->assertSee('Banner Homepage');
     }
 
+    public function test_homepage_product_cards_show_discounted_and_struck_original_prices(): void
+    {
+        $product = $this->makeProduct(attributes: [
+            'name' => 'Discounted Banner',
+            'slug' => 'discounted-banner',
+        ]);
+        $product->priceRules()->update(['discount_percent' => 15]);
+
+        $response = $this->get(route('home'));
+
+        $response->assertOk()
+            ->assertSee('Discounted Banner')
+            ->assertSee('Rp 10.000')
+            ->assertSee('Rp 8.500')
+            ->assertSee('line-through');
+    }
+
     public function test_catalog_searches_and_filters_active_products(): void
     {
         $category = Category::factory()->create([

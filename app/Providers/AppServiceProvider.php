@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Models\Address;
+use App\Models\Category;
 use App\Models\CustomDesignAsset;
 use App\Models\CustomDesignDraft;
 use App\Models\DesignFile;
@@ -19,6 +20,7 @@ use Illuminate\Http\Request;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -36,6 +38,13 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(ProductionOrder::class, ProductionOrderPolicy::class);
         Gate::policy(CustomDesignDraft::class, CustomDesignDraftPolicy::class);
         Gate::policy(CustomDesignAsset::class, CustomDesignAssetPolicy::class);
+
+        View::composer('components.customer-nav', function ($view): void {
+            $view->with('navCategories', Category::query()
+                ->where('status', 'active')
+                ->orderBy('name')
+                ->get(['name', 'slug']));
+        });
 
         // Presentation only: paginate with the Kilat Print brand pagination view
         // instead of the framework default (neutral gray / blue focus rings).

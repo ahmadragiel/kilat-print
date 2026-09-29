@@ -100,20 +100,27 @@ class MasterDataCrudTest extends TestCase
             'name' => 'Area tariff',
             'pricing_type' => 'per_sqm',
             'price' => 25000,
+            'discount_percent' => 15.5,
             'min_quantity' => 1,
             'active' => '1',
         ])->assertRedirect(route('admin.prices.index'));
         $rule = PriceRule::where('name', 'Area tariff')->firstOrFail();
         $this->assertTrue($rule->active);
+        $this->assertSame('15.50', $rule->discount_percent);
+        $this->actingAs($admin)->get(route('admin.prices.edit', $rule))
+            ->assertOk()
+            ->assertSee('<option value="'.$product->id.'" selected', false);
 
         $this->actingAs($admin)->put(route('admin.prices.update', $rule), [
             'product_id' => $product->id,
             'name' => 'Area tariff updated',
             'pricing_type' => 'per_sqm',
             'price' => 27500,
+            'discount_percent' => 20,
             'min_quantity' => 2,
         ])->assertRedirect(route('admin.prices.index'));
         $this->assertFalse($rule->fresh()->active);
+        $this->assertSame('20.00', $rule->fresh()->discount_percent);
 
         $this->actingAs($admin)->delete(route('admin.prices.destroy', $rule))->assertSessionHas('success');
         $this->assertFalse($rule->fresh()->active);

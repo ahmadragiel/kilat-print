@@ -19,10 +19,23 @@
 
     <x-customer-nav :cart-count="$cartCount ?? null" :cart="$cart ?? null" :unread-notifications="$unreadNotifications ?? null" />
 
-    @if (session('success') || session('status') || session('error') || $errors->any())
-        <div x-data="flash" x-show="visible" x-transition class="page-shell pt-4" role="region" aria-label="Pemberitahuan sistem">
+    @if (session('logout_notice') || session('success') || session('status') || session('error') || $errors->any())
+        <div
+            x-data="flash"
+            @if (session('logout_notice')) x-init="setTimeout(() => visible = false, 2000)" @endif
+            x-show="visible"
+            x-transition:enter="transition ease-out duration-300"
+            x-transition:enter-start="-translate-y-2 opacity-0"
+            x-transition:enter-end="translate-y-0 opacity-100"
+            x-transition:leave="transition ease-in duration-300"
+            x-transition:leave-start="translate-y-0 opacity-100"
+            x-transition:leave-end="-translate-y-2 opacity-0"
+            class="page-shell pt-4"
+            role="region"
+            aria-label="Pemberitahuan sistem"
+        >
             <x-alert :type="session('error') || $errors->any() ? 'error' : 'success'">
-                {{ session('success') ?? session('status') ?? ($errors->any() ? $errors->first() : '') }}
+                {{ session('logout_notice') ?? session('success') ?? session('status') ?? ($errors->any() ? $errors->first() : '') }}
             </x-alert>
         </div>
     @endif

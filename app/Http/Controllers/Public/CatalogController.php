@@ -25,18 +25,18 @@ class CatalogController extends Controller
         $products = Product::query()
             ->select('products.*')
             ->addSelect(['starting_price' => PriceRule::query()
-                ->select('price')
+                ->selectRaw('(price_rules.price * (100 - price_rules.discount_percent) / 100)')
                 ->whereColumn('price_rules.product_id', 'products.id')
                 ->where('price_rules.active', true)
-                ->orderBy('price_rules.price')
+                ->orderByRaw('(price_rules.price * (100 - price_rules.discount_percent) / 100)')
                 ->limit(1)])
             ->with(['category', 'priceRules'])
             ->where('status', 'active')
             ->whereHas('priceRules', fn (Builder $price) => $price->where('active', true))
             ->when($request->filled('search'), fn (Builder $query) => $query->where('name', 'like', '%'.$request->string('search')->trim().'%'))
             ->when($request->filled('category'), fn (Builder $query) => $query->whereHas('category', fn (Builder $category) => $category->where('slug', $request->string('category'))))
-            ->when($request->filled('min_price'), fn (Builder $query) => $query->whereHas('priceRules', fn (Builder $price) => $price->where('price', '>=', (int) $request->input('min_price'))))
-            ->when($request->filled('max_price'), fn (Builder $query) => $query->whereHas('priceRules', fn (Builder $price) => $price->where('price', '<=', (int) $request->input('max_price'))));
+            ->when($request->filled('min_price'), fn (Builder $query) => $query->whereHas('priceRules', fn (Builder $price) => $price->whereRaw('(price_rules.price * (100 - price_rules.discount_percent) / 100) >= ?', [(int) $request->input('min_price')])))
+            ->when($request->filled('max_price'), fn (Builder $query) => $query->whereHas('priceRules', fn (Builder $price) => $price->whereRaw('(price_rules.price * (100 - price_rules.discount_percent) / 100) <= ?', [(int) $request->input('max_price')])));
 
         match ($request->string('sort')->value) {
             'price_low' => $products->orderBy('starting_price'),

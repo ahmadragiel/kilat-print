@@ -24,6 +24,19 @@ class PriceCalculationServiceTest extends TestCase
         $this->assertSame(37500, $result['breakdown']['product']);
     }
 
+    public function test_discount_percent_is_applied_to_product_price(): void
+    {
+        $product = $this->makeProduct(PricingType::PER_ITEM, 10000);
+        $product->priceRules()->update(['discount_percent' => 15]);
+
+        $result = app(PriceCalculationService::class)->calculate($product, [
+            'quantity' => 2,
+        ]);
+
+        $this->assertSame(8500, $result['unit_price']);
+        $this->assertSame(17000, $result['breakdown']['product']);
+    }
+
     public function test_per_square_meter_price_uses_length_and_width_converted_to_square_meters(): void
     {
         $product = $this->makeProduct(PricingType::PER_SQM, 20000);

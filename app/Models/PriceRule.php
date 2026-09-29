@@ -19,6 +19,7 @@ class PriceRule extends Model
         'pricing_type',
         'type',
         'price',
+        'discount_percent',
         'min_quantity',
         'active',
         'description',
@@ -29,6 +30,7 @@ class PriceRule extends Model
         return [
             'pricing_type' => PricingType::class,
             'price' => 'decimal:2',
+            'discount_percent' => 'decimal:2',
             'min_quantity' => 'integer',
             'active' => 'boolean',
         ];
@@ -60,5 +62,10 @@ class PriceRule extends Model
         if ($value !== null) {
             $this->attributes['pricing_type'] = $value instanceof PricingType ? $value->value : $value;
         }
+    }
+
+    public function getDiscountedPriceAttribute(): float
+    {
+        return (float) $this->price * (1 - ((float) $this->discount_percent / 100));
     }
 }
