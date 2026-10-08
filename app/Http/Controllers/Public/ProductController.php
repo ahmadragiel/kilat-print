@@ -8,10 +8,10 @@ use App\Models\CustomDesignDraft;
 use App\Models\Product;
 use App\Services\CustomDesignService;
 use App\Services\PriceCalculationService;
+use App\Support\MediaPath;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 
 class ProductController extends Controller
 {
@@ -139,17 +139,7 @@ class ProductController extends Controller
 
     private function mockupUrl(?string $path): ?string
     {
-        if (blank($path)) {
-            return null;
-        }
-
-        if (str_starts_with($path, 'images/mockups/') && is_file(public_path($path))) {
-            return asset($path);
-        }
-
-        return Storage::disk('public')->exists($path)
-            ? Storage::disk('public')->url($path)
-            : null;
+        return MediaPath::url($path);
     }
 
     public function price(Request $request, Product $product, PriceCalculationService $calculator): JsonResponse

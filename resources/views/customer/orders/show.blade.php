@@ -151,8 +151,23 @@
                 @if ($designFile)
                     <a href="{{ $designFile }}" target="_blank" rel="noopener" class="action-link mt-4">Lihat file desain <x-icon name="external" class="h-4 w-4" /></a>
                 @endif
-                @if (data_get($orderDesign, 'revision_note'))
-                    <x-alert type="warning" class="mt-4">Catatan revisi: {{ data_get($orderDesign, 'revision_note') }}</x-alert>
+                @if (data_get($orderDesign, 'review_note'))
+                    <x-alert type="warning" class="mt-4">Catatan revisi: {{ data_get($orderDesign, 'review_note') }}</x-alert>
+                @endif
+                @php $awaitingApproval = (data_get($orderDesign, 'status') === \App\Enums\DesignStatus::AwaitingCustomerApproval) || data_get($orderDesign, 'status') === 'Awaiting Customer Approval'; @endphp
+                @if ($awaitingApproval)
+                    <div class="mt-5 space-y-3 rounded-xl border border-brand-200 bg-brand-50 p-4">
+                        <p class="text-sm font-semibold text-ink-800">Status: Menunggu Persetujuan Customer</p>
+                        <form method="POST" action="{{ route('customer.orders.design.approve', ['order' => $order, 'design' => $orderDesign]) }}">
+                            @csrf
+                            <x-button type="submit" class="w-full" variant="success"><x-icon name="check-circle" class="h-4 w-4" /> Setujui Desain</x-button>
+                        </form>
+                        <form method="POST" action="{{ route('customer.orders.design.revision', ['order' => $order, 'design' => $orderDesign]) }}" class="space-y-2">
+                            @csrf
+                            <x-textarea name="reason" label="Alasan revisi" :rows="2" required />
+                            <x-button type="submit" class="w-full" variant="secondary"><x-icon name="refresh" class="h-4 w-4" /> Minta Revisi</x-button>
+                        </form>
+                    </div>
                 @endif
                 <form method="POST" action="{{ \Illuminate\Support\Facades\Route::has('customer.orders.uploadDesign') ? route('customer.orders.uploadDesign', $order) : route('customer.orders.design', $order) }}" enctype="multipart/form-data" class="mt-5 space-y-3 border-t border-ink-100 pt-5" aria-label="Unggah desain">
                     @csrf

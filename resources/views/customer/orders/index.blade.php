@@ -23,12 +23,7 @@
                     'DESIGN_REVIEW' => 'Review desain',
                     'DESIGN_REVISION' => 'Revisi desain',
                     'DESIGN_APPROVED' => 'Desain disetujui',
-                    'WAITING_PRODUCTION' => 'Menunggu produksi',
                     'IN_PRODUCTION' => 'Dalam produksi',
-                    'FINISHING' => 'Finishing',
-                    'QUALITY_CHECK' => 'Pemeriksaan kualitas',
-                    'READY' => 'Siap kirim',
-                    'SHIPPED' => 'Dikirim',
                     'COMPLETED' => 'Selesai',
                     'CANCELLED' => 'Dibatalkan',
                 ]) as $statusValue => $statusLabel)

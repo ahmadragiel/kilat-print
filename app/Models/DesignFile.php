@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class DesignFile extends Model
 {
@@ -70,6 +71,11 @@ class DesignFile extends Model
     public function reviewedBy(): BelongsTo
     {
         return $this->reviewer();
+    }
+
+    public function approvals(): HasMany
+    {
+        return $this->hasMany(DesignApproval::class, 'design_file_id');
     }
 
     public function scopeStatus(Builder $query, DesignStatus|string $status): Builder

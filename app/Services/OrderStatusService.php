@@ -19,27 +19,21 @@ class OrderStatusService
             'PENDING_PAYMENT' => ['PAYMENT_REVIEW', 'CANCELLED'],
             'PAYMENT_REVIEW' => ['CANCELLED'],
             'PAYMENT_CONFIRMED' => ['DESIGN_REVIEW', 'CANCELLED'],
+            'DESIGN_REVIEW' => ['DESIGN_APPROVED', 'DESIGN_REVISION', 'CANCELLED'],
             'DESIGN_REVISION' => ['DESIGN_REVIEW', 'CANCELLED'],
+            'DESIGN_APPROVED' => ['CANCELLED'],
         ],
         'operator' => [
-            'WAITING_PRODUCTION' => ['IN_PRODUCTION'],
-            'IN_PRODUCTION' => ['FINISHING'],
-            'FINISHING' => ['QUALITY_CHECK'],
-            'QUALITY_CHECK' => ['IN_PRODUCTION', 'READY'],
+            'IN_PRODUCTION' => ['COMPLETED'],
         ],
         'admin' => [
             'PENDING_PAYMENT' => ['PAYMENT_REVIEW', 'CANCELLED'],
             'PAYMENT_REVIEW' => ['PENDING_PAYMENT', 'PAYMENT_CONFIRMED', 'CANCELLED'],
             'PAYMENT_CONFIRMED' => ['DESIGN_REVIEW', 'CANCELLED'],
-            'DESIGN_REVIEW' => ['DESIGN_REVISION', 'DESIGN_APPROVED', 'CANCELLED'],
+            'DESIGN_REVIEW' => ['DESIGN_REVISION', 'CANCELLED'],
             'DESIGN_REVISION' => ['DESIGN_REVIEW', 'CANCELLED'],
-            'DESIGN_APPROVED' => ['WAITING_PRODUCTION', 'CANCELLED'],
-            'WAITING_PRODUCTION' => ['IN_PRODUCTION', 'CANCELLED'],
-            'IN_PRODUCTION' => ['FINISHING', 'CANCELLED'],
-            'FINISHING' => ['QUALITY_CHECK', 'CANCELLED'],
-            'QUALITY_CHECK' => ['IN_PRODUCTION', 'READY', 'CANCELLED'],
-            'READY' => ['SHIPPED', 'CANCELLED'],
-            'SHIPPED' => ['COMPLETED', 'CANCELLED'],
+            'DESIGN_APPROVED' => ['IN_PRODUCTION', 'CANCELLED'],
+            'IN_PRODUCTION' => ['COMPLETED', 'CANCELLED'],
         ],
     ];
 
@@ -61,11 +55,14 @@ class OrderStatusService
             if ($newValue === OrderStatus::DesignReview->value) {
                 abort_unless($locked->designFiles()->exists(), 422, 'Pesanan harus memiliki file desain sebelum masuk review.');
             }
-            if (in_array($newValue, [OrderStatus::DesignApproved->value, OrderStatus::WaitingProduction->value], true)) {
-                abort_unless($locked->designFiles()->where('status', DesignStatus::Approved->value)->exists(), 422, 'Desain harus disetujui sebelum pesanan dapat diproses.');
+            if (in_array($newValue, [OrderStatus::DesignApproved->value], true)) {
+                abort_unless($locked->designFiles()->where('status', DesignStatus::Approved->value)->exists(), 422, 'Desain harus disetujui customer sebelum pesanan dapat diproses.');
             }
-            if (in_array($newValue, [OrderStatus::InProduction->value, OrderStatus::Finishing->value, OrderStatus::QualityCheck->value, OrderStatus::Ready->value], true)) {
+            if ($newValue === OrderStatus::InProduction->value) {
                 abort_unless($locked->production()->whereNotNull('operator_id')->exists(), 422, 'Operator produksi harus ditugaskan sebelum status produksi diubah.');
+            }
+            if ($newValue === OrderStatus::Completed->value) {
+                $locked->update(['completed_at' => now()]);
             }
 
             $updates = ['status' => $newValue];

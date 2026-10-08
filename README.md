@@ -164,13 +164,11 @@ Checkout
 → Payment proof / PAYMENT_REVIEW
 → Admin verification / PAYMENT_CONFIRMED
 → Design review / revision / approval
-→ Operator assignment / WAITING_PRODUCTION
+→ Operator assignment / DESIGN_APPROVED
 → IN_PRODUCTION
-→ FINISHING
-→ QUALITY_CHECK
-→ READY
-→ SHIPPED / pickup completion
-→ COMPLETED
+   (detail: IN_DESIGN → PRINTING → FINISHING → PACKING → QUALITY_CONTROL)
+→ QC PASS / COMPLETED
+→ atau QC FAIL / rework kembali ke produksi
 ```
 
 Customer hanya dapat mengakses order, alamat, notification, dan design miliknya. Operator hanya dapat melihat job yang ditugaskan dan mengunduh design file job tersebut. Admin melakukan verifikasi pembayaran, review desain, assignment, monitoring, status transition, reporting, dan invoice.
@@ -192,7 +190,31 @@ Contoh conversion area:
 panjang (cm) × lebar (cm) ÷ 10.000 = luas (m²)
 ```
 
-Harga Flexi dan Mata Ayam pada seeder adalah **data dummy demo**, bukan klaim harga bisnis nyata.
+Harga material, finishing, dan aturan harga produk Kilat Print pada seeder adalah
+**data dummy demo** untuk kalkulator aplikasi, bukan klaim tarif resmi perusahaan.
+
+## Katalog Produk
+
+Katalog seed mengikuti produk yang disebut pada laporan Kerja Praktek Kilat Print.
+Tidak ada produk generik percetakan (banner, spanduk, brosur, flyer, poster, stiker,
+kartu nama, undangan, nota, kop surat) di katalog aktif.
+
+| Produk | Slug | Kategori |
+| --- | --- | --- |
+| Mug Custom | `mug-custom` | Produk Custom |
+| Bando Tuning Custom | `bando-tuning-custom` | Produk Custom |
+| Paper Bag Custom | `paper-bag-custom` | Printing Custom |
+| Kertas Kado | `kertas-kado` | Printing Custom |
+| Apotek Mini | `apotek-mini` | Printing Custom |
+| Topper Cake | `topper-cake` | Produk Custom |
+| Topeng Muka | `topeng-muka` | Produk Custom |
+
+Semua produk memakai satuan `per_item`, minimum pesan 1, dan deskripsi singkat yang
+mengikuti istilah laporan. `Paper Bag Custom` mewakili produk paper bag, jadi tidak
+ada duplikasi `Paper Bag`.
+
+Visual katalog memakai ilustrasi SVG generik per produk di `public/images/products`.
+Ilustrasi tersebut bukan foto produk asli Kilat Print.
 
 ## Product Design Editor
 
@@ -276,6 +298,9 @@ draft serta asal setiap `asset_id`.
 - `storage/app/private/production-photos`: foto progres produksi
 - `storage/app/public`: thumbnail produk/kategori
 - `public/images/mockups`: mockup produk bawaan (front/back)
+- `public/images/products`: ilustrasi katalog Kilat Print (SVG, satu file per produk)
+- `public/images/logo.png`: logo Kilat Print merah tua + kilat kuning (latar terang, dipakai `<x-brand>` + favicon)
+- `public/images/logo-white.png`: versi knockout putih + kilat kuning untuk panel merah / footer gelap
 - `public/images/stickers`: sticker SVG lokal untuk design editor
 
 Seluruh file customer tidak disimpan langsung di `public`. Download design/payment selalu melalui controller dan policy. Jangan depress disk `local` atau mengubah file menjadi public.
@@ -325,14 +350,13 @@ Test otomatis memakai in-memory SQLite:
 php artisan test
 ```
 
-Suite saat ini berisi **83 test / 495 assertions** dan mencakup authentication, authorization/ownership, katalog, price calculation, cart, checkout, payment, design review, design editor persistence, status transition, master-data CRUD, repeat order, production, QC, dashboard, reporting, dan rendering markup (deteksi kebocoran komponen Blade).
+Suite saat ini berisi **104 test / 750+ assertions** dan mencakup authentication, authorization/ownership, katalog Kilat Print (produk laporan hadir, produk lama tidak aktif, pencarian, material/finishing, harga), price calculation, cart, checkout, payment, design review, design editor persistence, status transition, master-data CRUD, repeat order, production, QC, dashboard, reporting, dan rendering markup (deteksi kebocoran komponen Blade).
 
 Verifikasi sebelum release:
 
 ```powershell
 php artisan optimize:clear
-php artisan migrate
-php artisan db:seed
+php artisan migrate:fresh --seed
 php artisan route:list
 php artisan test
 npm run build

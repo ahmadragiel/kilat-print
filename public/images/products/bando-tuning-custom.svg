@@ -1,0 +1,10 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 700" role="img" aria-labelledby="title desc">
+  <title id="title">Ilustrasi Bando Tuning Custom</title>
+  <desc id="desc">Ilustrasi generik berbentuk bando/headband. Bukan foto produk asli Kilat Print.</desc>
+  <rect width="1000" height="700" fill="#f3f4f6"/>
+  <ellipse cx="500" cy="500" rx="255" ry="22" fill="#0f172a" opacity=".08"/>
+  <path d="M272 470 C 302 250 698 250 728 470" fill="none" stroke="#94a3b8" stroke-width="48" stroke-linecap="round"/>
+  <rect x="432" y="284" width="136" height="44" rx="22" fill="#e11d2e"/>
+  <circle cx="500" cy="306" r="12" fill="#ffffff"/>
+  <text x="500" y="652" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" fill="#9ca3af">Ilustrasi demo &#183; bukan foto produk asli</text>
+</svg>

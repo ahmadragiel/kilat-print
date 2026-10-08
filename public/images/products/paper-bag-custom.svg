@@ -1,0 +1,11 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 700" role="img" aria-labelledby="title desc">
+  <title id="title">Ilustrasi Paper Bag Custom</title>
+  <desc id="desc">Ilustrasi generik berbentuk paper bag dengan tali handle. Bukan foto produk asli Kilat Print.</desc>
+  <rect width="1000" height="700" fill="#f3f4f6"/>
+  <ellipse cx="500" cy="580" rx="205" ry="24" fill="#0f172a" opacity=".08"/>
+  <path d="M424 258 c 0 -78 152 -78 152 0" fill="none" stroke="#cbd5e1" stroke-width="12" stroke-linecap="round"/>
+  <path d="M336 258 h328 l-30 296 h-268 Z" fill="#ffffff" stroke="#cbd5e1" stroke-width="8" stroke-linejoin="round"/>
+  <rect x="336" y="258" width="328" height="34" fill="#e5e7eb"/>
+  <rect x="378" y="330" width="244" height="176" rx="14" fill="#f8fafc" stroke="#cbd5e1" stroke-width="4" stroke-dasharray="12 12"/>
+  <text x="500" y="652" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" fill="#9ca3af">Ilustrasi demo &#183; bukan foto produk asli</text>
+</svg>

@@ -1,0 +1,12 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 700" role="img" aria-labelledby="title desc">
+  <title id="title">Ilustrasi Apotek Mini</title>
+  <desc id="desc">Ilustrasi generik kemasan apotek mini berbentuk kotak. Bukan foto produk asli Kilat Print.</desc>
+  <rect width="1000" height="700" fill="#f3f4f6"/>
+  <ellipse cx="500" cy="560" rx="195" ry="22" fill="#0f172a" opacity=".08"/>
+  <path d="M336 300 l46 -54 h236 l46 54 Z" fill="#e5e7eb" stroke="#cbd5e1" stroke-width="8" stroke-linejoin="round"/>
+  <rect x="336" y="300" width="328" height="220" rx="14" fill="#ffffff" stroke="#cbd5e1" stroke-width="8"/>
+  <rect x="382" y="352" width="236" height="120" rx="12" fill="#f8fafc" stroke="#cbd5e1" stroke-width="4" stroke-dasharray="12 12"/>
+  <rect x="478" y="374" width="44" height="76" rx="8" fill="#e11d2e"/>
+  <rect x="462" y="390" width="76" height="44" rx="8" fill="#e11d2e"/>
+  <text x="500" y="652" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" fill="#9ca3af">Ilustrasi demo &#183; bukan foto produk asli</text>
+</svg>

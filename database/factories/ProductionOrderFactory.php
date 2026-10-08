@@ -19,7 +19,7 @@ class ProductionOrderFactory extends Factory
         return [
             'order_id' => Order::factory(),
             'operator_id' => null,
-            'status' => ProductionStatus::WAITING_PRODUCTION,
+            'status' => ProductionStatus::IN_DESIGN,
             'progress' => 0,
             'notes' => null,
             'deadline' => now()->addDays(5),

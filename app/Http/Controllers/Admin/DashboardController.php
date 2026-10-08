@@ -18,7 +18,7 @@ class DashboardController extends Controller
     public function __invoke(): View
     {
         $orders = Order::query()->get(['id', 'number', 'status', 'customer_id', 'grand_total', 'created_at']);
-        $paidStatuses = [OrderStatus::PaymentConfirmed, OrderStatus::DesignReview, OrderStatus::DesignRevision, OrderStatus::DesignApproved, OrderStatus::WaitingProduction, OrderStatus::InProduction, OrderStatus::Finishing, OrderStatus::QualityCheck, OrderStatus::Ready, OrderStatus::Shipped, OrderStatus::Completed];
+        $paidStatuses = [OrderStatus::PaymentConfirmed, OrderStatus::DesignReview, OrderStatus::DesignRevision, OrderStatus::DesignApproved, OrderStatus::InProduction, OrderStatus::Completed];
         $paidStatusValues = array_map(fn (OrderStatus $status) => $status->value, $paidStatuses);
         $statusValue = fn (Order $order) => $order->status instanceof OrderStatus ? $order->status->value : (string) $order->status;
 

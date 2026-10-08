@@ -153,7 +153,7 @@ class AuthAndAuthorizationTest extends TestCase
 
         $order->production()->create([
             'operator_id' => $assigned->id,
-            'status' => 'WAITING_PRODUCTION',
+            'status' => 'IN_DESIGN',
         ]);
         $this->actingAs($assigned->user)
             ->get(route('operator.designs.download', $design))

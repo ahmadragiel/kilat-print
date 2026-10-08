@@ -1,0 +1,14 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 700" role="img" aria-labelledby="title desc">
+  <title id="title">Ilustrasi Topeng Muka</title>
+  <desc id="desc">Ilustrasi generik topeng muka berbentuk masker wajah. Bukan foto produk asli Kilat Print.</desc>
+  <rect width="1000" height="700" fill="#f3f4f6"/>
+  <ellipse cx="500" cy="600" rx="180" ry="22" fill="#0f172a" opacity=".08"/>
+  <path d="M336 330 C 286 352 286 470 336 492" fill="none" stroke="#cbd5e1" stroke-width="12" stroke-linecap="round"/>
+  <path d="M664 330 C 714 352 714 470 664 492" fill="none" stroke="#cbd5e1" stroke-width="12" stroke-linecap="round"/>
+  <path d="M500 194 C 640 194 692 322 692 400 C 692 522 612 578 500 578 C 388 578 308 522 308 400 C 308 322 360 194 500 194 Z" fill="#ffffff" stroke="#cbd5e1" stroke-width="8"/>
+  <ellipse cx="424" cy="382" rx="40" ry="26" fill="#e2e8f0" stroke="#cbd5e1" stroke-width="6"/>
+  <ellipse cx="576" cy="382" rx="40" ry="26" fill="#e2e8f0" stroke="#cbd5e1" stroke-width="6"/>
+  <ellipse cx="500" cy="456" rx="22" ry="16" fill="#e2e8f0" stroke="#cbd5e1" stroke-width="6"/>
+  <rect x="446" y="500" width="108" height="34" rx="17" fill="#e2e8f0" stroke="#cbd5e1" stroke-width="6"/>
+  <text x="500" y="652" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" fill="#9ca3af">Ilustrasi demo &#183; bukan foto produk asli</text>
+</svg>

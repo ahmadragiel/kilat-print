@@ -42,16 +42,19 @@ class ProductionTest extends TestCase
             'assigned_by' => $admin->id,
             'is_current' => true,
         ]);
-        $this->assertSame(OrderStatus::WAITING_PRODUCTION, $order->fresh()->status);
+        $this->assertSame(OrderStatus::IN_PRODUCTION, $order->fresh()->status);
 
         $this->actingAs($operator->user)
-            ->post(route('operator.jobs.start', $production))
+            ->post(route('operator.jobs.status', $production), ['status' => 'PRINTING'])
             ->assertSessionHas('success');
         $this->actingAs($operator->user)
-            ->post(route('operator.jobs.finishing', $production), ['progress' => 80])
+            ->post(route('operator.jobs.status', $production), ['status' => 'FINISHING', 'progress' => 60])
             ->assertSessionHas('success');
         $this->actingAs($operator->user)
-            ->post(route('operator.jobs.complete', $production))
+            ->post(route('operator.jobs.status', $production), ['status' => 'PACKING', 'progress' => 80])
+            ->assertSessionHas('success');
+        $this->actingAs($operator->user)
+            ->post(route('operator.jobs.status', $production), ['status' => 'QUALITY_CONTROL', 'progress' => 90])
             ->assertSessionHas('success');
         $this->actingAs($operator->user)
             ->post(route('operator.jobs.quality-check', $production), [
@@ -61,17 +64,20 @@ class ProductionTest extends TestCase
             ->assertSessionHas('success');
 
         $production->refresh();
-        $this->assertSame(ProductionStatus::READY, $production->status);
+        $this->assertSame(ProductionStatus::COMPLETED, $production->status);
         $this->assertSame(100, $production->progress);
         $this->assertNotNull($production->started_at);
         $this->assertNotNull($production->finished_at);
-        $this->assertSame(OrderStatus::READY, $order->fresh()->status);
+        $this->assertSame(OrderStatus::COMPLETED, $order->fresh()->status);
         $this->assertDatabaseHas('quality_checks', [
             'production_order_id' => $production->id,
             'result' => 'PASS',
             'notes' => 'Color and dimensions match proof.',
         ]);
-        $this->assertDatabaseCount('production_status_histories', 4);
+        $this->assertDatabaseHas('production_status_histories', [
+            'production_order_id' => $production->id,
+            'new_status' => ProductionStatus::Completed->value,
+        ]);
     }
 
     public function test_failed_quality_check_returns_job_to_production_for_rework(): void
@@ -84,18 +90,19 @@ class ProductionTest extends TestCase
         $production = $this->makeProduction($order);
         app(ProductionService::class)->assign($production, $operator, $admin);
 
-        $this->actingAs($operator->user)->post(route('operator.jobs.start', $production));
-        $this->actingAs($operator->user)->post(route('operator.jobs.finishing', $production));
-        $this->actingAs($operator->user)->post(route('operator.jobs.complete', $production));
+        $this->actingAs($operator->user)->post(route('operator.jobs.status', $production), ['status' => 'PRINTING']);
+        $this->actingAs($operator->user)->post(route('operator.jobs.status', $production), ['status' => 'FINISHING']);
+        $this->actingAs($operator->user)->post(route('operator.jobs.status', $production), ['status' => 'PACKING']);
+        $this->actingAs($operator->user)->post(route('operator.jobs.status', $production), ['status' => 'QUALITY_CONTROL']);
         $this->actingAs($operator->user)
-            ->post(route('operator.jobs.rework', $production), [
+            ->post(route('operator.jobs.quality-check', $production), [
                 'result' => 'FAIL',
                 'notes' => 'Please replace the damaged panel.',
             ])
             ->assertSessionHas('success');
 
         $production->refresh();
-        $this->assertSame(ProductionStatus::IN_PRODUCTION, $production->status);
+        $this->assertSame(ProductionStatus::PRINTING, $production->status);
         $this->assertSame(OrderStatus::IN_PRODUCTION, $order->fresh()->status);
         $this->assertDatabaseHas('quality_checks', [
             'production_order_id' => $production->id,
@@ -103,8 +110,8 @@ class ProductionTest extends TestCase
         ]);
         $this->assertDatabaseHas('production_status_histories', [
             'production_order_id' => $production->id,
-            'old_status' => ProductionStatus::QUALITY_CHECK->value,
-            'new_status' => ProductionStatus::IN_PRODUCTION->value,
+            'old_status' => ProductionStatus::QUALITY_CONTROL->value,
+            'new_status' => ProductionStatus::PRINTING->value,
         ]);
     }
 
@@ -120,11 +127,8 @@ class ProductionTest extends TestCase
         $production->update(['operator_id' => null]);
 
         $this->actingAs($operator->user)
-            ->post(route('operator.jobs.start', $production))
+            ->post(route('operator.jobs.status', $production), ['status' => 'PRINTING'])
             ->assertForbidden();
-        $this->actingAs($operator->user)
-            ->post(route('operator.jobs.finishing', $production))
-            ->assertForbidden();
-        $this->assertSame(OrderStatus::WAITING_PRODUCTION, $order->fresh()->status);
+        $this->assertSame(OrderStatus::IN_PRODUCTION, $order->fresh()->status);
     }
 }

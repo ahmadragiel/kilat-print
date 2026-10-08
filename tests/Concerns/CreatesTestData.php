@@ -251,7 +251,7 @@ trait CreatesTestData
     protected function makeProduction(Order $order, array $attributes = []): ProductionOrder
     {
         return $order->production()->create(array_merge([
-            'status' => ProductionStatus::WAITING_PRODUCTION,
+            'status' => ProductionStatus::IN_DESIGN,
             'progress' => 0,
         ], $attributes));
     }

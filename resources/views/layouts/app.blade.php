@@ -3,12 +3,12 @@
 <html lang="id">
 <head>
     <meta charset="utf-8">
-    <link rel="icon" href="{{ asset('favicon.svg') }}" type="image/svg+xml">
+    <link rel="icon" href="{{ asset('images/logo.png') }}" type="image/png">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="description" content="@yield('meta_description', 'Kilat Print, layanan cetak dan produksi kustom dalam satu sistem.')">
     <title>@yield('title', 'Kilat Print')</title>
-    <meta name="theme-color" content="#e11d2e">
+    <meta name="theme-color" content="#a81818">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
@@ -65,7 +65,7 @@
             <div>
                 <p class="text-sm font-bold text-white">Pelanggan</p>
                 <div class="mt-3 space-y-2 text-sm text-ink-500">
-                    <a href="{{ route('customer.orders.index') }}" class="block transition hover:text-accent-300">Lacak pesanan</a>
+                    <a href="{{ route('tracking.index') }}" class="block transition hover:text-accent-300">Lacak pesanan</a>
                     <a href="{{ route('cart.index') }}" class="block transition hover:text-accent-300">Keranjang</a>
                     <a href="{{ \Illuminate\Support\Facades\Route::has('customer.profile') ? route('customer.profile') : route('customer.profile.edit') }}" class="block transition hover:text-accent-300">Profil</a>
                 </div>

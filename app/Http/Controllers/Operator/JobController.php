@@ -45,29 +45,25 @@ class JobController extends Controller
         return view('operator.jobs.show', ['job' => $job]);
     }
 
-    public function start(Request $request, ProductionOrder $job, ProductionService $production): RedirectResponse
+    public function status(Request $request, ProductionOrder $job, ProductionService $production): RedirectResponse
     {
         $this->authorize('update', $job);
-        $production->transition($job, ProductionStatus::InProduction, $request->user(), 10, $request->input('note', 'Produksi dimulai.'));
+        $data = $request->validate([
+            'status' => ['required', 'in:PRINTING,FINISHING,PACKING,QUALITY_CONTROL'],
+            'progress' => ['nullable', 'integer', 'min:0', 'max:100'],
+            'note' => ['nullable', 'string', 'max:1000'],
+        ]);
+        $target = ProductionStatus::from($data['status']);
+        $progress = $data['progress'] ?? match ($target) {
+            ProductionStatus::Printing => 25,
+            ProductionStatus::Finishing => 60,
+            ProductionStatus::Packing => 80,
+            ProductionStatus::QualityControl => 90,
+            default => 0,
+        };
+        $production->transition($job, $target, $request->user(), $progress, $data['note'] ?? null);
 
-        return back()->with('success', 'Produksi dimulai.');
-    }
-
-    public function finishing(Request $request, ProductionOrder $job, ProductionService $production): RedirectResponse
-    {
-        $this->authorize('update', $job);
-        $data = $request->validate(['progress' => ['nullable', 'integer', 'min:0', 'max:100'], 'note' => ['nullable', 'string', 'max:1000']]);
-        $production->transition($job, ProductionStatus::Finishing, $request->user(), $data['progress'] ?? 80, $data['note'] ?? null);
-
-        return back()->with('success', 'Job masuk tahap finishing.');
-    }
-
-    public function complete(Request $request, ProductionOrder $job, ProductionService $production): RedirectResponse
-    {
-        $this->authorize('update', $job);
-        $production->transition($job, ProductionStatus::QualityCheck, $request->user(), 95, $request->input('note', 'Produksi selesai, siap quality check.'));
-
-        return back()->with('success', 'Job dikirim ke quality check.');
+        return back()->with('success', "Status produksi diperbarui ke {$target->label()}.");
     }
 
     public function qualityCheck(Request $request, ProductionOrder $job, ProductionService $production): RedirectResponse
@@ -78,6 +74,9 @@ class JobController extends Controller
             'notes' => ['nullable', 'string', 'max:1000'],
         ]);
         $result = $data['result'] === 'PASS' ? 'PASS' : 'FAIL';
+        if ($result !== 'PASS' && blank($data['notes'] ?? null)) {
+            return back()->withErrors(['notes' => 'Catatan wajib diisi untuk QC FAIL/REWORK.'])->withInput();
+        }
         $production->qualityCheck($job, $request->user(), $result, $data['notes'] ?? null);
 
         return back()->with('success', $result === 'PASS' ? 'Quality check lulus; pesanan siap.' : 'Quality check gagal; job dikembalikan untuk rework.');

@@ -18,7 +18,7 @@ class RenderedMarkupTest extends TestCase
 
     public function test_public_pages_render_without_leaked_components(): void
     {
-        $product = $this->makeProduct(attributes: ['name' => 'Spanduk Uji', 'slug' => 'spanduk-uji']);
+        $product = $this->makeProduct(attributes: ['name' => 'Bando Tuning Uji', 'slug' => 'bando-tuning-uji']);
 
         foreach (['/', '/products', '/login', '/register'] as $url) {
             $response = $this->get($url);

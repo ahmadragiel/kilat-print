@@ -11,12 +11,7 @@ enum OrderStatus: string
     case DesignReview = 'DESIGN_REVIEW';
     case DesignRevision = 'DESIGN_REVISION';
     case DesignApproved = 'DESIGN_APPROVED';
-    case WaitingProduction = 'WAITING_PRODUCTION';
     case InProduction = 'IN_PRODUCTION';
-    case Finishing = 'FINISHING';
-    case QualityCheck = 'QUALITY_CHECK';
-    case Ready = 'READY';
-    case Shipped = 'SHIPPED';
     case Completed = 'COMPLETED';
     case Cancelled = 'CANCELLED';
 
@@ -33,17 +28,7 @@ enum OrderStatus: string
 
     public const DESIGN_APPROVED = self::DesignApproved;
 
-    public const WAITING_PRODUCTION = self::WaitingProduction;
-
     public const IN_PRODUCTION = self::InProduction;
-
-    public const FINISHING = self::Finishing;
-
-    public const QUALITY_CHECK = self::QualityCheck;
-
-    public const READY = self::Ready;
-
-    public const SHIPPED = self::Shipped;
 
     public const COMPLETED = self::Completed;
 
@@ -58,12 +43,7 @@ enum OrderStatus: string
             self::DesignReview => 'Design Review',
             self::DesignRevision => 'Design Revision',
             self::DesignApproved => 'Design Approved',
-            self::WaitingProduction => 'Waiting Production',
             self::InProduction => 'In Production',
-            self::Finishing => 'Finishing',
-            self::QualityCheck => 'Quality Check',
-            self::Ready => 'Ready',
-            self::Shipped => 'Shipped',
             self::Completed => 'Completed',
             self::Cancelled => 'Cancelled',
         };

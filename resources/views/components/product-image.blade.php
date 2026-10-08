@@ -6,9 +6,7 @@
 
 @php
     $placeholderId = 'sheet-' . \Illuminate\Support\Str::random(8);
-    $imageUrl = filled($src) && ! preg_match('#^(https?:|//|/|data:)#i', (string) $src)
-        ? \Illuminate\Support\Facades\Storage::disk('public')->url($src)
-        : $src;
+    $imageUrl = \App\Support\MediaPath::url($src);
 @endphp
 <div {{ $attributes->except('class')->class(['relative overflow-hidden bg-ink-100', $class]) }}>
     @if (filled($imageUrl))

@@ -47,15 +47,11 @@
                     ?? data_get($product, 'front_mockup')
                     ?? data_get($product, 'back_mockup')
                     ?? data_get($product, 'image_url')
-                    ?? data_get($product, 'image')
-                    ?? 'images/mockups/product-front.svg';
-                $imageUrl = filled($image) && ! preg_match('#^(https?:|//|/|data:)#i', (string) $image)
-                    ? (str_starts_with($image, 'images/mockups/') ? asset($image) : \Illuminate\Support\Facades\Storage::disk('public')->url($image))
-                    : $image;
+                    ?? data_get($product, 'image');
 
                 return [
-                    'name' => data_get($product, 'name', 'Featured Product'),
-                    'image' => $imageUrl,
+                    'name' => data_get($product, 'name', 'Produk Kilat Print'),
+                    'image' => \App\Support\MediaPath::url($image),
                     'url' => route('products.show', $product),
                 ];
             })->values();
@@ -87,7 +83,7 @@
                             class="absolute inset-y-0 flex w-[84%] flex-col overflow-hidden rounded-[1.8rem] border border-[#f4a5a5] bg-[#f7f1ea] p-3 shadow-lg transition-all duration-[6000ms] ease-in-out md:w-[62%]"
                         >
                             <div class="min-h-0 flex-1 overflow-hidden rounded-[1.5rem] bg-[#efe2d6] p-3 sm:p-5">
-                                <img :src="product.image || '/images/placeholder-product.svg'" :alt="product.name" class="h-full w-full object-contain" />
+                                <img :src="product.image || '/images/mockups/product-front.svg'" :alt="product.name" class="h-full w-full object-contain" />
                             </div>
 
                             <div

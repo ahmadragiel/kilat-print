@@ -15,15 +15,15 @@ class DashboardController extends Controller
         $operatorId = $request->user()->operator->id;
         $jobs = ProductionOrder::where('operator_id', $operatorId);
         $today = (clone $jobs)->whereHas('order', fn ($order) => $order->whereDate('created_at', today()))->count();
-        $completed = (clone $jobs)->whereIn('status', [ProductionStatus::Ready, ProductionStatus::Completed])->count();
+        $completed = (clone $jobs)->whereIn('status', [ProductionStatus::Completed])->count();
 
         return view('operator.dashboard', [
             'totalJobs' => (clone $jobs)->count(),
             'todayJobs' => $today,
-            'waitingProduction' => (clone $jobs)->where('status', ProductionStatus::WaitingProduction)->count(),
-            'inProduction' => (clone $jobs)->where('status', ProductionStatus::InProduction)->count(),
+            'waitingProduction' => (clone $jobs)->where('status', ProductionStatus::InDesign)->count(),
+            'inProduction' => (clone $jobs)->whereIn('status', [ProductionStatus::Printing, ProductionStatus::Finishing, ProductionStatus::Packing])->count(),
             'finishing' => (clone $jobs)->where('status', ProductionStatus::Finishing)->count(),
-            'qualityCheck' => (clone $jobs)->where('status', ProductionStatus::QualityCheck)->count(),
+            'qualityCheck' => (clone $jobs)->where('status', ProductionStatus::QualityControl)->count(),
             'completed' => $completed,
             'recentJobs' => (clone $jobs)->with(['order.customer.user', 'order.items'])->latest()->limit(6)->get(),
         ]);

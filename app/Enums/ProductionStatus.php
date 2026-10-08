@@ -4,27 +4,24 @@ namespace App\Enums;
 
 enum ProductionStatus: string
 {
-    case WaitingProduction = 'WAITING_PRODUCTION';
-    case InProduction = 'IN_PRODUCTION';
+    case InDesign = 'IN_DESIGN';
+    case Printing = 'PRINTING';
     case Finishing = 'FINISHING';
-    case QualityCheck = 'QUALITY_CHECK';
-    case Ready = 'READY';
-    case Shipped = 'SHIPPED';
+    case Packing = 'PACKING';
+    case QualityControl = 'QUALITY_CONTROL';
     case Completed = 'COMPLETED';
     case Cancelled = 'CANCELLED';
 
     // Upper-case aliases make persisted values convenient in queries and migrations.
-    public const WAITING_PRODUCTION = self::WaitingProduction;
+    public const IN_DESIGN = self::InDesign;
 
-    public const IN_PRODUCTION = self::InProduction;
+    public const PRINTING = self::Printing;
 
     public const FINISHING = self::Finishing;
 
-    public const QUALITY_CHECK = self::QualityCheck;
+    public const PACKING = self::Packing;
 
-    public const READY = self::Ready;
-
-    public const SHIPPED = self::Shipped;
+    public const QUALITY_CONTROL = self::QualityControl;
 
     public const COMPLETED = self::Completed;
 
@@ -33,12 +30,11 @@ enum ProductionStatus: string
     public function label(): string
     {
         return match ($this) {
-            self::WaitingProduction => 'Waiting Production',
-            self::InProduction => 'In Production',
+            self::InDesign => 'In-Design',
+            self::Printing => 'Printing',
             self::Finishing => 'Finishing',
-            self::QualityCheck => 'Quality Check',
-            self::Ready => 'Ready',
-            self::Shipped => 'Shipped',
+            self::Packing => 'Packing',
+            self::QualityControl => 'Quality Control',
             self::Completed => 'Completed',
             self::Cancelled => 'Cancelled',
         };

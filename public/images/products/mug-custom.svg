@@ -1,0 +1,11 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 700" role="img" aria-labelledby="title desc">
+  <title id="title">Ilustrasi Mug Custom</title>
+  <desc id="desc">Ilustrasi generik berbentuk mug. Bukan foto produk asli Kilat Print.</desc>
+  <rect width="1000" height="700" fill="#f3f4f6"/>
+  <ellipse cx="500" cy="582" rx="215" ry="24" fill="#0f172a" opacity=".08"/>
+  <path d="M648 312 h74 a92 92 0 0 1 0 184 h-74" fill="none" stroke="#cbd5e1" stroke-width="26" stroke-linecap="round"/>
+  <rect x="300" y="246" width="348" height="256" rx="30" fill="#ffffff" stroke="#cbd5e1" stroke-width="8"/>
+  <rect x="300" y="246" width="348" height="36" rx="18" fill="#e11d2e"/>
+  <rect x="344" y="318" width="260" height="146" rx="16" fill="#f8fafc" stroke="#cbd5e1" stroke-width="4" stroke-dasharray="12 12"/>
+  <text x="500" y="652" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" fill="#9ca3af">Ilustrasi demo &#183; bukan foto produk asli</text>
+</svg>

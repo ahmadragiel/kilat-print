@@ -44,7 +44,7 @@ class DesignReviewTest extends TestCase
         Notification::assertSentTo($customer->user, OrderNotification::class);
     }
 
-    public function test_admin_approves_latest_design_and_creates_waiting_production_record(): void
+    public function test_admin_approves_latest_design_and_customer_approval_creates_production_record(): void
     {
         $admin = $this->makeAdmin();
         $customer = $this->makeCustomer();
@@ -54,12 +54,48 @@ class DesignReviewTest extends TestCase
         $response = $this->actingAs($admin)->post(route('admin.designs.approve', $design));
 
         $response->assertSessionHas('success');
-        $this->assertSame(DesignStatus::APPROVED, $design->fresh()->status);
+        $this->assertSame(DesignStatus::AWAITING_CUSTOMER_APPROVAL, $design->fresh()->status);
         $this->assertSame($admin->id, $design->fresh()->reviewed_by);
+        $this->assertDatabaseHas('design_approvals', [
+            'design_file_id' => $design->id,
+            'status' => 'PENDING',
+        ]);
+
+        $this->actingAs($customer->user)
+            ->post(route('customer.orders.design.approve', ['order' => $order, 'design' => $design]))
+            ->assertSessionHas('success');
+
+        $this->assertSame(DesignStatus::APPROVED, $design->fresh()->status);
         $this->assertSame(OrderStatus::DESIGN_APPROVED, $order->fresh()->status);
+        $this->assertDatabaseHas('design_approvals', [
+            'design_file_id' => $design->id,
+            'status' => 'APPROVED',
+        ]);
         $this->assertDatabaseHas('production_orders', [
             'order_id' => $order->id,
-            'status' => ProductionStatus::WAITING_PRODUCTION->value,
+            'status' => ProductionStatus::IN_DESIGN->value,
+        ]);
+    }
+
+    public function test_customer_can_request_revision_from_waiting_approval(): void
+    {
+        $admin = $this->makeAdmin();
+        $customer = $this->makeCustomer();
+        $order = $this->makeOrder($customer, ['status' => OrderStatus::DESIGN_REVIEW]);
+        $design = $this->makeDesign($order);
+
+        $this->actingAs($admin)->post(route('admin.designs.approve', $design));
+        $this->actingAs($customer->user)
+            ->post(route('customer.orders.design.revision', ['order' => $order, 'design' => $design]), [
+                'reason' => 'Ukuran tidak sesuai.',
+            ])
+            ->assertSessionHas('success');
+
+        $this->assertSame(DesignStatus::REVISION_REQUIRED, $design->fresh()->status);
+        $this->assertSame(OrderStatus::DESIGN_REVISION, $order->fresh()->status);
+        $this->assertDatabaseHas('design_approvals', [
+            'design_file_id' => $design->id,
+            'status' => 'REVISION_REQUESTED',
         ]);
     }
 
@@ -103,7 +139,7 @@ class DesignReviewTest extends TestCase
         $this->actingAs($admin)
             ->post(route('admin.designs.approve', $newDesign))
             ->assertSessionHas('success');
-        $this->assertSame(DesignStatus::APPROVED, $newDesign->fresh()->status);
+        $this->assertSame(DesignStatus::AWAITING_CUSTOMER_APPROVAL, $newDesign->fresh()->status);
     }
 
     public function test_customer_cannot_upload_for_another_customers_order(): void

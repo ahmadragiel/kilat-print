@@ -13,6 +13,7 @@ use App\Models\Cart;
 use App\Models\CartItem;
 use App\Models\Category;
 use App\Models\Customer;
+use App\Models\DesignApproval;
 use App\Models\DesignFile;
 use App\Models\Finishing;
 use App\Models\Material;
@@ -42,7 +43,7 @@ class DemoDataSeeder extends Seeder
         $accounts = $this->seedAccounts();
         $catalog = $this->seedCatalog();
         $this->seedCustomerProfile($accounts['customer']);
-        $this->seedCart($accounts['customer'], $catalog['products']['banner']);
+        $this->seedCart($accounts['customer'], $catalog['products']['mug-custom']);
         $this->seedOrders($accounts, $catalog);
         $this->seedNotifications($accounts['customer']);
     }
@@ -115,145 +116,289 @@ class DemoDataSeeder extends Seeder
     }
 
     /**
+     * Master data katalog Kilat Print.
+     *
+     * Produk, kategori, material, dan finishing di bawah ini mengikuti produk yang
+     * disebut pada laporan Kerja Praktek: Mug Custom, Bando Tuning Custom,
+     * Paper Bag Custom, Kertas Kado, Apotek Mini, Topper Cake, dan Topeng Muka.
+     * Harga, minimum order, dan hari produksi berstatus data demo untuk kalkulator
+     * aplikasi, bukan klaim tarif resmi perusahaan.
+     *
      * @return array{categories: array<string, Category>, materials: array<string, Material>, finishings: array<string, Finishing>, products: array<string, Product>}
      */
     private function seedCatalog(): array
     {
-        $categoryDefinitions = [
-            'banner' => ['Banner & Spanduk', 'banner'],
-            'brochure' => ['Brochure & Flyer', 'brochure-flyer'],
-            'poster' => ['Poster & Sticker', 'poster-sticker'],
-            'stationery' => ['Stationery', 'stationery'],
-            'invitation' => ['Invitation & Event', 'invitation-event'],
+        $categories = $this->seedCategories();
+        $materials = $this->seedMaterials();
+        $finishings = $this->seedFinishings();
+        $products = $this->seedProducts($categories, $materials, $finishings);
+
+        return compact('categories', 'materials', 'finishings', 'products');
+    }
+
+    /** @return array<string, Category> */
+    private function seedCategories(): array
+    {
+        $definitions = [
+            'custom' => [
+                'name' => 'Produk Custom',
+                'description' => 'Produk custom Kilat Print: Mug Custom, Bando Tuning Custom, Topper Cake, dan Topeng Muka.',
+            ],
+            'printing-custom' => [
+                'name' => 'Printing Custom',
+                'description' => 'Printing custom Kilat Print untuk kebutuhan cetak dan kemasan: Paper Bag Custom, Kertas Kado, dan Apotek Mini.',
+            ],
         ];
 
         $categories = [];
-        foreach ($categoryDefinitions as $key => [$name, $slug]) {
+        foreach ($definitions as $key => $definition) {
             $categories[$key] = Category::updateOrCreate(
-                ['slug' => $slug],
+                ['slug' => Str::slug($definition['name'])],
                 [
-                    'name' => $name,
-                    'description' => 'Demo master data for '.$name.'. This catalog record is for local demonstration only.',
+                    'name' => $definition['name'],
+                    'description' => $definition['description'],
                     'image' => null,
                     'status' => 'active',
                 ],
             );
         }
 
-        $materialDefinitions = [
-            'flexi280' => ['Flexi 280gr', PricingType::PER_SQM, 25000, 'Demo banner material.'],
-            'flexi340' => ['Flexi 340gr', PricingType::PER_SQM, 30000, 'Demo premium banner material.'],
-            'artpaper' => ['Art Paper 150gr', PricingType::PER_ITEM, 3500, 'Demo paper stock for flyers and cards.'],
-            'cotton' => ['Cotton Premium', PricingType::PER_ITEM, 25000, 'Demo apparel material.'],
+        return $categories;
+    }
+
+    /**
+     * Pilihan bahan bersifat generik karena laporan KP hanya menyatakan bahwa bahan
+     * menyesuaikan jenis produk. Harga bahan di sini adalah data demo kalkulator.
+     *
+     * @return array<string, Material>
+     */
+    private function seedMaterials(): array
+    {
+        $definitions = [
+            'mug' => ['Bahan Mug', 'Bahan dasar untuk Mug Custom.'],
+            'bando' => ['Bahan Bando', 'Bahan dasar untuk Bando Tuning Custom.'],
+            'kraft' => ['Kertas Kraft', 'Kertas kemasan untuk Paper Bag Custom.'],
+            'kertas-cetak' => ['Kertas Cetak', 'Kertas cetak untuk produk kertas Kilat Print.'],
         ];
 
         $materials = [];
-        foreach ($materialDefinitions as $key => [$name, $pricingType, $price, $description]) {
+        foreach ($definitions as $key => [$name, $usage]) {
             $materials[$key] = Material::updateOrCreate(
                 ['slug' => Str::slug($name)],
                 [
                     'name' => $name,
-                    'description' => $description.' Demo data, not a real business quotation.',
-                    'pricing_type' => $pricingType,
-                    'price' => $price,
+                    'description' => $usage.' Data demo untuk kalkulator harga, bukan daftar material resmi Kilat Print.',
+                    'pricing_type' => PricingType::PER_ITEM,
+                    'price' => 0,
                     'status' => 'active',
                 ],
             );
         }
 
-        $finishingDefinitions = [
-            'matte' => ['Matte', PricingType::PER_ITEM, 0, 'Demo matte finishing.'],
-            'glossy' => ['Glossy', PricingType::PER_ITEM, 5000, 'Demo gloss finishing.'],
-            'lamination' => ['Laminasi', PricingType::PER_SQM, 12000, 'Demo lamination finishing.'],
-            'eyelet' => ['Mata Ayam', PricingType::PER_ITEM, 2000, 'Demo eyelet finishing.'],
+        return $materials;
+    }
+
+    /** @return array<string, Finishing> */
+    private function seedFinishings(): array
+    {
+        $definitions = [
+            'matte' => ['Matte', 0],
+            'glossy' => ['Glossy', 5000],
+            'lamination' => ['Laminasi', 8000],
         ];
 
         $finishings = [];
-        foreach ($finishingDefinitions as $key => [$name, $pricingType, $price, $description]) {
+        foreach ($definitions as $key => [$name, $price]) {
             $finishings[$key] = Finishing::updateOrCreate(
                 ['slug' => Str::slug($name)],
                 [
                     'name' => $name,
-                    'description' => $description.' Demo data, not a real business quotation.',
-                    'pricing_type' => $pricingType,
+                    'description' => 'Pilihan finishing Kilat Print. Harga pada seeder ini data demo, bukan tarif resmi perusahaan.',
+                    'pricing_type' => PricingType::PER_ITEM,
                     'price' => $price,
                     'status' => 'active',
                 ],
             );
         }
 
-        $productDefinitions = [
-            'banner' => ['Banner', 'banner', 25000, PricingType::PER_SQM, 1, 3, ['flexi280', 'flexi340'], ['matte', 'glossy', 'lamination']],
-            'spanduk' => ['Spanduk', 'spanduk', 35000, PricingType::PER_SQM, 1, 4, ['flexi280', 'flexi340'], ['matte', 'lamination', 'eyelet']],
-            'brosur' => ['Brosur', 'brosur', 2500, PricingType::PER_ITEM, 25, 3, ['artpaper'], ['matte', 'glossy']],
-            'flyer' => ['Flyer', 'flyer', 1500, PricingType::PER_ITEM, 50, 2, ['artpaper'], ['matte', 'glossy']],
-            'poster' => ['Poster', 'poster', 10000, PricingType::PER_ITEM, 5, 3, ['artpaper'], ['matte', 'lamination']],
-            'stiker' => ['Stiker', 'stiker', 3000, PricingType::PER_ITEM, 10, 2, ['flexi280', 'artpaper'], ['glossy', 'lamination']],
-            'kartu-nama' => ['Kartu Nama', 'kartu-nama', 7500, PricingType::PER_ITEM, 50, 3, ['artpaper'], ['matte', 'glossy']],
-            'undangan' => ['Undangan', 'undangan', 6000, PricingType::PER_ITEM, 25, 4, ['artpaper'], ['matte', 'glossy']],
-            'nota' => ['Nota', 'nota', 2000, PricingType::PER_ITEM, 100, 2, ['artpaper'], ['matte']],
-            'kop-surat' => ['Kop Surat', 'kop-surat', 4000, PricingType::PER_ITEM, 50, 3, ['artpaper'], ['matte', 'glossy']],
+        return $finishings;
+    }
+
+    /**
+     * Definisi produk Kilat Print. Kunci material/finishing berisi tambahan biaya
+     * demo per item; null berarti memakai harga master pada tabel material/finishing.
+     *
+     * @param  array<string, Category>  $categories
+     * @param  array<string, Material>  $materials
+     * @param  array<string, Finishing>  $finishings
+     * @return array<string, Product>
+     */
+    private function seedProducts(array $categories, array $materials, array $finishings): array
+    {
+        $definitions = [
+            'mug-custom' => [
+                'name' => 'Mug Custom',
+                'category' => 'custom',
+                'description' => 'Produk mug custom yang dapat disesuaikan dengan desain dan kebutuhan pelanggan.',
+                'base_price' => 25000,
+                'minimum_order' => 1,
+                'production_days' => 3,
+                'materials' => ['mug' => null],
+                'finishings' => ['matte' => null, 'glossy' => 3000],
+                'is_featured' => true,
+                'popularity_count' => 42,
+            ],
+            'bando-tuning-custom' => [
+                'name' => 'Bando Tuning Custom',
+                'category' => 'custom',
+                'description' => 'Produk bando tuning custom yang dapat disesuaikan dengan desain dan kebutuhan pelanggan.',
+                'base_price' => 35000,
+                'minimum_order' => 1,
+                'production_days' => 3,
+                'materials' => ['bando' => null],
+                'finishings' => ['matte' => null, 'glossy' => 3000],
+                'is_featured' => true,
+                'popularity_count' => 35,
+            ],
+            'paper-bag-custom' => [
+                'name' => 'Paper Bag Custom',
+                'category' => 'printing-custom',
+                'description' => 'Produk paper bag custom untuk kebutuhan cetak dan kemasan sesuai kebutuhan pelanggan.',
+                'base_price' => 4500,
+                'minimum_order' => 1,
+                'production_days' => 4,
+                'materials' => ['kraft' => null, 'kertas-cetak' => 2000],
+                'finishings' => ['matte' => null, 'lamination' => 2500],
+                'is_featured' => true,
+                'popularity_count' => 28,
+            ],
+            'kertas-kado' => [
+                'name' => 'Kertas Kado',
+                'category' => 'printing-custom',
+                'description' => 'Produk kertas kado untuk kebutuhan cetak sesuai desain pelanggan.',
+                'base_price' => 3000,
+                'minimum_order' => 1,
+                'production_days' => 2,
+                'materials' => ['kertas-cetak' => null],
+                'finishings' => ['glossy' => 1500, 'lamination' => 2000],
+                'is_featured' => false,
+                'popularity_count' => 21,
+            ],
+            'apotek-mini' => [
+                'name' => 'Apotek Mini',
+                'category' => 'printing-custom',
+                'description' => 'Produk apotek mini untuk kebutuhan cetak dan kemasan sesuai desain pelanggan.',
+                'base_price' => 8500,
+                'minimum_order' => 1,
+                'production_days' => 3,
+                'materials' => ['kertas-cetak' => null],
+                'finishings' => ['matte' => null, 'glossy' => 1500],
+                'is_featured' => false,
+                'popularity_count' => 11,
+            ],
+            'topper-cake' => [
+                'name' => 'Topper Cake',
+                'category' => 'custom',
+                'description' => 'Produk topper cake yang dapat disesuaikan dengan desain dan kebutuhan pelanggan.',
+                'base_price' => 12000,
+                'minimum_order' => 1,
+                'production_days' => 2,
+                'materials' => ['kertas-cetak' => null],
+                'finishings' => ['matte' => null, 'glossy' => 1500],
+                'is_featured' => false,
+                'popularity_count' => 17,
+            ],
+            'topeng-muka' => [
+                'name' => 'Topeng Muka',
+                'category' => 'custom',
+                'description' => 'Produk topeng muka yang dapat disesuaikan dengan desain dan kebutuhan pelanggan.',
+                'base_price' => 15000,
+                'minimum_order' => 1,
+                'production_days' => 3,
+                'materials' => ['kertas-cetak' => null],
+                'finishings' => ['matte' => null, 'glossy' => 1500],
+                'is_featured' => false,
+                'popularity_count' => 14,
+            ],
         ];
 
         $products = [];
-        foreach ($productDefinitions as $key => [$name, $slug, $price, $pricingType, $minimumOrder, $productionDays, $materialKeys, $finishingKeys]) {
+        foreach ($definitions as $key => $definition) {
+            $slug = Str::slug($definition['name']);
+
             $product = Product::updateOrCreate(
                 ['slug' => $slug],
                 [
-                    'category_id' => $categories[$this->categoryForProduct($key)]->id,
-                    'name' => $name,
-                    'description' => 'Demo product for '.Str::lower($name).'. Sample content and pricing are provided for dashboard testing only.',
+                    'category_id' => $categories[$definition['category']]->id,
+                    'name' => $definition['name'],
+                    'description' => $definition['description'],
                     'specifications' => [
                         'demo' => true,
-                        'material_options' => array_map(fn (string $materialKey): string => $materials[$materialKey]->name, $materialKeys),
-                        'finishing_options' => array_map(fn (string $finishingKey): string => $finishings[$finishingKey]->name, $finishingKeys),
+                        'size' => 'Sesuai kebutuhan pelanggan',
+                        'material' => $this->optionNames($materials, $definition['materials']),
+                        'finishing' => $this->optionNames($finishings, $definition['finishings']),
+                        'catatan' => 'Data demo untuk pengembangan aplikasi. Ganti dengan spesifikasi resmi Kilat Print sebelum dipakai nyata.',
                     ],
-                    'thumbnail' => null,
-                    'front_mockup' => 'images/mockups/product-front.svg',
+                    'thumbnail' => 'images/products/'.$slug.'.svg',
+                    'front_mockup' => 'images/products/'.$slug.'.svg',
                     'back_mockup' => 'images/mockups/product-back.svg',
-                    'base_price' => $price,
+                    'base_price' => $definition['base_price'],
                     'status' => 'active',
-                    'minimum_order' => $minimumOrder,
-                    'production_days' => $productionDays,
-                    'popularity_count' => 10 + count($products) * 3,
+                    'is_featured' => $definition['is_featured'],
+                    'minimum_order' => $definition['minimum_order'],
+                    'production_days' => $definition['production_days'],
+                    'popularity_count' => $definition['popularity_count'],
                 ],
             );
 
-            $product->materials()->sync([
-                $materials[$materialKeys[0]]->id => ['price_override' => null],
-                $materials[$materialKeys[1] ?? $materialKeys[0]]->id => ['price_override' => $price + 5000],
-            ]);
-            $product->finishings()->sync([
-                $finishings[$finishingKeys[0]]->id => ['price_override' => null],
-                $finishings[$finishingKeys[1] ?? $finishingKeys[0]]->id => ['price_override' => 5000],
-            ]);
+            $product->materials()->sync($this->optionSync($materials, $definition['materials']));
+            $product->finishings()->sync($this->optionSync($finishings, $definition['finishings']));
+
+            // Hapus aturan harga lama (misalnya aturan per meter persegi dari katalog demo
+            // sebelumnya) supaya kalkulator tidak menjumlahkan dua basis harga.
+            $product->priceRules()->where('name', '!=', 'Harga demo per item')->delete();
 
             PriceRule::updateOrCreate(
-                ['product_id' => $product->id, 'name' => 'Demo base price'],
+                ['product_id' => $product->id, 'name' => 'Harga demo per item'],
                 [
-                    'pricing_type' => $pricingType,
-                    'price' => $price,
+                    'pricing_type' => PricingType::PER_ITEM,
+                    'price' => $definition['base_price'],
                     'min_quantity' => 1,
                     'active' => true,
-                    'description' => 'Demo price rule. Replace with the approved business tariff before launch.',
+                    'description' => 'Harga demo per item untuk kalkulator aplikasi. Ganti dengan tarif resmi Kilat Print sebelum dipakai nyata.',
                 ],
             );
 
             $products[$key] = $product;
         }
 
-        return compact('categories', 'materials', 'finishings', 'products');
+        return $products;
     }
 
-    private function categoryForProduct(string $product): string
+    /**
+     * @param  array<string, Material|Finishing>  $options
+     * @param  array<string, int|null>  $selection  option key => surcharge per item
+     * @return array<int, array{price_override: int|null}>
+     */
+    private function optionSync(array $options, array $selection): array
     {
-        return match ($product) {
-            'banner', 'spanduk' => 'banner',
-            'brosur', 'flyer' => 'brochure',
-            'poster', 'stiker' => 'poster',
-            'kartu-nama', 'nota', 'kop-surat' => 'stationery',
-            default => 'invitation',
-        };
+        $payload = [];
+        foreach ($selection as $key => $surcharge) {
+            $payload[$options[$key]->id] = ['price_override' => $surcharge];
+        }
+
+        return $payload;
+    }
+
+    /**
+     * @param  array<string, Material|Finishing>  $options
+     * @param  array<string, int|null>  $selection
+     */
+    private function optionNames(array $options, array $selection): string
+    {
+        return collect(array_keys($selection))
+            ->map(fn (string $key): string => $options[$key]->name)
+            ->implode(', ');
     }
 
     private function seedCustomerProfile(User $customerUser): void
@@ -281,21 +426,22 @@ class DemoDataSeeder extends Seeder
     {
         $customer = Customer::where('user_id', $customerUser->id)->firstOrFail();
         $cart = Cart::firstOrCreate(['customer_id' => $customer->id]);
+        $quantity = 2;
 
         CartItem::updateOrCreate(
             ['cart_id' => $cart->id, 'product_id' => $product->id, 'design_reference' => null],
             [
-                'quantity' => 2,
-                'size' => '3m x 1m',
-                'length_cm' => 300,
-                'width_cm' => 100,
+                'quantity' => $quantity,
+                'size' => null,
+                'length_cm' => null,
+                'width_cm' => null,
                 'material_id' => null,
                 'finishing_id' => null,
                 'color' => 'Full Color',
-                'production_method' => 'large_format',
+                'production_method' => 'digital',
                 'custom_parameters' => ['demo' => true, 'notes' => 'Demo cart configuration.'],
-                'price_at_addition' => 50000,
-                'notes' => 'Demo cart item; recalculate the price at checkout.',
+                'price_at_addition' => $quantity * (float) $product->base_price,
+                'notes' => 'Demo cart item; price is recalculated by the server at checkout.',
             ],
         );
     }
@@ -310,15 +456,17 @@ class DemoDataSeeder extends Seeder
         $operator = Operator::where('user_id', $accounts['operator']->id)->firstOrFail();
         $products = $catalog['products'];
 
+        // Jumlah pesanan demo mengikuti katalog laporan KP; seluruh produk dihitung
+        // per item sehingga tidak ada dimensi luas (meter persegi) pada order item.
         $this->seedOrder(
             $accounts,
             $customer,
             $operator,
-            $products['banner'],
+            $products['mug-custom'],
             'KP-DEMO-0001',
             OrderStatus::PENDING_PAYMENT,
             PaymentStatus::UNPAID,
-            50000,
+            2,
             false,
         );
 
@@ -326,11 +474,11 @@ class DemoDataSeeder extends Seeder
             $accounts,
             $customer,
             $operator,
-            $products['spanduk'],
+            $products['bando-tuning-custom'],
             'KP-DEMO-0002',
             OrderStatus::PAYMENT_REVIEW,
             PaymentStatus::WAITING_VERIFICATION,
-            70000,
+            2,
             false,
         );
 
@@ -338,11 +486,11 @@ class DemoDataSeeder extends Seeder
             $accounts,
             $customer,
             $operator,
-            $products['kartu-nama'],
+            $products['kertas-kado'],
             'KP-DEMO-0003',
             OrderStatus::DESIGN_REVIEW,
             PaymentStatus::PAID,
-            187500,
+            50,
             true,
         );
 
@@ -350,28 +498,85 @@ class DemoDataSeeder extends Seeder
             $accounts,
             $customer,
             $operator,
-            $products['brosur'],
+            $products['paper-bag-custom'],
             'KP-DEMO-0004',
             OrderStatus::IN_PRODUCTION,
             PaymentStatus::PAID,
-            125000,
+            100,
             true,
-            ProductionStatus::IN_PRODUCTION,
+            ProductionStatus::Printing,
         );
 
         $this->seedOrder(
             $accounts,
             $customer,
             $operator,
-            $products['undangan'],
+            $products['topper-cake'],
             'KP-DEMO-0005',
-            OrderStatus::READY,
+            OrderStatus::COMPLETED,
             PaymentStatus::PAID,
-            150000,
+            12,
             true,
-            ProductionStatus::READY,
+            ProductionStatus::Completed,
             true,
         );
+
+        $this->seedOrder(
+            $accounts,
+            $customer,
+            $operator,
+            $products['topeng-muka'],
+            'KP-DEMO-0006',
+            OrderStatus::DESIGN_REVIEW,
+            PaymentStatus::PAID,
+            6,
+            true,
+        );
+
+        $this->seedOrder(
+            $accounts,
+            $customer,
+            $operator,
+            $products['apotek-mini'],
+            'KP-DEMO-0007',
+            OrderStatus::IN_PRODUCTION,
+            PaymentStatus::PAID,
+            15,
+            true,
+            ProductionStatus::Printing,
+        );
+
+        $awaitingApprovalOrder = Order::where('number', 'KP-DEMO-0006')->first();
+        if ($awaitingApprovalOrder && ($pendingDesign = $awaitingApprovalOrder->designFiles()->first())) {
+            $pendingDesign->update([
+                'status' => DesignStatus::AwaitingCustomerApproval,
+                'review_note' => null,
+                'reviewed_by' => $accounts['admin']->id,
+                'reviewed_at' => now()->subDay(),
+            ]);
+            DesignApproval::updateOrCreate(
+                ['design_file_id' => $pendingDesign->id],
+                [
+                    'order_id' => $awaitingApprovalOrder->id,
+                    'customer_id' => $accounts['customer']->id,
+                    'status' => 'PENDING',
+                    'requested_by' => $accounts['admin']->id,
+                    'requested_at' => now()->subDay(),
+                ],
+            );
+        }
+
+        $reworkOrder = Order::where('number', 'KP-DEMO-0007')->first();
+        if ($reworkOrder && ($reworkProduction = $reworkOrder->production)) {
+            QualityCheck::updateOrCreate(
+                ['production_order_id' => $reworkProduction->id, 'result' => 'FAIL'],
+                [
+                    'checker_id' => $accounts['operator']->id,
+                    'notes' => 'Warna cetakan tidak sesuai; perlu re-print ulang.',
+                    'checked_at' => now()->subHours(3),
+                ],
+            );
+        }
     }
 
     private function seedOrder(
@@ -382,11 +587,14 @@ class DemoDataSeeder extends Seeder
         string $number,
         OrderStatus $orderStatus,
         PaymentStatus $paymentStatus,
-        int $lineTotal,
+        int $quantity,
         bool $withDesign,
         ?ProductionStatus $productionStatus = null,
         bool $withQualityCheck = false,
     ): void {
+        $unitPrice = (int) $product->base_price;
+        $lineTotal = $unitPrice * $quantity;
+
         $order = Order::updateOrCreate(
             ['number' => $number],
             [
@@ -415,10 +623,10 @@ class DemoDataSeeder extends Seeder
                 'product_name' => $product->name,
                 'product_reference' => 'DEMO-'.$product->slug,
                 'product_slug' => $product->slug,
-                'quantity' => $lineTotal >= 100000 ? 25 : 2,
-                'size' => 'Demo size',
-                'length_cm' => $lineTotal >= 100000 ? 21 : 100,
-                'width_cm' => $lineTotal >= 100000 ? 29.7 : 100,
+                'quantity' => $quantity,
+                'size' => null,
+                'length_cm' => null,
+                'width_cm' => null,
                 'material_id' => $material?->id,
                 'material_name' => $material?->name,
                 'material_reference' => $material?->slug,
@@ -431,7 +639,7 @@ class DemoDataSeeder extends Seeder
                 'configuration' => ['source' => 'DemoDataSeeder'],
                 'design_reference' => null,
                 'notes' => 'Demo configuration snapshot.',
-                'unit_price' => $lineTotal / max(1, $lineTotal >= 100000 ? 25 : 2),
+                'unit_price' => $unitPrice,
                 'line_total' => $lineTotal,
             ],
         );
@@ -479,24 +687,18 @@ class DemoDataSeeder extends Seeder
         if ($orderStatus !== OrderStatus::PENDING_PAYMENT) {
             $this->history($order, OrderStatus::PENDING_PAYMENT, OrderStatus::PAYMENT_REVIEW, $accounts['customer']->id, 'Demo payment proof submitted.');
         }
-        if (in_array($orderStatus, [OrderStatus::DESIGN_REVIEW, OrderStatus::IN_PRODUCTION, OrderStatus::READY], true)) {
+        if (in_array($orderStatus, [OrderStatus::DESIGN_REVIEW, OrderStatus::IN_PRODUCTION, OrderStatus::COMPLETED], true)) {
             $this->history($order, OrderStatus::PAYMENT_REVIEW, OrderStatus::PAYMENT_CONFIRMED, $accounts['admin']->id, 'Demo payment verified.');
         }
         if ($orderStatus === OrderStatus::DESIGN_REVIEW) {
             $this->history($order, OrderStatus::PAYMENT_CONFIRMED, OrderStatus::DESIGN_REVIEW, $accounts['customer']->id, 'Demo design submitted for review.');
         }
-        if (in_array($orderStatus, [OrderStatus::IN_PRODUCTION, OrderStatus::READY], true)) {
-            $this->history($order, OrderStatus::PAYMENT_CONFIRMED, OrderStatus::DESIGN_APPROVED, $accounts['admin']->id, 'Demo design approved.');
-            $this->history($order, OrderStatus::DESIGN_APPROVED, OrderStatus::WAITING_PRODUCTION, $accounts['admin']->id, 'Demo production task assigned.');
+        if (in_array($orderStatus, [OrderStatus::IN_PRODUCTION, OrderStatus::COMPLETED], true)) {
+            $this->history($order, OrderStatus::PAYMENT_CONFIRMED, OrderStatus::DESIGN_APPROVED, $accounts['customer']->id, 'Demo design approved by customer.');
+            $this->history($order, OrderStatus::DESIGN_APPROVED, OrderStatus::IN_PRODUCTION, $accounts['admin']->id, 'Demo production task assigned.');
         }
-        if ($orderStatus === OrderStatus::IN_PRODUCTION) {
-            $this->history($order, OrderStatus::WAITING_PRODUCTION, OrderStatus::IN_PRODUCTION, $accounts['operator']->id, 'Demo production started.');
-        }
-        if ($orderStatus === OrderStatus::READY) {
-            $this->history($order, OrderStatus::WAITING_PRODUCTION, OrderStatus::IN_PRODUCTION, $accounts['operator']->id, 'Demo production started.');
-            $this->history($order, OrderStatus::IN_PRODUCTION, OrderStatus::FINISHING, $accounts['operator']->id, 'Demo finishing completed.');
-            $this->history($order, OrderStatus::FINISHING, OrderStatus::QUALITY_CHECK, $accounts['operator']->id, 'Demo job sent to quality check.');
-            $this->history($order, OrderStatus::QUALITY_CHECK, OrderStatus::READY, $accounts['operator']->id, 'Demo quality check passed.');
+        if ($orderStatus === OrderStatus::COMPLETED) {
+            $this->history($order, OrderStatus::IN_PRODUCTION, OrderStatus::COMPLETED, $accounts['operator']->id, 'Demo quality control passed.');
         }
 
         if ($withDesign) {
@@ -527,13 +729,13 @@ class DemoDataSeeder extends Seeder
                 [
                     'operator_id' => $operator->id,
                     'status' => $productionStatus,
-                    'progress' => $productionStatus === ProductionStatus::READY ? 100 : 45,
+                    'progress' => $productionStatus === ProductionStatus::Completed ? 100 : 45,
                     'notes' => 'Demo production record. This is sample data for dashboard testing.',
                     'deadline' => now()->addDays(5),
                     'assigned_at' => now()->subDays(1),
                     'started_at' => now()->subDays(1),
-                    'finished_at' => $productionStatus === ProductionStatus::READY ? now()->subHours(4) : null,
-                    'completed_at' => null,
+                    'finished_at' => $productionStatus === ProductionStatus::Completed ? now()->subHours(4) : null,
+                    'completed_at' => $productionStatus === ProductionStatus::Completed ? now()->subHours(4) : null,
                 ],
             );
 
@@ -549,39 +751,48 @@ class DemoDataSeeder extends Seeder
             );
 
             ProductionStatusHistory::firstOrCreate(
-                ['production_order_id' => $production->id, 'new_status' => ProductionStatus::IN_PRODUCTION->value],
+                ['production_order_id' => $production->id, 'new_status' => ProductionStatus::Printing->value],
                 [
                     'changed_by' => $accounts['operator']->id,
-                    'old_status' => ProductionStatus::WAITING_PRODUCTION->value,
-                    'progress' => 10,
-                    'note' => 'Demo production started.',
+                    'old_status' => ProductionStatus::InDesign->value,
+                    'progress' => 25,
+                    'note' => 'Demo printing started.',
                 ],
             );
 
-            if ($productionStatus === ProductionStatus::READY) {
+            if ($productionStatus === ProductionStatus::Completed) {
                 ProductionStatusHistory::firstOrCreate(
-                    ['production_order_id' => $production->id, 'new_status' => ProductionStatus::FINISHING->value],
+                    ['production_order_id' => $production->id, 'new_status' => ProductionStatus::Finishing->value],
                     [
                         'changed_by' => $accounts['operator']->id,
-                        'old_status' => ProductionStatus::IN_PRODUCTION->value,
-                        'progress' => 80,
+                        'old_status' => ProductionStatus::Printing->value,
+                        'progress' => 60,
                         'note' => 'Demo finishing completed.',
                     ],
                 );
                 ProductionStatusHistory::firstOrCreate(
-                    ['production_order_id' => $production->id, 'new_status' => ProductionStatus::QUALITY_CHECK->value],
+                    ['production_order_id' => $production->id, 'new_status' => ProductionStatus::Packing->value],
                     [
                         'changed_by' => $accounts['operator']->id,
-                        'old_status' => ProductionStatus::FINISHING->value,
-                        'progress' => 95,
+                        'old_status' => ProductionStatus::Finishing->value,
+                        'progress' => 80,
+                        'note' => 'Demo packing completed.',
+                    ],
+                );
+                ProductionStatusHistory::firstOrCreate(
+                    ['production_order_id' => $production->id, 'new_status' => ProductionStatus::QualityControl->value],
+                    [
+                        'changed_by' => $accounts['operator']->id,
+                        'old_status' => ProductionStatus::Packing->value,
+                        'progress' => 90,
                         'note' => 'Demo quality check submitted.',
                     ],
                 );
                 ProductionStatusHistory::firstOrCreate(
-                    ['production_order_id' => $production->id, 'new_status' => ProductionStatus::READY->value],
+                    ['production_order_id' => $production->id, 'new_status' => ProductionStatus::Completed->value],
                     [
                         'changed_by' => $accounts['operator']->id,
-                        'old_status' => ProductionStatus::QUALITY_CHECK->value,
+                        'old_status' => ProductionStatus::QualityControl->value,
                         'progress' => 100,
                         'note' => 'Demo quality check passed.',
                     ],

@@ -4,8 +4,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex">
-    <link rel="icon" href="{{ asset('favicon.svg') }}" type="image/svg+xml">
-    <meta name="theme-color" content="#e11d2e">
+    <link rel="icon" href="{{ asset('images/logo.png') }}" type="image/png">
+    <meta name="theme-color" content="#a81818">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">

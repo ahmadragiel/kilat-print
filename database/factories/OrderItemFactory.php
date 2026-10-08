@@ -22,9 +22,9 @@ class OrderItemFactory extends Factory
         return [
             'order_id' => Order::factory(),
             'product_id' => Product::factory(),
-            'product_name' => fake()->words(3, true),
+            'product_name' => fn (array $attributes): ?string => Product::find($attributes['product_id'])?->name,
             'product_reference' => 'REF-'.fake()->unique()->numerify('#####'),
-            'product_slug' => fake()->slug(),
+            'product_slug' => fn (array $attributes): ?string => Product::find($attributes['product_id'])?->slug,
             'quantity' => $quantity,
             'production_method' => 'digital',
             'custom_parameters' => [],

@@ -8,12 +8,15 @@ use App\Http\Controllers\Operator;
 use App\Http\Controllers\Public\CatalogController;
 use App\Http\Controllers\Public\HomeController;
 use App\Http\Controllers\Public\ProductController;
+use App\Http\Controllers\Public\TrackingController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', HomeController::class)->name('home');
 Route::get('/products', [CatalogController::class, 'index'])->name('products.index');
 Route::get('/products/{slug}', [ProductController::class, 'show'])->name('products.show');
 Route::get('/products/{product}/price', [ProductController::class, 'price'])->middleware(['auth', 'role:customer', 'throttle:60,1'])->name('products.price');
+
+Route::get('/lacak', [TrackingController::class, 'index'])->name('tracking.index');
 
 Route::middleware('guest')->group(function () {
     Route::get('/register', [RegisteredUserController::class, 'create'])->name('register');
@@ -45,6 +48,8 @@ Route::middleware(['auth', 'role:customer'])->group(function () {
     Route::get('/orders/{order:number}', [Customer\OrderController::class, 'show'])->name('customer.orders.show');
     Route::post('/orders/{order:number}/payment-proof', [Customer\OrderController::class, 'uploadPayment'])->middleware('throttle:uploads')->name('customer.orders.payment');
     Route::post('/orders/{order:number}/design', [Customer\OrderController::class, 'uploadDesign'])->middleware('throttle:uploads')->name('customer.orders.design');
+    Route::post('/orders/{order:number}/designs/{design}/approve', [Customer\OrderController::class, 'approveDesign'])->name('customer.orders.design.approve');
+    Route::post('/orders/{order:number}/designs/{design}/revision', [Customer\OrderController::class, 'requestDesignRevision'])->name('customer.orders.design.revision');
     Route::get('/orders/{order:number}/designs/{design}/download', [Customer\OrderController::class, 'downloadDesign'])->name('customer.orders.design-download');
     Route::post('/orders/{order:number}/repeat', [Customer\OrderController::class, 'repeat'])->name('customer.orders.repeat');
     Route::post('/orders/{order:number}/cancel', [Customer\OrderController::class, 'cancel'])->name('customer.orders.cancel');
@@ -122,11 +127,8 @@ Route::middleware(['auth', 'role:operator'])->prefix('operator')->name('operator
     Route::get('/dashboard', [Operator\DashboardController::class, '__invoke'])->name('dashboard');
     Route::get('/jobs', [Operator\JobController::class, 'index'])->name('jobs.index');
     Route::get('/jobs/{job}', [Operator\JobController::class, 'show'])->whereNumber('job')->name('jobs.show');
-    Route::post('/jobs/{job}/start', [Operator\JobController::class, 'start'])->whereNumber('job')->name('jobs.start');
-    Route::post('/jobs/{job}/finishing', [Operator\JobController::class, 'finishing'])->whereNumber('job')->name('jobs.finishing');
-    Route::post('/jobs/{job}/complete', [Operator\JobController::class, 'complete'])->whereNumber('job')->name('jobs.complete');
+    Route::post('/jobs/{job}/status', [Operator\JobController::class, 'status'])->whereNumber('job')->name('jobs.status');
     Route::post('/jobs/{job}/quality-check', [Operator\JobController::class, 'qualityCheck'])->whereNumber('job')->name('jobs.quality-check');
-    Route::post('/jobs/{job}/rework', [Operator\JobController::class, 'qualityCheck'])->whereNumber('job')->name('jobs.rework');
     Route::post('/jobs/{job}/progress', [Operator\JobController::class, 'progress'])->whereNumber('job')->name('jobs.progress');
     Route::post('/jobs/{job}/note', [Operator\JobController::class, 'note'])->whereNumber('job')->name('jobs.note');
     Route::post('/jobs/{job}/photo', [Operator\JobController::class, 'photo'])->whereNumber('job')->name('jobs.photo');

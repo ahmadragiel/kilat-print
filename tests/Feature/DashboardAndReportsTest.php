@@ -33,11 +33,11 @@ class DashboardAndReportsTest extends TestCase
     {
         $operator = $this->makeOperator();
         $customer = $this->makeCustomer();
-        $assignedOrder = $this->makeOrder($customer, ['status' => OrderStatus::WAITING_PRODUCTION]);
-        $unassignedOrder = $this->makeOrder($customer, ['status' => OrderStatus::WAITING_PRODUCTION]);
+        $assignedOrder = $this->makeOrder($customer, ['status' => OrderStatus::DESIGN_APPROVED]);
+        $unassignedOrder = $this->makeOrder($customer, ['status' => OrderStatus::DESIGN_APPROVED]);
         $assigned = $this->makeProduction($assignedOrder, [
             'operator_id' => $operator->id,
-            'status' => ProductionStatus::IN_PRODUCTION,
+            'status' => ProductionStatus::PRINTING,
         ]);
         $unassigned = $this->makeProduction($unassignedOrder);
 

@@ -10,8 +10,8 @@ class PublicCatalogTest extends TestCase
     public function test_homepage_uses_active_categories_and_products(): void
     {
         $category = Category::factory()->create([
-            'name' => 'Banner Test',
-            'slug' => 'banner-test',
+            'name' => 'Kategori Katalog Uji',
+            'slug' => 'kategori-katalog-uji',
             'status' => 'active',
         ]);
         $inactiveCategory = Category::factory()->create([
@@ -20,8 +20,8 @@ class PublicCatalogTest extends TestCase
             'status' => 'inactive',
         ]);
         $product = $this->makeProduct(attributes: [
-            'name' => 'Banner Homepage',
-            'slug' => 'banner-homepage',
+            'name' => 'Mug Custom Unggulan',
+            'slug' => 'mug-custom-unggulan',
             'category_id' => $category->id,
             'popularity_count' => 99,
         ]);
@@ -41,21 +41,21 @@ class PublicCatalogTest extends TestCase
         $response->assertViewHas('popularProducts', function ($products) use ($product, $inactive) {
             return $products->contains($product) && ! $products->contains($inactive);
         });
-        $response->assertSee('Banner Homepage');
+        $response->assertSee('Mug Custom Unggulan');
     }
 
     public function test_homepage_product_cards_show_discounted_and_struck_original_prices(): void
     {
         $product = $this->makeProduct(attributes: [
-            'name' => 'Discounted Banner',
-            'slug' => 'discounted-banner',
+            'name' => 'Mug Custom Diskon',
+            'slug' => 'mug-custom-diskon',
         ]);
         $product->priceRules()->update(['discount_percent' => 15]);
 
         $response = $this->get(route('home'));
 
         $response->assertOk()
-            ->assertSee('Discounted Banner')
+            ->assertSee('Mug Custom Diskon')
             ->assertSee('Rp 10.000')
             ->assertSee('Rp 8.500')
             ->assertSee('line-through');
@@ -64,32 +64,32 @@ class PublicCatalogTest extends TestCase
     public function test_catalog_searches_and_filters_active_products(): void
     {
         $category = Category::factory()->create([
-            'name' => 'Sticker Category',
-            'slug' => 'sticker-category',
+            'name' => 'Kategori Utama',
+            'slug' => 'kategori-utama',
         ]);
         $otherCategory = Category::factory()->create([
-            'name' => 'Other Category',
-            'slug' => 'other-category',
+            'name' => 'Kategori Cadangan',
+            'slug' => 'kategori-cadangan',
         ]);
         $matching = $this->makeProduct(attributes: [
-            'name' => 'Premium Sticker Sheet',
-            'slug' => 'premium-sticker-sheet',
+            'name' => 'Topper Cake Premium',
+            'slug' => 'topper-cake-premium',
             'category_id' => $category->id,
         ]);
         $wrongCategory = $this->makeProduct(attributes: [
-            'name' => 'Premium Sticker Roll',
-            'slug' => 'premium-sticker-roll',
+            'name' => 'Topeng Muka Premium',
+            'slug' => 'topeng-muka-premium',
             'category_id' => $otherCategory->id,
         ]);
         $inactive = $this->makeProduct(attributes: [
-            'name' => 'Premium Sticker Hidden',
-            'slug' => 'premium-sticker-hidden',
+            'name' => 'Apotek Mini Premium Hidden',
+            'slug' => 'apotek-mini-premium-hidden',
             'category_id' => $category->id,
             'status' => 'inactive',
         ]);
 
         $response = $this->get(route('products.index', [
-            'search' => 'Sticker',
+            'search' => 'Premium',
             'category' => $category->slug,
             'min_price' => 1,
             'max_price' => 20000,
@@ -100,18 +100,18 @@ class PublicCatalogTest extends TestCase
         $this->assertTrue($products->contains($matching));
         $this->assertFalse($products->contains($wrongCategory));
         $this->assertFalse($products->contains($inactive));
-        $this->assertSame('Sticker', $response->viewData('filters')['search']);
+        $this->assertSame('Premium', $response->viewData('filters')['search']);
     }
 
     public function test_catalog_can_sort_by_price_and_product_detail_loads_options_and_increments_popularity(): void
     {
         $cheaper = $this->makeProduct(price: 2000, attributes: [
-            'name' => 'Cheap Print',
-            'slug' => 'cheap-print',
+            'name' => 'Kertas Kado Murah',
+            'slug' => 'kertas-kado-murah',
         ]);
         $expensive = $this->makeProduct(price: 50000, attributes: [
-            'name' => 'Premium Print',
-            'slug' => 'premium-print',
+            'name' => 'Bando Tuning Custom Premium',
+            'slug' => 'bando-tuning-custom-premium',
         ]);
         $material = $this->attachMaterial($cheaper, price: 250);
         $finishing = $this->attachFinishing($cheaper, price: 500);
@@ -123,7 +123,7 @@ class PublicCatalogTest extends TestCase
 
         $detail = $this->get(route('products.show', $cheaper));
         $detail->assertOk();
-        $detail->assertSee('Cheap Print');
+        $detail->assertSee('Kertas Kado Murah');
         $this->assertDatabaseHas('products', ['id' => $cheaper->id, 'popularity_count' => 1]);
         $this->assertTrue($cheaper->fresh()->materials->contains($material));
         $this->assertTrue($cheaper->fresh()->finishings->contains($finishing));

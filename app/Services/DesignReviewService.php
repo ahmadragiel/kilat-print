@@ -71,28 +71,101 @@ class DesignReviewService
     {
         return DB::transaction(function () use ($design, $admin) {
             abort_if($design->order->designFiles()->where('version', '>', $design->version)->exists(), 422, 'Hanya versi desain terbaru yang dapat disetujui.');
-            $design->update([
-                'status' => DesignStatus::Approved,
-                'review_note' => null,
-                'reviewed_by' => $admin->id,
-                'reviewed_at' => now(),
-            ]);
             $order = $design->order;
             $orderStatus = $order->status instanceof OrderStatus ? $order->status : OrderStatus::from($order->status);
             abort_unless($orderStatus === OrderStatus::DesignReview, 422, 'Pesanan tidak dalam tahap review desain.');
 
-            $order = $this->statuses->transition($order, OrderStatus::DesignApproved, $admin, "Desain versi {$design->version} disetujui.");
+            $design->update([
+                'status' => DesignStatus::AwaitingCustomerApproval,
+                'review_note' => null,
+                'reviewed_by' => $admin->id,
+                'reviewed_at' => now(),
+            ]);
+            $design->approvals()->create([
+                'order_id' => $order->id,
+                'customer_id' => $order->customer?->user_id,
+                'status' => 'PENDING',
+                'requested_by' => $admin->id,
+                'requested_at' => now(),
+            ]);
+            $order->customer?->user?->notify(new OrderNotification(
+                'Desain menunggu persetujuan Anda',
+                "Desain pesanan {$order->number} sudah diperiksa admin. Silakan tinjau dan berikan persetujuan.",
+                route('customer.orders.show', $order),
+            ));
+
+            return $design->fresh();
+        });
+    }
+
+    public function customerApprove(DesignFile $design, User $customer): DesignFile
+    {
+        return DB::transaction(function () use ($design, $customer) {
+            $order = $design->order;
+            abort_unless($order->customer?->user_id === $customer->id, 403);
+            abort_if($design->order->designFiles()->where('version', '>', $design->version)->exists(), 422, 'Hanya versi desain terbaru yang dapat disetujui.');
+            abort_unless($design->status === DesignStatus::AwaitingCustomerApproval, 422, 'Desain belum menunggu persetujuan customer.');
+
+            $design->update(['status' => DesignStatus::Approved]);
+            $approval = $design->approvals()->latest()->first();
+            if ($approval) {
+                $approval->update(['status' => 'APPROVED', 'approved_at' => now()]);
+            } else {
+                $design->approvals()->create([
+                    'order_id' => $order->id,
+                    'customer_id' => $order->customer?->user_id,
+                    'status' => 'APPROVED',
+                    'approved_at' => now(),
+                ]);
+            }
+            $order = $this->statuses->transition($order, OrderStatus::DesignApproved, $customer, "Desain versi {$design->version} disetujui customer.");
             $order->production()->firstOrCreate([
                 'order_id' => $order->id,
             ], [
-                'status' => ProductionStatus::WaitingProduction,
+                'status' => ProductionStatus::InDesign,
                 'deadline' => $order->deadline,
             ]);
             $order->customer?->user?->notify(new OrderNotification(
                 'Desain disetujui',
-                "Desain pesanan {$order->number} siap dijadwalkan untuk produksi.",
+                "Terima kasih. Desain pesanan {$order->number} akan dijadwalkan ke produksi.",
                 route('customer.orders.show', $order),
                 'success',
+            ));
+
+            return $design->fresh();
+        });
+    }
+
+    public function customerRequestRevision(DesignFile $design, User $customer, string $reason): DesignFile
+    {
+        return DB::transaction(function () use ($design, $customer, $reason) {
+            $order = $design->order;
+            abort_unless($order->customer?->user_id === $customer->id, 403);
+            abort_if($design->order->designFiles()->where('version', '>', $design->version)->exists(), 422, 'Hanya versi desain terbaru yang dapat ditinjau.');
+            abort_unless($design->status === DesignStatus::AwaitingCustomerApproval, 422, 'Desain belum menunggu persetujuan customer.');
+
+            $design->update([
+                'status' => DesignStatus::RevisionRequired,
+                'review_note' => $reason,
+                'reviewed_at' => now(),
+            ]);
+            $approval = $design->approvals()->latest()->first();
+            if ($approval) {
+                $approval->update(['status' => 'REVISION_REQUESTED', 'notes' => $reason]);
+            } else {
+                $design->approvals()->create([
+                    'order_id' => $order->id,
+                    'customer_id' => $order->customer?->user_id,
+                    'status' => 'REVISION_REQUESTED',
+                    'notes' => $reason,
+                ]);
+            }
+            $order = $this->statuses->transition($order, OrderStatus::DesignRevision, $customer, $reason);
+            $order->customer?->user?->notify(new OrderNotification(
+                'Revisi desain diminta',
+                "Pesanan {$order->number} menunggu revisi desain.",
+                route('customer.orders.show', $order),
+                'warning',
             ));
 
             return $design->fresh();

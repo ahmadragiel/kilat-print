@@ -5,10 +5,13 @@ namespace App\Enums;
 enum DesignStatus: string
 {
     case Pending = 'Pending';
+    case AwaitingCustomerApproval = 'Awaiting Customer Approval';
     case Approved = 'Approved';
     case RevisionRequired = 'Revision Required';
 
     public const PENDING = self::Pending;
+
+    public const AWAITING_CUSTOMER_APPROVAL = self::AwaitingCustomerApproval;
 
     public const APPROVED = self::Approved;
 
@@ -18,6 +21,7 @@ enum DesignStatus: string
     {
         return match ($this) {
             self::Pending => 'Pending',
+            self::AwaitingCustomerApproval => 'Menunggu Persetujuan Customer',
             self::Approved => 'Approved',
             self::RevisionRequired => 'Revision Required',
         };

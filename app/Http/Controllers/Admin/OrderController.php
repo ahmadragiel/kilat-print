@@ -70,13 +70,7 @@ class OrderController extends Controller
         abort_unless($status, 422, 'Status tidak valid.');
         $order = $statuses->transition($order, $status, $request->user(), $data['note'] ?? null);
 
-        if ($status === OrderStatus::Shipped && $order->production) {
-            $production = $order->production;
-            $oldProductionStatus = $production->status;
-            $production->update(['status' => ProductionStatus::Shipped, 'finished_at' => now()]);
-            $production->statusHistories()->create(['changed_by' => $request->user()->id, 'old_status' => $oldProductionStatus, 'new_status' => ProductionStatus::Shipped, 'progress' => 100, 'note' => $data['note'] ?? 'Pesanan dikirim.']);
-            $order->customer?->user?->notify(new OrderNotification('Pesanan dikirim', "Pesanan {$order->number} telah dikirim.", route('customer.orders.show', $order), 'success'));
-        } elseif ($status === OrderStatus::Completed && $order->production) {
+        if ($status === OrderStatus::Completed && $order->production) {
             $production = $order->production;
             $oldProductionStatus = $production->status;
             $production->update(['status' => ProductionStatus::Completed, 'completed_at' => now(), 'progress' => 100]);

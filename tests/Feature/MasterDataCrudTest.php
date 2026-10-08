@@ -17,13 +17,13 @@ class MasterDataCrudTest extends TestCase
     public function test_admin_can_create_update_and_soft_delete_a_product(): void
     {
         $admin = $this->makeAdmin();
-        $category = Category::create(['name' => 'Banner', 'slug' => 'banner', 'status' => 'active']);
-        $material = Material::create(['name' => 'Flexi 280gr', 'slug' => 'flexi-280gr', 'pricing_type' => 'per_sqm', 'price' => 25000, 'status' => 'active']);
-        $finishing = Finishing::create(['name' => 'Mata Ayam', 'slug' => 'mata-ayam', 'pricing_type' => 'per_item', 'price' => 2000, 'status' => 'active']);
+        $category = Category::create(['name' => 'Kategori Uji', 'slug' => 'kategori-uji', 'status' => 'active']);
+        $material = Material::create(['name' => 'Material Uji Per Sqm', 'slug' => 'material-uji-per-sqm', 'pricing_type' => 'per_sqm', 'price' => 25000, 'status' => 'active']);
+        $finishing = Finishing::create(['name' => 'Finishing Uji', 'slug' => 'finishing-uji', 'pricing_type' => 'per_item', 'price' => 2000, 'status' => 'active']);
 
         $this->actingAs($admin)->post(route('admin.products.store'), [
-            'name' => 'Banner Demo',
-            'slug' => 'banner-demo',
+            'name' => 'Produk Uji Demo',
+            'slug' => 'produk-uji-demo',
             'category_id' => $category->id,
             'description' => 'Demo product.',
             'status' => 'active',
@@ -33,13 +33,13 @@ class MasterDataCrudTest extends TestCase
             'finishings' => [$finishing->id],
         ])->assertRedirect(route('admin.products.index'));
 
-        $product = Product::where('slug', 'banner-demo')->firstOrFail();
+        $product = Product::where('slug', 'produk-uji-demo')->firstOrFail();
         $this->assertDatabaseHas('product_materials', ['product_id' => $product->id, 'material_id' => $material->id]);
         $this->assertDatabaseHas('product_finishings', ['product_id' => $product->id, 'finishing_id' => $finishing->id]);
 
         $this->actingAs($admin)->put(route('admin.products.update', $product), [
-            'name' => 'Banner Demo Updated',
-            'slug' => 'banner-demo-updated',
+            'name' => 'Produk Uji Demo Updated',
+            'slug' => 'produk-uji-demo-updated',
             'category_id' => $category->id,
             'description' => 'Updated demo product.',
             'status' => 'inactive',
@@ -48,7 +48,7 @@ class MasterDataCrudTest extends TestCase
             'materials' => [$material->id],
             'finishings' => [$finishing->id],
         ])->assertRedirect(route('admin.products.index'));
-        $this->assertSame('Banner Demo Updated', $product->fresh()->name);
+        $this->assertSame('Produk Uji Demo Updated', $product->fresh()->name);
         $this->assertSame('inactive', $product->fresh()->status);
 
         $this->actingAs($admin)->delete(route('admin.products.destroy', $product->fresh()))->assertSessionHas('success');

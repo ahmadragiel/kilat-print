@@ -47,12 +47,7 @@ return new class extends Migration
                 'DESIGN_REVIEW',
                 'DESIGN_REVISION',
                 'DESIGN_APPROVED',
-                'WAITING_PRODUCTION',
                 'IN_PRODUCTION',
-                'FINISHING',
-                'QUALITY_CHECK',
-                'READY',
-                'SHIPPED',
                 'COMPLETED',
                 'CANCELLED',
             ])->default('PENDING_PAYMENT')->index();

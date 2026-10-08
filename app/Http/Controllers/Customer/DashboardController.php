@@ -12,7 +12,7 @@ class DashboardController extends Controller
     public function __invoke(Request $request): View
     {
         $orders = $request->user()->customer->orders();
-        $active = array_map(fn (OrderStatus $status) => $status->value, [OrderStatus::PaymentConfirmed, OrderStatus::DesignReview, OrderStatus::DesignRevision, OrderStatus::DesignApproved, OrderStatus::WaitingProduction, OrderStatus::InProduction, OrderStatus::Finishing, OrderStatus::QualityCheck, OrderStatus::Ready, OrderStatus::Shipped]);
+        $active = array_map(fn (OrderStatus $status) => $status->value, [OrderStatus::PaymentConfirmed, OrderStatus::DesignReview, OrderStatus::DesignRevision, OrderStatus::DesignApproved, OrderStatus::InProduction]);
         $pending = array_map(fn (OrderStatus $status) => $status->value, [OrderStatus::PendingPayment, OrderStatus::PaymentReview]);
 
         return view('customer.dashboard', [

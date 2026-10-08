@@ -3,20 +3,35 @@
     'size' => 'md',
 ])
 
+{{--
+    Logo Kilat Print. Kedua file berlatar transparan (tanpa kotak putih):
+      - `public/images/logo.png`       : merah tua + kilat kuning, untuk latar terang
+      - `public/images/logo-white.png` : knockout putih + kilat kuning, untuk panel
+                                         merah/footer gelap (varian `inverse`)
+
+    Logo disisipkan langsung di atas latar halaman, jadi tidak ada chip/kotak
+    putih lagi. Rasio tetap dijaga lewat atribut intrinsik `width`/`height`
+    (772x413 = 1.87:1) + `max-h-*` + `w-auto` + `object-contain`, sehingga logo
+    tidak pernah gepeng, tidak meluber, dan selalu tajam (file 772px dipakai pada
+    tinggi 32-56px, jadi hanya downscale).
+--}}
 @php
-    $sizes = [
-        'sm' => ['h-8 w-8', 'h-4 w-4', 'text-base'],
-        'md' => ['h-9 w-9', 'h-5 w-5', 'text-lg'],
-        'lg' => ['h-11 w-11', 'h-6 w-6', 'text-2xl'],
+    $logoSizes = [
+        'sm' => 'max-h-8',
+        'md' => 'max-h-10',
+        'lg' => 'max-h-14',
     ];
-    [$markSize, $glyphSize, $wordSize] = $sizes[$size] ?? $sizes['md'];
+    $logoMaxHeight = $logoSizes[$size] ?? $logoSizes['md'];
+    $logoSrc = asset($inverse ? 'images/logo-white.png' : 'images/logo.png');
 @endphp
 
-<a href="/" {{ $attributes->class(['inline-flex items-center gap-2.5 font-extrabold tracking-tight', $inverse ? 'text-white' : 'text-ink-950']) }}>
-    <span {{ $attributes->class(['grid shrink-0 place-items-center rounded-lg', $markSize, $inverse ? 'bg-accent-400 text-ink-950' : 'bg-brand-600 text-white']) }}>
-        <svg viewBox="0 0 24 24" class="{{ $glyphSize }}" fill="currentColor" aria-hidden="true">
-            <path d="M13.2 2 5 13h6l-.8 9L19 10h-6l.2-8Z"/>
-        </svg>
-    </span>
-    <span class="{{ $wordSize }}">Kilat Print</span>
+<a href="/" {{ $attributes->class('inline-flex max-w-full items-center rounded-xl transition') }}>
+    <img
+        src="{{ $logoSrc }}"
+        alt="Kilat Print"
+        width="772"
+        height="413"
+        class="{{ $logoMaxHeight }} h-auto w-auto max-w-full object-contain align-middle"
+        decoding="async"
+    >
 </a>

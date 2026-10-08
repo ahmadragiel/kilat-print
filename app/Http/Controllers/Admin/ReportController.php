@@ -24,8 +24,7 @@ class ReportController extends Controller
         $base = Order::whereBetween('created_at', [$from, $to]);
         $revenueStatuses = [
             OrderStatus::PaymentConfirmed, OrderStatus::DesignReview, OrderStatus::DesignRevision, OrderStatus::DesignApproved,
-            OrderStatus::WaitingProduction, OrderStatus::InProduction, OrderStatus::Finishing, OrderStatus::QualityCheck,
-            OrderStatus::Ready, OrderStatus::Shipped, OrderStatus::Completed,
+            OrderStatus::InProduction, OrderStatus::Completed,
         ];
 
         $orders = (clone $base)->get();

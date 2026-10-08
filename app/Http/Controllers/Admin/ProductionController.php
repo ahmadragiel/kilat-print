@@ -7,7 +7,6 @@ use App\Http\Controllers\Controller;
 use App\Models\Operator;
 use App\Models\ProductionOrder;
 use App\Notifications\OrderNotification;
-use App\Services\OrderStatusService;
 use App\Services\ProductionService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
@@ -55,29 +54,22 @@ class ProductionController extends Controller
         return back()->with('success', 'Job produksi berhasil ditugaskan.');
     }
 
-    public function status(Request $request, ProductionOrder $production, OrderStatusService $statuses): RedirectResponse
+    public function status(Request $request, ProductionOrder $production): RedirectResponse
     {
         $this->authorize('update', $production);
         $data = $request->validate(['status' => ['required'], 'note' => ['nullable', 'string', 'max:1000']]);
-        $status = OrderStatus::tryFrom($data['status']);
-        abort_unless($status, 422, 'Status tidak valid.');
-        $order = $statuses->transition($production->order, $status, $request->user(), $data['note'] ?? null);
+        $status = ProductionStatus::tryFrom($data['status']);
+        abort_unless($status && $status !== ProductionStatus::Cancelled, 422, 'Status tidak valid.');
+        if ($status === ProductionStatus::Completed) {
+            abort(422, 'Penyelesaian produksi hanya melalui Quality Control PASS.');
+        }
         $oldProductionStatus = $production->status;
-        $updates = [];
-        if ($status === OrderStatus::Shipped) {
-            $updates = ['status' => ProductionStatus::Shipped, 'finished_at' => now(), 'progress' => 100];
-        } elseif ($status === OrderStatus::Completed) {
-            $updates = ['status' => ProductionStatus::Completed, 'completed_at' => now(), 'progress' => 100];
-            $order->update(['completed_at' => now()]);
-        }
-        if ($updates) {
-            $production->update($updates);
-            $production->statusHistories()->create(['changed_by' => $request->user()->id, 'old_status' => $oldProductionStatus, 'new_status' => $updates['status'], 'progress' => 100, 'note' => $data['note'] ?? 'Status produksi diperbarui admin.']);
-        }
-        if ($status === OrderStatus::Shipped) {
-            $order->customer?->user?->notify(new OrderNotification('Pesanan dikirim', "Pesanan {$order->number} telah dikirim.", route('customer.orders.show', $order), 'success'));
-        } elseif ($status === OrderStatus::Completed) {
-            $order->customer?->user?->notify(new OrderNotification('Pesanan selesai', "Pesanan {$order->number} telah selesai. Terima kasih!", route('customer.orders.show', $order), 'success'));
+        app(ProductionService::class)->transition($production, $status, $request->user(), $production->progress, $data['note'] ?? null);
+        if ($oldProductionStatus !== $production->fresh()->status) {
+            $order = $production->order;
+            if ($order) {
+                $order->customer?->user?->notify(new OrderNotification('Status produksi diperbarui', "Produksi pesanan {$order->number}: {$status->label()}.", route('customer.orders.show', $order)));
+            }
         }
 
         return back()->with('success', 'Status produksi diperbarui.');

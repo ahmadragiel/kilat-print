@@ -17,12 +17,7 @@ class OrderPresenter
             OrderStatus::DESIGN_REVIEW => 'Meninjau Desain',
             OrderStatus::DESIGN_REVISION => 'Revisi Desain',
             OrderStatus::DESIGN_APPROVED => 'Desain Disetujui',
-            OrderStatus::WAITING_PRODUCTION => 'Menunggu Produksi',
             OrderStatus::IN_PRODUCTION => 'Sedang Diproduksi',
-            OrderStatus::FINISHING => 'Finishing',
-            OrderStatus::QUALITY_CHECK => 'Pemeriksaan Mutu',
-            OrderStatus::READY => 'Siap Dipickup / Dikirim',
-            OrderStatus::SHIPPED => 'Pesanan Dikirim',
             OrderStatus::COMPLETED => 'Selesai',
             OrderStatus::CANCELLED => 'Dibatalkan',
         };
@@ -31,10 +26,10 @@ class OrderPresenter
     public static function color(string|OrderStatus $status): string
     {
         return match ($status instanceof OrderStatus ? $status : OrderStatus::from($status)) {
-            OrderStatus::COMPLETED, OrderStatus::READY => 'emerald',
+            OrderStatus::COMPLETED => 'emerald',
             OrderStatus::CANCELLED, OrderStatus::DESIGN_REVISION => 'rose',
             OrderStatus::PENDING_PAYMENT, OrderStatus::PAYMENT_REVIEW => 'amber',
-            OrderStatus::IN_PRODUCTION, OrderStatus::FINISHING, OrderStatus::QUALITY_CHECK => 'blue',
+            OrderStatus::IN_PRODUCTION => 'blue',
             default => 'violet',
         };
     }

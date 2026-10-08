@@ -13,9 +13,7 @@ class InvoiceController extends Controller
     {
         return view('admin.invoices.index', ['orders' => Order::with('customer.user')->whereIn('status', [
             OrderStatus::PaymentConfirmed, OrderStatus::DesignReview, OrderStatus::DesignRevision,
-            OrderStatus::DesignApproved, OrderStatus::WaitingProduction, OrderStatus::InProduction,
-            OrderStatus::Finishing, OrderStatus::QualityCheck, OrderStatus::Ready,
-            OrderStatus::Shipped, OrderStatus::Completed,
+            OrderStatus::DesignApproved, OrderStatus::InProduction, OrderStatus::Completed,
         ])->latest()->paginate(20)]);
     }
 

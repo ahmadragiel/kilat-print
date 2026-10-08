@@ -1,0 +1,13 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 700" role="img" aria-labelledby="title desc">
+  <title id="title">Ilustrasi Topper Cake</title>
+  <desc id="desc">Ilustrasi generik topper cake berbentuk papan bulat bertangkai. Bukan foto produk asli Kilat Print.</desc>
+  <rect width="1000" height="700" fill="#f3f4f6"/>
+  <ellipse cx="500" cy="578" rx="180" ry="22" fill="#0f172a" opacity=".08"/>
+  <rect x="488" y="356" width="24" height="186" rx="12" fill="#cbd5e1"/>
+  <rect x="374" y="232" width="252" height="158" rx="28" fill="#fde68a" stroke="#f59e0b" stroke-width="8"/>
+  <path d="M374 274 c 30 -22 54 22 84 0 c 30 -22 54 22 84 0 c 30 -22 54 22 84 0" fill="none" stroke="#ffffff" stroke-width="10" stroke-linecap="round"/>
+  <circle cx="432" cy="330" r="9" fill="#e11d2e"/>
+  <circle cx="500" cy="352" r="9" fill="#0ea5e9"/>
+  <circle cx="568" cy="330" r="9" fill="#22c55e"/>
+  <text x="500" y="652" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" fill="#9ca3af">Ilustrasi demo &#183; bukan foto produk asli</text>
+</svg>

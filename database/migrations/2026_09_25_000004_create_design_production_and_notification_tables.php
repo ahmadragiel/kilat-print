@@ -19,7 +19,7 @@ return new class extends Migration
             $table->string('mime_type', 150);
             $table->unsignedBigInteger('size');
             $table->unsignedInteger('version')->default(1);
-            $table->enum('status', ['Pending', 'Approved', 'Revision Required'])->default('Pending')->index();
+            $table->enum('status', ['Pending', 'Awaiting Customer Approval', 'Approved', 'Revision Required'])->default('Pending')->index();
             $table->text('notes')->nullable();
             $table->text('review_note')->nullable();
             $table->foreignId('reviewed_by')->nullable()->constrained('users')->nullOnDelete();
@@ -38,15 +38,14 @@ return new class extends Migration
             $table->foreignId('order_id')->unique()->constrained('orders')->restrictOnDelete();
             $table->foreignId('operator_id')->nullable()->constrained('operators')->nullOnDelete();
             $table->enum('status', [
-                'WAITING_PRODUCTION',
-                'IN_PRODUCTION',
+                'IN_DESIGN',
+                'PRINTING',
                 'FINISHING',
-                'QUALITY_CHECK',
-                'READY',
-                'SHIPPED',
+                'PACKING',
+                'QUALITY_CONTROL',
                 'COMPLETED',
                 'CANCELLED',
-            ])->default('WAITING_PRODUCTION')->index();
+            ])->default('IN_DESIGN')->index();
             $table->unsignedTinyInteger('progress')->default(0);
             $table->text('notes')->nullable();
             $table->date('deadline')->nullable();

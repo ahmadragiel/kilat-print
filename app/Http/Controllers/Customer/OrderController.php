@@ -30,7 +30,7 @@ class OrderController extends Controller
     public function show(Order $order): View
     {
         $this->authorize('view', $order);
-        $order->load(['items.product', 'items.customDesignDraft.assets', 'payment', 'address', 'statusHistories.changer', 'designFiles.reviewer', 'production.operator.user']);
+        $order->load(['items.product', 'items.customDesignDraft.assets', 'payment', 'address', 'statusHistories.changer', 'designFiles.reviewer', 'designFiles.approvals', 'production.operator.user', 'production.qualityChecks']);
 
         return view('customer.orders.show', compact('order'));
     }
@@ -56,6 +56,25 @@ class OrderController extends Controller
         abort_unless(Storage::disk('local')->exists($design->path), 404, 'File desain tidak ditemukan.');
 
         return Storage::disk('local')->download($design->path, $design->original_filename);
+    }
+
+    public function approveDesign(Request $request, Order $order, DesignFile $design, DesignReviewService $designs): RedirectResponse
+    {
+        $this->authorize('view', $order);
+        abort_unless($design->order_id === $order->id, 404);
+        $designs->customerApprove($design, $request->user());
+
+        return back()->with('success', 'Desain disetujui. Pesanan akan dijadwalkan ke produksi.');
+    }
+
+    public function requestDesignRevision(Request $request, Order $order, DesignFile $design, DesignReviewService $designs): RedirectResponse
+    {
+        $this->authorize('view', $order);
+        abort_unless($design->order_id === $order->id, 404);
+        $data = $request->validate(['reason' => ['required', 'string', 'max:1000']]);
+        $designs->customerRequestRevision($design, $request->user(), $data['reason']);
+
+        return back()->with('success', 'Permintaan revisi dikirim.');
     }
 
     public function repeat(Request $request, Order $order, RepeatOrderService $repeats): RedirectResponse

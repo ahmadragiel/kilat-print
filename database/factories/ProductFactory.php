@@ -14,24 +14,36 @@ class ProductFactory extends Factory
 {
     protected $model = Product::class;
 
+    /** Nama produk mengikuti katalog Kilat Print pada laporan Kerja Praktek. */
+    public const REPORT_PRODUCTS = [
+        'Mug Custom',
+        'Bando Tuning Custom',
+        'Paper Bag Custom',
+        'Kertas Kado',
+        'Apotek Mini',
+        'Topper Cake',
+        'Topeng Muka',
+    ];
+
     public function definition(): array
     {
-        $name = Str::title(fake()->unique()->words(3, true));
+        $name = fake()->randomElement(self::REPORT_PRODUCTS);
 
         return [
             'category_id' => Category::factory(),
             'name' => $name,
             'slug' => Str::slug($name).'-'.fake()->unique()->numerify('###'),
-            'description' => fake()->paragraph(),
+            'description' => "Produk {$name} yang dapat disesuaikan dengan desain dan kebutuhan pelanggan. Data uji untuk pengujian fitur.",
             'specifications' => [
-                'material' => 'Demo material',
-                'finish' => 'Demo finish',
+                'demo' => true,
+                'size' => 'Sesuai kebutuhan pelanggan',
             ],
             'thumbnail' => null,
-            'base_price' => fake()->randomFloat(2, 10000, 500000),
+            'base_price' => fake()->randomFloat(2, 3000, 50000),
             'status' => 'active',
-            'minimum_order' => fake()->numberBetween(1, 10),
-            'production_days' => fake()->numberBetween(1, 7),
+            'is_featured' => false,
+            'minimum_order' => 1,
+            'production_days' => fake()->numberBetween(1, 5),
             'popularity_count' => fake()->numberBetween(0, 100),
         ];
     }
