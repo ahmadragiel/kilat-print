@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Enums\DesignStatus;
 use App\Enums\OrderStatus;
+use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
 use App\Enums\PricingType;
 use App\Enums\ProductionStatus;
@@ -13,7 +14,6 @@ use App\Models\Cart;
 use App\Models\CartItem;
 use App\Models\Category;
 use App\Models\Customer;
-use App\Models\DesignApproval;
 use App\Models\DesignFile;
 use App\Models\Finishing;
 use App\Models\Material;
@@ -465,7 +465,7 @@ class DemoDataSeeder extends Seeder
             $products['mug-custom'],
             'KP-DEMO-0001',
             OrderStatus::PENDING_PAYMENT,
-            PaymentStatus::UNPAID,
+            PaymentStatus::Pending,
             2,
             false,
         );
@@ -476,8 +476,8 @@ class DemoDataSeeder extends Seeder
             $operator,
             $products['bando-tuning-custom'],
             'KP-DEMO-0002',
-            OrderStatus::PAYMENT_REVIEW,
-            PaymentStatus::WAITING_VERIFICATION,
+            OrderStatus::PENDING_PAYMENT,
+            PaymentStatus::Expired,
             2,
             false,
         );
@@ -488,8 +488,8 @@ class DemoDataSeeder extends Seeder
             $operator,
             $products['kertas-kado'],
             'KP-DEMO-0003',
-            OrderStatus::DESIGN_REVIEW,
-            PaymentStatus::PAID,
+            OrderStatus::PAYMENT_CONFIRMED,
+            PaymentStatus::Paid,
             50,
             true,
         );
@@ -501,7 +501,7 @@ class DemoDataSeeder extends Seeder
             $products['paper-bag-custom'],
             'KP-DEMO-0004',
             OrderStatus::IN_PRODUCTION,
-            PaymentStatus::PAID,
+            PaymentStatus::Paid,
             100,
             true,
             ProductionStatus::Printing,
@@ -514,7 +514,7 @@ class DemoDataSeeder extends Seeder
             $products['topper-cake'],
             'KP-DEMO-0005',
             OrderStatus::COMPLETED,
-            PaymentStatus::PAID,
+            PaymentStatus::Paid,
             12,
             true,
             ProductionStatus::Completed,
@@ -527,8 +527,8 @@ class DemoDataSeeder extends Seeder
             $operator,
             $products['topeng-muka'],
             'KP-DEMO-0006',
-            OrderStatus::DESIGN_REVIEW,
-            PaymentStatus::PAID,
+            OrderStatus::PAYMENT_CONFIRMED,
+            PaymentStatus::Paid,
             6,
             true,
         );
@@ -540,31 +540,11 @@ class DemoDataSeeder extends Seeder
             $products['apotek-mini'],
             'KP-DEMO-0007',
             OrderStatus::IN_PRODUCTION,
-            PaymentStatus::PAID,
+            PaymentStatus::Paid,
             15,
             true,
             ProductionStatus::Printing,
         );
-
-        $awaitingApprovalOrder = Order::where('number', 'KP-DEMO-0006')->first();
-        if ($awaitingApprovalOrder && ($pendingDesign = $awaitingApprovalOrder->designFiles()->first())) {
-            $pendingDesign->update([
-                'status' => DesignStatus::AwaitingCustomerApproval,
-                'review_note' => null,
-                'reviewed_by' => $accounts['admin']->id,
-                'reviewed_at' => now()->subDay(),
-            ]);
-            DesignApproval::updateOrCreate(
-                ['design_file_id' => $pendingDesign->id],
-                [
-                    'order_id' => $awaitingApprovalOrder->id,
-                    'customer_id' => $accounts['customer']->id,
-                    'status' => 'PENDING',
-                    'requested_by' => $accounts['admin']->id,
-                    'requested_at' => now()->subDay(),
-                ],
-            );
-        }
 
         $reworkOrder = Order::where('number', 'KP-DEMO-0007')->first();
         if ($reworkOrder && ($reworkProduction = $reworkOrder->production)) {
@@ -614,9 +594,6 @@ class DemoDataSeeder extends Seeder
             ],
         );
 
-        $material = $product->materials()->first();
-        $finishing = $product->finishings()->first();
-
         OrderItem::updateOrCreate(
             ['order_id' => $order->id, 'product_id' => $product->id],
             [
@@ -627,12 +604,6 @@ class DemoDataSeeder extends Seeder
                 'size' => null,
                 'length_cm' => null,
                 'width_cm' => null,
-                'material_id' => $material?->id,
-                'material_name' => $material?->name,
-                'material_reference' => $material?->slug,
-                'finishing_id' => $finishing?->id,
-                'finishing_name' => $finishing?->name,
-                'finishing_reference' => $finishing?->slug,
                 'color' => 'Full Color',
                 'production_method' => 'digital',
                 'custom_parameters' => ['demo' => true],
@@ -665,37 +636,36 @@ class DemoDataSeeder extends Seeder
             ['order_id' => $order->id],
             [
                 'status' => $paymentStatus,
-                'method' => 'BANK_TRANSFER',
+                'method' => PaymentMethod::BankTransfer->value,
                 'amount' => $lineTotal,
+                'provider' => 'midtrans',
+                'provider_reference' => 'demo-'.$order->number,
+                'provider_status' => $paymentStatus === PaymentStatus::Paid ? 'settlement' : $paymentStatus->value,
+                'channel' => PaymentMethod::BankTransfer->value,
+                'virtual_account_bank' => 'Bank Demo Indonesia',
+                'virtual_account_number' => '8808'.str_pad((string) $order->id, 12, '0', STR_PAD_LEFT),
                 'bank_name' => 'Bank Demo Indonesia',
-                'account_number' => '1234567890',
                 'account_name' => 'PT Solusi Print Cepat',
+                'expires_at' => $paymentStatus === PaymentStatus::Pending ? now()->addDay() : now()->subDays(2),
+                'paid_at' => $paymentStatus === PaymentStatus::Paid ? now()->subDays(2) : null,
+                'failure_reason' => $paymentStatus === PaymentStatus::Expired
+                    ? 'Waktu pembayaran habis sebelum transaksi dikonfirmasi.'
+                    : null,
                 'proof_path' => null,
-                'proof_original_filename' => null,
-                'proof_extension' => null,
-                'proof_mime_type' => null,
-                'proof_size' => null,
                 'proof_version' => 1,
-                'submitted_at' => $paymentStatus === PaymentStatus::UNPAID ? null : now()->subDays(3),
-                'verified_at' => $paymentStatus === PaymentStatus::PAID ? now()->subDays(2) : null,
-                'verified_by' => $paymentStatus === PaymentStatus::PAID ? $accounts['admin']->id : null,
+                'submitted_at' => null,
+                'verified_at' => $paymentStatus === PaymentStatus::Paid ? now()->subDays(2) : null,
+                'verified_by' => null,
                 'rejection_reason' => null,
             ],
         );
 
         $this->history($order, null, OrderStatus::PENDING_PAYMENT, $accounts['customer']->id, 'Demo order created.');
         if ($orderStatus !== OrderStatus::PENDING_PAYMENT) {
-            $this->history($order, OrderStatus::PENDING_PAYMENT, OrderStatus::PAYMENT_REVIEW, $accounts['customer']->id, 'Demo payment proof submitted.');
-        }
-        if (in_array($orderStatus, [OrderStatus::DESIGN_REVIEW, OrderStatus::IN_PRODUCTION, OrderStatus::COMPLETED], true)) {
-            $this->history($order, OrderStatus::PAYMENT_REVIEW, OrderStatus::PAYMENT_CONFIRMED, $accounts['admin']->id, 'Demo payment verified.');
-        }
-        if ($orderStatus === OrderStatus::DESIGN_REVIEW) {
-            $this->history($order, OrderStatus::PAYMENT_CONFIRMED, OrderStatus::DESIGN_REVIEW, $accounts['customer']->id, 'Demo design submitted for review.');
+            $this->history($order, null, OrderStatus::PAYMENT_CONFIRMED, null, 'Demo payment confirmed by the payment provider.');
         }
         if (in_array($orderStatus, [OrderStatus::IN_PRODUCTION, OrderStatus::COMPLETED], true)) {
-            $this->history($order, OrderStatus::PAYMENT_CONFIRMED, OrderStatus::DESIGN_APPROVED, $accounts['customer']->id, 'Demo design approved by customer.');
-            $this->history($order, OrderStatus::DESIGN_APPROVED, OrderStatus::IN_PRODUCTION, $accounts['admin']->id, 'Demo production task assigned.');
+            $this->history($order, OrderStatus::PAYMENT_CONFIRMED, OrderStatus::IN_PRODUCTION, $accounts['admin']->id, 'Demo production task assigned.');
         }
         if ($orderStatus === OrderStatus::COMPLETED) {
             $this->history($order, OrderStatus::IN_PRODUCTION, OrderStatus::COMPLETED, $accounts['operator']->id, 'Demo quality control passed.');
@@ -712,32 +682,40 @@ class DemoDataSeeder extends Seeder
                     'extension' => 'pdf',
                     'mime_type' => 'application/pdf',
                     'size' => 245760,
-                    'status' => $orderStatus === OrderStatus::DESIGN_REVIEW ? DesignStatus::PENDING : DesignStatus::APPROVED,
+                    'status' => DesignStatus::Approved,
                     'notes' => 'Demo design metadata; no binary file is required for local seeding.',
-                    'review_note' => $orderStatus === OrderStatus::DESIGN_REVIEW ? 'Demo review is waiting for approval.' : null,
-                    'reviewed_by' => $orderStatus === OrderStatus::DESIGN_REVIEW ? null : $accounts['admin']->id,
-                    'reviewed_at' => $orderStatus === OrderStatus::DESIGN_REVIEW ? null : now()->subDays(1),
                     'uploaded_by' => $accounts['customer']->id,
                     'uploaded_at' => now()->subDays(2),
                 ],
             );
         }
 
-        if ($productionStatus !== null) {
+        // A production record only exists once the payment provider has confirmed the
+        // order, which is exactly what the settlement service does at runtime.
+        if ($orderStatus !== OrderStatus::PENDING_PAYMENT) {
             $production = ProductionOrder::updateOrCreate(
                 ['order_id' => $order->id],
                 [
-                    'operator_id' => $operator->id,
-                    'status' => $productionStatus,
-                    'progress' => $productionStatus === ProductionStatus::Completed ? 100 : 45,
+                    'operator_id' => $productionStatus !== null ? $operator->id : null,
+                    'status' => $productionStatus ?? ProductionStatus::InDesign,
+                    'progress' => match ($productionStatus) {
+                        ProductionStatus::Completed => 100,
+                        null => 0,
+                        default => 45,
+                    },
                     'notes' => 'Demo production record. This is sample data for dashboard testing.',
                     'deadline' => now()->addDays(5),
-                    'assigned_at' => now()->subDays(1),
-                    'started_at' => now()->subDays(1),
+                    'assigned_at' => $productionStatus !== null ? now()->subDays(1) : null,
+                    'started_at' => $productionStatus !== null ? now()->subDays(1) : null,
                     'finished_at' => $productionStatus === ProductionStatus::Completed ? now()->subHours(4) : null,
                     'completed_at' => $productionStatus === ProductionStatus::Completed ? now()->subHours(4) : null,
                 ],
             );
+
+            if ($productionStatus === null) {
+                // Paid but not yet scheduled: the queue is created, no operator.
+                return;
+            }
 
             ProductionAssignment::updateOrCreate(
                 ['production_order_id' => $production->id, 'operator_id' => $operator->id],
@@ -824,7 +802,7 @@ class DemoDataSeeder extends Seeder
         }
     }
 
-    private function history(Order $order, ?OrderStatus $old, OrderStatus $new, int $changedBy, string $note): void
+    private function history(Order $order, ?OrderStatus $old, OrderStatus $new, ?int $changedBy, string $note): void
     {
         OrderStatusHistory::updateOrCreate(
             ['order_id' => $order->id, 'new_status' => $new->value],

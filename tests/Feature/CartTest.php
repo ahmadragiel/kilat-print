@@ -14,8 +14,6 @@ class CartTest extends TestCase
         Storage::fake('local');
         $customer = $this->makeCustomer();
         $product = $this->makeProduct(PricingType::PER_ITEM, 10000);
-        $material = $this->attachMaterial($product, PricingType::PER_ITEM, 1500);
-        $finishing = $this->attachFinishing($product, PricingType::PER_ITEM, 2500);
         $design = UploadedFile::fake()->create('reference.pdf', 20, 'application/pdf');
 
         $response = $this->actingAs($customer->user)->post(route('cart.store'), [
@@ -24,8 +22,6 @@ class CartTest extends TestCase
             'size' => 'A5',
             'length_cm' => 10,
             'width_cm' => 20,
-            'material_id' => $material->id,
-            'finishing_id' => $finishing->id,
             'color' => 'Blue',
             'production_method' => 'digital',
             'notes' => 'Please print carefully.',
@@ -37,9 +33,10 @@ class CartTest extends TestCase
         $response->assertRedirect(route('cart.index'));
         $item = $customer->cart->items()->sole();
         $this->assertSame(2, $item->quantity);
-        $this->assertSame(28000, (int) $item->price_at_addition);
-        $this->assertSame($material->id, $item->material_id);
-        $this->assertSame($finishing->id, $item->finishing_id);
+        // Price comes from the product tariff, size and quantity only.
+        $this->assertSame(20000, (int) $item->price_at_addition);
+        $this->assertNull($item->material_id);
+        $this->assertNull($item->finishing_id);
         $this->assertSame('Blue', $item->color);
         $this->assertNotNull($item->design_reference);
         Storage::disk('local')->assertExists($item->design_reference);

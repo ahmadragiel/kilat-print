@@ -11,25 +11,21 @@ class OrderPresenter
         $status = $status instanceof OrderStatus ? $status : OrderStatus::from($status);
 
         return match ($status) {
-            OrderStatus::PENDING_PAYMENT => 'Menunggu Pembayaran',
-            OrderStatus::PAYMENT_REVIEW => 'Verifikasi Pembayaran',
-            OrderStatus::PAYMENT_CONFIRMED => 'Pembayaran Dikonfirmasi',
-            OrderStatus::DESIGN_REVIEW => 'Meninjau Desain',
-            OrderStatus::DESIGN_REVISION => 'Revisi Desain',
-            OrderStatus::DESIGN_APPROVED => 'Desain Disetujui',
-            OrderStatus::IN_PRODUCTION => 'Sedang Diproduksi',
-            OrderStatus::COMPLETED => 'Selesai',
-            OrderStatus::CANCELLED => 'Dibatalkan',
+            OrderStatus::PendingPayment => 'Menunggu Pembayaran',
+            OrderStatus::PaymentConfirmed => 'Pembayaran Dikonfirmasi',
+            OrderStatus::InProduction => 'Sedang Diproduksi',
+            OrderStatus::Completed => 'Selesai',
+            OrderStatus::Cancelled => 'Dibatalkan',
         };
     }
 
     public static function color(string|OrderStatus $status): string
     {
         return match ($status instanceof OrderStatus ? $status : OrderStatus::from($status)) {
-            OrderStatus::COMPLETED => 'emerald',
-            OrderStatus::CANCELLED, OrderStatus::DESIGN_REVISION => 'rose',
-            OrderStatus::PENDING_PAYMENT, OrderStatus::PAYMENT_REVIEW => 'amber',
-            OrderStatus::IN_PRODUCTION => 'blue',
+            OrderStatus::Completed => 'emerald',
+            OrderStatus::Cancelled => 'rose',
+            OrderStatus::PendingPayment => 'amber',
+            OrderStatus::InProduction => 'blue',
             default => 'violet',
         };
     }

@@ -267,12 +267,6 @@
                 <x-input name="size" label="Ukuran / orientasi" :value="data_get($specification, 'size')" placeholder="Contoh: A4" />
                 <x-input name="length_cm" label="Panjang (cm)" type="number" step="0.01" min="0" :value="data_get($specification, 'length_cm')" placeholder="Masukkan panjang" />
                 <x-input name="width_cm" label="Lebar (cm)" type="number" step="0.01" min="0" :value="data_get($specification, 'width_cm')" placeholder="Masukkan lebar" />
-                <x-select name="material_id" label="Material" :value="data_get($specification, 'material_id')" placeholder="Tanpa material">
-                    @foreach ($materials as $material)<option value="{{ $material->id }}">{{ $material->name }}</option>@endforeach
-                </x-select>
-                <x-select name="finishing_id" label="Finishing" :value="data_get($specification, 'finishing_id')" placeholder="Tanpa finishing">
-                    @foreach ($finishings as $finishing)<option value="{{ $finishing->id }}">{{ $finishing->name }}</option>@endforeach
-                </x-select>
                 <x-select name="production_method" label="Metode produksi" :value="data_get($specification, 'production_method', 'digital')" required>
                     @foreach ($productionMethods as $method)<option value="{{ $method['value'] }}">{{ $method['label'] }}</option>@endforeach
                 </x-select>

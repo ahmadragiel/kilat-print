@@ -12,15 +12,7 @@
     $currentOrderStatus = data_get($order, 'status');
     $currentOrderStatusValue = $currentOrderStatus instanceof \BackedEnum ? $currentOrderStatus->value : $currentOrderStatus;
     $statusUrl = \Illuminate\Support\Facades\Route::has('orders.status') ? route('orders.status', $order) : route('admin.orders.status', $order);
-    $paymentVerifyUrl = \Illuminate\Support\Facades\Route::has('payment.verify')
-        ? route('payment.verify', $orderPayment)
-        : route('admin.payments.verify', $order);
-    $paymentRejectUrl = \Illuminate\Support\Facades\Route::has('payment.reject')
-        ? route('payment.reject', $orderPayment)
-        : route('admin.payments.reject', $order);
     $paymentProofUrl = data_get($orderPayment, 'proof_url') ?? (\Illuminate\Support\Facades\Route::has('admin.payments.proof') && data_get($orderPayment, 'proof_path') ? route('admin.payments.proof', $order) : null);
-    $designApproveUrl = $orderDesign ? (\Illuminate\Support\Facades\Route::has('design.approve') ? route('design.approve', $orderDesign) : route('admin.designs.approve', $orderDesign)) : null;
-    $designRevisionUrl = $orderDesign ? (\Illuminate\Support\Facades\Route::has('design.requestRevision') ? route('design.requestRevision', $orderDesign) : route('admin.designs.revision', $orderDesign)) : null;
     $designDownloadUrl = $orderDesign ? (\Illuminate\Support\Facades\Route::has('design.download') && data_get($orderDesign, 'path') ? route('design.download', $orderDesign) : (\Illuminate\Support\Facades\Route::has('admin.designs.download') && data_get($orderDesign, 'path') ? route('admin.designs.download', $orderDesign) : data_get($orderDesign, 'file_url'))) : null;
     $productionAssignUrl = $production ? (\Illuminate\Support\Facades\Route::has('production.assign') ? route('production.assign', $production) : route('admin.production.assign', $production)) : (\Illuminate\Support\Facades\Route::has('production.assign') ? route('production.assign', $order) : null);
 @endphp
@@ -130,7 +122,7 @@
                 @if($orderPayment)
                     <p class="mt-3 text-sm text-ink-500">{{ data_get($orderPayment, 'method', 'Metode belum tersedia') }}</p>
                     @if($paymentProofUrl)<a href="{{ $paymentProofUrl }}" target="_blank" rel="noopener" class="action-link mt-3">Bukti pembayaran <x-icon name="external" class="h-4 w-4" /></a>@endif
-                    <div class="mt-4 grid grid-cols-2 gap-2 border-t border-ink-100 pt-4"><form method="POST" action="{{ $paymentVerifyUrl }}">@csrf @if(\Illuminate\Support\Facades\Route::has('payment.verify')) @method('PATCH') @endif<x-button type="submit" variant="success" size="sm" class="w-full">Verifikasi</x-button></form><form method="POST" action="{{ $paymentRejectUrl }}">@csrf @if(\Illuminate\Support\Facades\Route::has('payment.reject')) @method('PATCH') @endif<input type="hidden" name="reason" value="Bukti pembayaran tidak dapat diverifikasi."><x-button type="submit" variant="danger" size="sm" class="w-full">Tolak</x-button></form></div>
+                    <p class="mt-4 border-t border-ink-100 pt-4 text-xs leading-5 text-ink-500">Pembayaran diverifikasi otomatis saat pesanan dibuat.</p>
                 @else<x-empty-state compact title="Data pembayaran belum tersedia" icon="credit-card" />@endif
             </section>
 
@@ -138,7 +130,7 @@
                 <div class="flex items-center justify-between gap-3"><h2 class="font-extrabold text-ink-950">Desain</h2><x-status-badge :status="data_get($orderDesign, 'status')" /></div>
                 @if($orderDesign)
                     @if($designDownloadUrl)<a href="{{ $designDownloadUrl }}" target="_blank" rel="noopener" class="action-link mt-3">Buka desain <x-icon name="external" class="h-4 w-4" /></a>@else<p class="mt-3 text-sm text-ink-500">{{ data_get($orderDesign, 'original_filename', 'File desain tersimpan') }}</p>@endif
-                    <div class="mt-4 grid grid-cols-2 gap-2 border-t border-ink-100 pt-4"><form method="POST" action="{{ $designApproveUrl }}">@csrf @if(\Illuminate\Support\Facades\Route::has('design.approve')) @method('PATCH') @endif<x-button type="submit" variant="success" size="sm" class="w-full">Setujui</x-button></form><form method="POST" action="{{ $designRevisionUrl }}">@csrf @if(\Illuminate\Support\Facades\Route::has('design.requestRevision')) @method('PATCH') @endif<input type="hidden" name="reason" value="Mohon periksa kembali desain sebelum produksi."><x-button type="submit" variant="secondary" size="sm" class="w-full">Minta revisi</x-button></form></div>
+                    <p class="mt-4 border-t border-ink-100 pt-4 text-xs leading-5 text-ink-500">Desain yang diunggah pelanggan langsung dianggap siap cetak.</p>
                 @else<x-empty-state compact title="Desain belum diunggah" icon="palette" />@endif
             </section>
 

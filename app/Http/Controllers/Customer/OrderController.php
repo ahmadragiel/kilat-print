@@ -5,12 +5,10 @@ namespace App\Http\Controllers\Customer;
 use App\Enums\OrderStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\DesignUploadRequest;
-use App\Http\Requests\PaymentProofRequest;
 use App\Models\DesignFile;
 use App\Models\Order;
-use App\Services\DesignReviewService;
+use App\Services\DesignUploadService;
 use App\Services\OrderStatusService;
-use App\Services\PaymentVerificationService;
 use App\Services\RepeatOrderService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
@@ -30,19 +28,12 @@ class OrderController extends Controller
     public function show(Order $order): View
     {
         $this->authorize('view', $order);
-        $order->load(['items.product', 'items.customDesignDraft.assets', 'payment', 'address', 'statusHistories.changer', 'designFiles.reviewer', 'designFiles.approvals', 'production.operator.user', 'production.qualityChecks']);
+        $order->load(['items.product', 'items.customDesignDraft.assets', 'payment', 'address', 'statusHistories.changer', 'designFiles', 'production.operator.user', 'production.qualityChecks']);
 
         return view('customer.orders.show', compact('order'));
     }
 
-    public function uploadPayment(PaymentProofRequest $request, Order $order, PaymentVerificationService $payments): RedirectResponse
-    {
-        $payments->upload($order, $request->user(), $request->file('proof'));
-
-        return back()->with('success', 'Bukti pembayaran diunggah dan menunggu verifikasi admin.');
-    }
-
-    public function uploadDesign(DesignUploadRequest $request, Order $order, DesignReviewService $designs): RedirectResponse
+    public function uploadDesign(DesignUploadRequest $request, Order $order, DesignUploadService $designs): RedirectResponse
     {
         $designs->upload($order, $request->user(), $request->file('design'), $request->integer('order_item_id') ?: null, $request->input('notes'));
 
@@ -56,25 +47,6 @@ class OrderController extends Controller
         abort_unless(Storage::disk('local')->exists($design->path), 404, 'File desain tidak ditemukan.');
 
         return Storage::disk('local')->download($design->path, $design->original_filename);
-    }
-
-    public function approveDesign(Request $request, Order $order, DesignFile $design, DesignReviewService $designs): RedirectResponse
-    {
-        $this->authorize('view', $order);
-        abort_unless($design->order_id === $order->id, 404);
-        $designs->customerApprove($design, $request->user());
-
-        return back()->with('success', 'Desain disetujui. Pesanan akan dijadwalkan ke produksi.');
-    }
-
-    public function requestDesignRevision(Request $request, Order $order, DesignFile $design, DesignReviewService $designs): RedirectResponse
-    {
-        $this->authorize('view', $order);
-        abort_unless($design->order_id === $order->id, 404);
-        $data = $request->validate(['reason' => ['required', 'string', 'max:1000']]);
-        $designs->customerRequestRevision($design, $request->user(), $data['reason']);
-
-        return back()->with('success', 'Permintaan revisi dikirim.');
     }
 
     public function repeat(Request $request, Order $order, RepeatOrderService $repeats): RedirectResponse

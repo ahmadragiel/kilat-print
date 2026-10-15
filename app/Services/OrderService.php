@@ -4,27 +4,37 @@ namespace App\Services;
 
 use App\Enums\DesignStatus;
 use App\Enums\OrderStatus;
+use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
 use App\Models\Cart;
 use App\Models\Customer;
 use App\Models\Order;
+use App\Models\OrderItem;
 use App\Models\OrderStatusHistory;
 use App\Notifications\OrderNotification;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use RuntimeException;
 
+/**
+ * Turns a customer cart into an order that is waiting for payment.
+ *
+ * Checkout never marks a payment as paid. It snapshots the cart into the order,
+ * stores the design the customer produced, and opens a PENDING payment. The
+ * order only becomes payable/confirmed through the payment gateway flow.
+ */
 class OrderService
 {
     public function __construct(private readonly PriceCalculationService $priceCalculator) {}
 
-    /** @param array<string, mixed> $checkout */
+    /** @param  array<string, mixed>  $checkout  Validated checkout payload. */
     public function checkout(Customer $customer, array $checkout): Order
     {
         return DB::transaction(function () use ($customer, $checkout) {
             $cart = Cart::query()
                 ->where('customer_id', $customer->id)
-                ->with(['items.product', 'items.material', 'items.finishing'])
+                ->with(['items.product'])
                 ->lockForUpdate()
                 ->first();
 
@@ -37,8 +47,6 @@ class OrderService
                     'quantity' => $item->quantity,
                     'length_cm' => $item->length_cm,
                     'width_cm' => $item->width_cm,
-                    'material_id' => $item->material_id,
-                    'finishing_id' => $item->finishing_id,
                 ];
 
                 $calculation = $this->priceCalculator->calculate($item->product, $configuration);
@@ -49,6 +57,10 @@ class OrderService
 
             $subtotal = $calculations->sum(fn (array $row) => $row[1]['total']);
             $shippingFee = $checkout['shipping_method'] === 'delivery' ? (int) config('printing.delivery_fee') : 0;
+
+            // The order starts waiting for payment. It is promoted to
+            // PAYMENT_CONFIRMED only after the provider confirms the transaction,
+            // and only then does a production record exist.
             $order = Order::create([
                 'customer_id' => $customer->id,
                 'customer_name' => $checkout['name'],
@@ -60,6 +72,7 @@ class OrderService
                 'shipping_fee' => $shippingFee,
                 'grand_total' => $subtotal + $shippingFee,
                 'shipping_method' => $checkout['shipping_method'],
+                'paid_at' => null,
                 'deadline' => now()->addDays(max(1, (int) $cart->items->max(fn ($item) => $item->product->production_days))),
             ]);
 
@@ -76,12 +89,6 @@ class OrderService
                     'size' => $item->size,
                     'length_cm' => $item->length_cm,
                     'width_cm' => $item->width_cm,
-                    'material_id' => $item->material_id,
-                    'material_name' => $item->material?->name,
-                    'material_reference' => $item->material_id ? (string) $item->material_id : null,
-                    'finishing_id' => $item->finishing_id,
-                    'finishing_name' => $item->finishing?->name,
-                    'finishing_reference' => $item->finishing_id ? (string) $item->finishing_id : null,
                     'color' => $item->color,
                     'production_method' => $item->production_method,
                     'custom_parameters' => $item->custom_parameters,
@@ -99,28 +106,7 @@ class OrderService
                 ];
             })->all());
 
-            $designVersion = 0;
-            foreach ($orderItems as $orderItem) {
-                $reference = $orderItem->design_reference;
-                if (! $reference || ! Storage::disk('local')->exists($reference)) {
-                    continue;
-                }
-                $designVersion++;
-                $fullPath = Storage::disk('local')->path($reference);
-                $order->designFiles()->create([
-                    'order_item_id' => $orderItem->id,
-                    'original_filename' => $orderItem->custom_parameters['design_original_filename'] ?? basename($reference),
-                    'stored_filename' => basename($reference),
-                    'path' => $reference,
-                    'extension' => strtolower(pathinfo($reference, PATHINFO_EXTENSION)),
-                    'mime_type' => mime_content_type($fullPath) ?: 'application/octet-stream',
-                    'size' => filesize($fullPath) ?: 0,
-                    'version' => $designVersion,
-                    'status' => DesignStatus::Pending,
-                    'uploaded_by' => $customer->user_id,
-                    'uploaded_at' => now(),
-                ]);
-            }
+            $this->attachDesignFiles($order, $orderItems, $customer);
 
             $order->address()->create([
                 'recipient' => $checkout['recipient'],
@@ -134,13 +120,13 @@ class OrderService
                 'shipping_method' => $checkout['shipping_method'],
             ]);
 
+            // A PENDING payment only: the customer pays through QRIS or bank
+            // transfer, and the provider confirms it. No proof, no admin verify.
             $order->payment()->create([
-                'status' => PaymentStatus::Unpaid,
-                'method' => 'BANK_TRANSFER',
+                'status' => PaymentStatus::Pending,
+                'method' => PaymentMethod::from($checkout['payment_method'])->value,
                 'amount' => $order->grand_total,
-                'bank_name' => config('printing.bank_name'),
-                'account_number' => config('printing.bank_account_number'),
-                'account_name' => config('printing.bank_account_name'),
+                'expires_at' => now()->addHours(max(1, (int) config('payments.expiry_hours', 24))),
             ]);
 
             OrderStatusHistory::create([
@@ -148,7 +134,7 @@ class OrderService
                 'changed_by' => $customer->user_id,
                 'old_status' => null,
                 'new_status' => OrderStatus::PendingPayment->value,
-                'note' => 'Pesanan dibuat dari checkout.',
+                'note' => 'Pesanan dibuat dari checkout. Menunggu konfirmasi pembayaran dari penyedia pembayaran.',
             ]);
 
             $cart->items()->delete();
@@ -160,6 +146,42 @@ class OrderService
 
             return $order->load(['items', 'address', 'payment', 'statusHistories']);
         }, 3);
+    }
+
+    /**
+     * Copy the design the customer produced into the order.
+     *
+     * There is no admin review stage: a stored design is immediately usable by
+     * production once the order is paid.
+     *
+     * @param  Collection<int, OrderItem>  $orderItems
+     */
+    private function attachDesignFiles(Order $order, $orderItems, Customer $customer): void
+    {
+        $version = 0;
+
+        foreach ($orderItems as $orderItem) {
+            $reference = $orderItem->design_reference;
+            if (! $reference || ! Storage::disk('local')->exists($reference)) {
+                continue;
+            }
+
+            $version++;
+            $fullPath = Storage::disk('local')->path($reference);
+            $order->designFiles()->create([
+                'order_item_id' => $orderItem->id,
+                'original_filename' => $orderItem->custom_parameters['design_original_filename'] ?? basename($reference),
+                'stored_filename' => basename($reference),
+                'path' => $reference,
+                'extension' => strtolower(pathinfo($reference, PATHINFO_EXTENSION)),
+                'mime_type' => mime_content_type($fullPath) ?: 'application/octet-stream',
+                'size' => filesize($fullPath) ?: 0,
+                'version' => $version,
+                'status' => DesignStatus::Approved,
+                'uploaded_by' => $customer->user_id,
+                'uploaded_at' => now(),
+            ]);
+        }
     }
 
     private function uniqueOrderNumber(): string

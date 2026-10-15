@@ -22,7 +22,7 @@ class ProductionTest extends TestCase
         $admin = $this->makeAdmin();
         $customer = $this->makeCustomer();
         $operator = $this->makeOperator();
-        $order = $this->makeOrder($customer, ['status' => OrderStatus::DESIGN_APPROVED]);
+        $order = $this->makePaidOrder($this->makeOrder($customer, ['status' => OrderStatus::PaymentConfirmed]));
         $this->makeDesign($order, ['status' => DesignStatus::APPROVED]);
         $production = $this->makeProduction($order);
 
@@ -85,7 +85,7 @@ class ProductionTest extends TestCase
         $admin = $this->makeAdmin();
         $customer = $this->makeCustomer();
         $operator = $this->makeOperator();
-        $order = $this->makeOrder($customer, ['status' => OrderStatus::DESIGN_APPROVED]);
+        $order = $this->makePaidOrder($this->makeOrder($customer, ['status' => OrderStatus::PaymentConfirmed]));
         $this->makeDesign($order, ['status' => DesignStatus::APPROVED]);
         $production = $this->makeProduction($order);
         app(ProductionService::class)->assign($production, $operator, $admin);
@@ -120,7 +120,7 @@ class ProductionTest extends TestCase
         $admin = $this->makeAdmin();
         $customer = $this->makeCustomer();
         $operator = $this->makeOperator();
-        $order = $this->makeOrder($customer, ['status' => OrderStatus::DESIGN_APPROVED]);
+        $order = $this->makePaidOrder($this->makeOrder($customer, ['status' => OrderStatus::PaymentConfirmed]));
         $this->makeDesign($order, ['status' => DesignStatus::APPROVED]);
         $production = $this->makeProduction($order);
         app(ProductionService::class)->assign($production, $operator, $admin);

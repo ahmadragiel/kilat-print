@@ -56,6 +56,10 @@
             <a href="{{ \Illuminate\Support\Facades\Route::has('admin.production') ? route('admin.production') : route('admin.production.index') }}" class="{{ $link }} {{ $productionActive ? $linkActive : '' }} @if($productionActive) before:absolute before:inset-y-2 before:left-0 before:w-1 before:rounded-full before:bg-accent-400 @endif">
                 <x-icon name="factory" class="h-5 w-5" /> Produksi
             </a>
+            @php $settingsActive = request()->routeIs('admin.payment-settings*'); @endphp
+            <a href="{{ route('admin.payment-settings.edit') }}" class="{{ $link }} {{ $settingsActive ? $linkActive : '' }} @if($settingsActive) before:absolute before:inset-y-2 before:left-0 before:w-1 before:rounded-full before:bg-accent-400 @endif">
+                <x-icon name="settings" class="h-5 w-5" /> Penyedia Bayar
+            </a>
         </div>
 
         <div>

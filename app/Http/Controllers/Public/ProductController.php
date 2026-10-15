@@ -22,8 +22,6 @@ class ProductController extends Controller
             ->where('status', 'active')
             ->with([
                 'category',
-                'materials' => fn ($query) => $query->where('materials.status', 'active'),
-                'finishings' => fn ($query) => $query->where('finishings.status', 'active'),
                 'priceRules' => fn ($query) => $query->where('active', true),
             ])
             ->firstOrFail();
@@ -37,8 +35,6 @@ class ProductController extends Controller
         abort_unless($product->status === 'active', 404);
         $product->load([
             'category',
-            'materials' => fn ($query) => $query->where('materials.status', 'active'),
-            'finishings' => fn ($query) => $query->where('finishings.status', 'active'),
             'priceRules' => fn ($query) => $query->where('active', true),
         ]);
 
@@ -67,8 +63,6 @@ class ProductController extends Controller
             'size' => $cartItem->size,
             'length_cm' => $cartItem->length_cm,
             'width_cm' => $cartItem->width_cm,
-            'material_id' => $cartItem->material_id,
-            'finishing_id' => $cartItem->finishing_id,
             'color' => $cartItem->color,
             'production_method' => $cartItem->production_method,
             'notes' => $cartItem->notes,
@@ -77,8 +71,6 @@ class ProductController extends Controller
             'size' => null,
             'length_cm' => null,
             'width_cm' => null,
-            'material_id' => null,
-            'finishing_id' => null,
             'color' => null,
             'production_method' => 'digital',
             'notes' => null,
@@ -110,8 +102,6 @@ class ProductController extends Controller
 
         return view('products.customize', [
             'product' => $product,
-            'materials' => $product->materials,
-            'finishings' => $product->finishings,
             'cartItem' => $cartItem,
             'initialDraft' => $initialDraft,
             'initialDesign' => $design,
@@ -148,8 +138,6 @@ class ProductController extends Controller
             'quantity' => ['required', 'integer', 'min:1', 'max:100000'],
             'length_cm' => ['nullable', 'numeric', 'min:0', 'max:100000'],
             'width_cm' => ['nullable', 'numeric', 'min:0', 'max:100000'],
-            'material_id' => ['nullable', 'integer'],
-            'finishing_id' => ['nullable', 'integer'],
         ]);
 
         $calculation = $calculator->calculate($product, $data);

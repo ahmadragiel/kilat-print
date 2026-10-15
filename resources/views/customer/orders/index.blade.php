@@ -18,11 +18,7 @@
                 <option value="">Semua status</option>
                 @foreach (($statuses ?? [
                     'PENDING_PAYMENT' => 'Menunggu pembayaran',
-                    'PAYMENT_REVIEW' => 'Verifikasi pembayaran',
                     'PAYMENT_CONFIRMED' => 'Pembayaran dikonfirmasi',
-                    'DESIGN_REVIEW' => 'Review desain',
-                    'DESIGN_REVISION' => 'Revisi desain',
-                    'DESIGN_APPROVED' => 'Desain disetujui',
                     'IN_PRODUCTION' => 'Dalam produksi',
                     'COMPLETED' => 'Selesai',
                     'CANCELLED' => 'Dibatalkan',

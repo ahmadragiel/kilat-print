@@ -2,13 +2,17 @@
 
 namespace Tests\Feature;
 
+use App\Enums\PaymentMethod;
+use App\Enums\PaymentStatus;
 use App\Enums\PricingType;
 use App\Models\Category;
+use App\Models\Finishing;
 use App\Models\Material;
 use App\Models\Product;
 use App\Services\PriceCalculationService;
 use Database\Seeders\DemoDataSeeder;
 use PHPUnit\Framework\Attributes\DataProvider;
+use Tests\Fakes\FakeMidtransApi;
 use Tests\TestCase;
 
 /**
@@ -124,7 +128,7 @@ class KilatPrintCatalogTest extends TestCase
 
         $this->assertSame(
             ['Glossy', 'Laminasi', 'Matte'],
-            \App\Models\Finishing::active()->orderBy('name')->pluck('name')->all(),
+            Finishing::active()->orderBy('name')->pluck('name')->all(),
         );
 
         $mug = Product::with(['materials', 'finishings'])->where('slug', 'mug-custom')->firstOrFail();
@@ -155,8 +159,6 @@ class KilatPrintCatalogTest extends TestCase
 
             $calculation = $calculator->calculate($product, [
                 'quantity' => max(1, (int) $product->minimum_order),
-                'material_id' => $product->materials()->value('materials.id'),
-                'finishing_id' => $product->finishings()->value('finishings.id'),
             ]);
 
             $this->assertGreaterThan(0, $calculation['total']);
@@ -309,6 +311,7 @@ class KilatPrintCatalogTest extends TestCase
 
     public function test_customer_can_customize_and_order_mug_custom_end_to_end(): void
     {
+        (new FakeMidtransApi)->install();
         $customer = $this->makeCustomer();
         $mug = Product::where('slug', 'mug-custom')->firstOrFail();
 
@@ -353,14 +356,10 @@ class KilatPrintCatalogTest extends TestCase
             (string) $editor->viewData('mockups')['front'],
         );
 
-        $glossy = $mug->finishings()->where('name', 'Glossy')->value('finishings.id');
-
         $this->actingAs($customer->user)->post(route('cart.store'), [
             'product_id' => $mug->id,
             'quantity' => 2,
             'production_method' => 'digital',
-            'material_id' => $mug->materials()->value('materials.id'),
-            'finishing_id' => $glossy,
             'design_draft_id' => $draftId,
         ])->assertRedirect(route('cart.index'));
 
@@ -368,7 +367,7 @@ class KilatPrintCatalogTest extends TestCase
 
         $this->assertSame($mug->id, $cartItem->product_id);
         $this->assertSame($draftId, $cartItem->custom_design_draft_id);
-        $this->assertSame(2 * 25000 + 2 * 3000, (int) $cartItem->price_at_addition);
+        $this->assertSame(2 * 25000, (int) $cartItem->price_at_addition);
 
         $this->actingAs($customer->user)->get(route('cart.index'))
             ->assertOk()
@@ -379,6 +378,7 @@ class KilatPrintCatalogTest extends TestCase
             'phone' => '081200000001',
             'email' => $customer->user->email,
             'shipping_method' => 'pickup',
+            'payment_method' => PaymentMethod::Qris->value,
             'recipient' => $customer->user->name,
             'address_phone' => '081200000001',
             'address' => 'Jalan Kilat No. 1',
@@ -394,7 +394,11 @@ class KilatPrintCatalogTest extends TestCase
         $this->assertSame('mug-custom', $item->product_slug);
         $this->assertSame('Mug Custom', $item->product_name);
         $this->assertSame($draftId, $item->custom_design_draft_id);
-        $this->assertSame(2 * 25000 + 2 * 3000, (int) $item->line_total);
-        $this->assertDatabaseHas('payments', ['order_id' => $order->id, 'status' => 'UNPAID']);
+        $this->assertSame(2 * 25000, (int) $item->line_total);
+        // Checkout leaves the transaction pending; only the provider can settle it.
+        $this->assertDatabaseHas('payments', [
+            'order_id' => $order->id,
+            'status' => PaymentStatus::Pending->value,
+        ]);
     }
 }

@@ -130,17 +130,36 @@
                     <h2 id="order-payment-title" class="font-extrabold text-ink-950">Pembayaran</h2>
                     <x-status-badge :status="data_get($orderPayment, 'status', data_get($order, 'payment_status'))" />
                 </div>
-                <p class="mt-3 text-sm text-ink-500">Metode</p>
-                <p class="mt-1 font-semibold text-ink-800">{{ data_get($orderPayment, 'method_name', data_get($orderPayment, 'method', data_get($order, 'payment_method', 'Belum tersedia'))) }}</p>
-                @if ($paymentProof)
-                    <a href="{{ $paymentProof }}" target="_blank" rel="noopener" class="action-link mt-4">Lihat bukti pembayaran <x-icon name="external" class="h-4 w-4" /></a>
+                <dl class="mt-4 space-y-3 text-sm">
+                    <div>
+                        <dt class="text-xs font-semibold text-ink-500">Metode</dt>
+                        <dd class="mt-0.5 font-semibold text-ink-800">{{ $orderPayment?->paymentMethod()?->label() ?? data_get($orderPayment, 'method', 'Belum tersedia') }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-xs font-semibold text-ink-500">Nominal</dt>
+                        <dd class="mt-0.5 font-semibold text-ink-800"><x-money :value="data_get($orderPayment, 'amount', data_get($order, 'grand_total'))" /></dd>
+                    </div>
+                    <div>
+                        <dt class="text-xs font-semibold text-ink-500">Referensi transaksi</dt>
+                        <dd class="mt-0.5 font-mono text-xs break-all text-ink-700">{{ data_get($orderPayment, 'provider_reference', 'Belum dibuat') }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-xs font-semibold text-ink-500">Waktu pembayaran</dt>
+                        <dd class="mt-0.5 text-ink-700">{{ data_get($orderPayment, 'paid_at')?->format('d F Y, H:i') ?? 'Belum dikonfirmasi' }}</dd>
+                    </div>
+                </dl>
+
+                @if ($orderPayment?->status === \App\Enums\PaymentStatus::Paid)
+                    <p class="mt-4 flex items-center gap-2 rounded-lg bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-800 ring-1 ring-inset ring-emerald-200">
+                        <x-icon name="check" class="h-4 w-4" /> Pembayaran Berhasil
+                    </p>
+                @elseif ($order->status === \App\Enums\OrderStatus::PendingPayment)
+                    <x-button :href="route('customer.orders.payment', $order)" class="mt-4 w-full">Bayar sekarang <x-icon name="arrow-right" class="h-4 w-4" /></x-button>
                 @endif
-                <form method="POST" action="{{ \Illuminate\Support\Facades\Route::has('customer.orders.uploadPayment') ? route('customer.orders.uploadPayment', $order) : route('customer.orders.payment', $order) }}" enctype="multipart/form-data" class="mt-5 space-y-3 border-t border-ink-100 pt-5" aria-label="Unggah bukti pembayaran">
-                    @csrf
-                    <x-input name="proof" label="Unggah bukti pembayaran" type="file" accept=".jpg,.jpeg,.png,.pdf" required />
-                    <x-textarea name="payment_note" label="Catatan" :rows="2" placeholder="Keterangan pembayaran" />
-                    <x-button type="submit" class="w-full" variant="secondary"><x-icon name="upload" class="h-4 w-4" /> Kirim bukti</x-button>
-                </form>
+
+                @if ($paymentProof)
+                    <a href="{{ $paymentProof }}" target="_blank" rel="noopener" class="action-link mt-4">Lihat bukti pembayaran tersimpan <x-icon name="external" class="h-4 w-4" /></a>
+                @endif
             </section>
 
             <section class="panel p-5" aria-labelledby="order-design-title">
@@ -154,22 +173,7 @@
                 @if (data_get($orderDesign, 'review_note'))
                     <x-alert type="warning" class="mt-4">Catatan revisi: {{ data_get($orderDesign, 'review_note') }}</x-alert>
                 @endif
-                @php $awaitingApproval = (data_get($orderDesign, 'status') === \App\Enums\DesignStatus::AwaitingCustomerApproval) || data_get($orderDesign, 'status') === 'Awaiting Customer Approval'; @endphp
-                @if ($awaitingApproval)
-                    <div class="mt-5 space-y-3 rounded-xl border border-brand-200 bg-brand-50 p-4">
-                        <p class="text-sm font-semibold text-ink-800">Status: Menunggu Persetujuan Customer</p>
-                        <form method="POST" action="{{ route('customer.orders.design.approve', ['order' => $order, 'design' => $orderDesign]) }}">
-                            @csrf
-                            <x-button type="submit" class="w-full" variant="success"><x-icon name="check-circle" class="h-4 w-4" /> Setujui Desain</x-button>
-                        </form>
-                        <form method="POST" action="{{ route('customer.orders.design.revision', ['order' => $order, 'design' => $orderDesign]) }}" class="space-y-2">
-                            @csrf
-                            <x-textarea name="reason" label="Alasan revisi" :rows="2" required />
-                            <x-button type="submit" class="w-full" variant="secondary"><x-icon name="refresh" class="h-4 w-4" /> Minta Revisi</x-button>
-                        </form>
-                    </div>
-                @endif
-                <form method="POST" action="{{ \Illuminate\Support\Facades\Route::has('customer.orders.uploadDesign') ? route('customer.orders.uploadDesign', $order) : route('customer.orders.design', $order) }}" enctype="multipart/form-data" class="mt-5 space-y-3 border-t border-ink-100 pt-5" aria-label="Unggah desain">
+                <form method="POST" action="{{ route('customer.orders.design', $order) }}" enctype="multipart/form-data" class="mt-5 space-y-3 border-t border-ink-100 pt-5" aria-label="Unggah desain">
                     @csrf
                     <x-select name="order_item_id" label="Item pesanan" placeholder="Pilih item (opsional)">
                         @foreach ($orderItems as $item)

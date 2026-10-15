@@ -3,6 +3,8 @@
 namespace Tests\Concerns;
 
 use App\Enums\OrderStatus;
+use App\Enums\PaymentMethod;
+use App\Enums\PaymentStatus;
 use App\Enums\PricingType;
 use App\Enums\ProductionStatus;
 use App\Enums\UserRole;
@@ -238,14 +240,47 @@ trait CreatesTestData
     protected function makePayment(Order $order, array $attributes = []): Payment
     {
         return $order->payment()->create(array_merge([
-            'status' => 'UNPAID',
-            'method' => 'BANK_TRANSFER',
+            'status' => PaymentStatus::Pending,
+            'method' => PaymentMethod::BankTransfer->value,
             'amount' => $order->grand_total,
-            'bank_name' => 'Bank Test',
-            'account_number' => '1234567890',
-            'account_name' => 'Kilat Print',
+            'expires_at' => now()->addHours(24),
             'proof_version' => 1,
         ], $attributes));
+    }
+
+    /**
+     * Register a payment row that already carries a provider reference, as the
+     * gateway would after creating the transaction.
+     */
+    protected function makeGatewayPayment(Order $order, array $attributes = []): Payment
+    {
+        $payment = $this->makePayment($order, $attributes);
+        $payment->forceFill(array_merge([
+            'provider' => 'midtrans',
+            'provider_reference' => $order->number,
+            'provider_status' => 'pending',
+        ], $attributes))->save();
+
+        return $payment->fresh();
+    }
+
+    /** Move an order past payment the way the settlement service does. */
+    protected function makePaidOrder(Order $order, array $paymentAttributes = []): Order
+    {
+        $this->makePayment($order, array_merge([
+            'status' => PaymentStatus::Paid,
+            'paid_at' => now(),
+            'provider' => 'midtrans',
+            'provider_reference' => $order->number,
+            'provider_status' => 'settlement',
+        ], $paymentAttributes));
+
+        $order->forceFill([
+            'status' => OrderStatus::PaymentConfirmed,
+            'paid_at' => now(),
+        ])->save();
+
+        return $order->fresh();
     }
 
     protected function makeProduction(Order $order, array $attributes = []): ProductionOrder

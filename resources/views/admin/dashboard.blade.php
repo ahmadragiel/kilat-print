@@ -132,23 +132,23 @@
         <div class="panel overflow-hidden">
             <div class="panel-head">
                 <div>
-                    <p class="section-kicker">Desain</p>
-                    <h2 class="mt-1 font-extrabold text-ink-950">Menunggu review</h2>
+                    <p class="section-kicker">Produksi</p>
+                    <h2 class="mt-1 font-extrabold text-ink-950">Menunggu produksi</h2>
                 </div>
-                <a href="{{ route('admin.designs.index') }}" class="action-link text-xs">Review</a>
+                <a href="{{ route('admin.production.index') }}" class="action-link text-xs">Kelola</a>
             </div>
             <div class="divide-y divide-ink-100">
-                @forelse (($waitingDesigns ?? []) as $order)
+                @forelse (($waitingProductionOrders ?? []) as $order)
                     @php($design = $order->designFiles->sortByDesc('version')->first())
                     <a href="{{ route('admin.orders.show', $order) }}" class="block px-5 py-4 transition hover:bg-ink-50">
                         <span class="flex items-center justify-between gap-3">
                             <span class="truncate text-sm font-bold text-ink-900">#{{ $order->number }}</span>
                             <x-status-badge :status="$order->status" />
                         </span>
-                        <span class="mt-1 block truncate text-xs text-ink-500">{{ $design?->original_filename ?? 'Belum ada file desain' }}</span>
+                        <span class="mt-1 block truncate text-xs text-ink-500">{{ $design?->original_filename ?? 'Sudah lunas, belum dijadwalkan' }}</span>
                     </a>
                 @empty
-                    <x-empty-state compact title="Tidak ada desain tertunda" description="Antrean review desain kosong." icon="image" />
+                    <x-empty-state compact title="Tidak ada antrean produksi" description="Semua pesanan lunas sudah dijadwalkan." icon="package" />
                 @endforelse
             </div>
         </div>

@@ -21,8 +21,6 @@ class StoreCartItemRequest extends FormRequest
             'size' => ['nullable', 'string', 'max:80'],
             'length_cm' => ['nullable', 'numeric', 'min:0.1', 'max:100000'],
             'width_cm' => ['nullable', 'numeric', 'min:0.1', 'max:100000'],
-            'material_id' => ['nullable', 'integer', 'exists:materials,id'],
-            'finishing_id' => ['nullable', 'integer', 'exists:finishings,id'],
             'color' => ['nullable', 'string', 'max:100'],
             'production_method' => ['required', Rule::in(['digital', 'offset', 'large_format', 'sublimation'])],
             'notes' => ['nullable', 'string', 'max:2000'],

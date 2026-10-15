@@ -78,22 +78,21 @@ class PriceCalculationServiceTest extends TestCase
         $this->assertSame(6250, $result['unit_price']);
     }
 
-    public function test_material_and_finishing_overrides_are_used_instead_of_catalog_prices(): void
+    public function test_material_and_finishing_choices_no_longer_affect_the_price(): void
     {
         $product = $this->makeProduct(PricingType::PER_ITEM, 10000);
-        $material = $this->attachMaterial($product, PricingType::PER_ITEM, 1000, 1500);
-        $finishing = $this->attachFinishing($product, PricingType::PER_ITEM, 800, 1200);
+        $this->attachMaterial($product, PricingType::PER_ITEM, 1000, 1500);
+        $this->attachFinishing($product, PricingType::PER_ITEM, 800, 1200);
 
         $result = app(PriceCalculationService::class)->calculate($product, [
             'quantity' => 2,
-            'material_id' => $material->id,
-            'finishing_id' => $finishing->id,
+            'material_id' => $product->materials()->value('materials.id'),
+            'finishing_id' => $product->finishings()->value('finishings.id'),
         ]);
 
         $this->assertSame(20000, $result['breakdown']['product']);
-        $this->assertSame(3000, $result['breakdown']['material']);
-        $this->assertSame(2400, $result['breakdown']['finishing']);
-        $this->assertSame(25400, $result['total']);
+        $this->assertSame(20000, $result['total']);
+        $this->assertSame(['product' => 20000], $result['breakdown']);
     }
 
     public function test_additional_fee_is_added_once_as_a_fixed_charge(): void
@@ -140,18 +139,13 @@ class PriceCalculationServiceTest extends TestCase
         app(PriceCalculationService::class)->calculate($meterProduct, ['quantity' => 1]);
     }
 
-    public function test_calculator_returns_selected_options_and_rejects_inactive_products(): void
+    public function test_calculator_rejects_inactive_products(): void
     {
         $product = $this->makeProduct(PricingType::PER_ITEM, 10000);
-        $material = $this->attachMaterial($product, PricingType::FIXED, 700);
 
-        $result = app(PriceCalculationService::class)->calculate($product, [
-            'quantity' => 2,
-            'material_id' => $material->id,
-        ]);
+        $result = app(PriceCalculationService::class)->calculate($product, ['quantity' => 2]);
 
-        $this->assertTrue($result['material']->is($material));
-        $this->assertSame(700, $result['breakdown']['material']);
+        $this->assertSame(20000, $result['total']);
 
         $product->update(['status' => 'inactive']);
         $this->expectException(HttpException::class);

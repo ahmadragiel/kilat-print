@@ -23,8 +23,7 @@ class ReportController extends Controller
         $to = ($request->date('to') ?: now())->endOfDay();
         $base = Order::whereBetween('created_at', [$from, $to]);
         $revenueStatuses = [
-            OrderStatus::PaymentConfirmed, OrderStatus::DesignReview, OrderStatus::DesignRevision, OrderStatus::DesignApproved,
-            OrderStatus::InProduction, OrderStatus::Completed,
+            OrderStatus::PaymentConfirmed, OrderStatus::InProduction, OrderStatus::Completed,
         ];
 
         $orders = (clone $base)->get();
@@ -51,7 +50,7 @@ class ReportController extends Controller
                 'average' => $orders->count() ? (int) round($orders->avg('grand_total')) : 0,
                 'completed' => $orders->filter(fn (Order $order) => $statusValue($order) === OrderStatus::Completed->value)->count(),
                 'cancelled' => $orders->filter(fn (Order $order) => $statusValue($order) === OrderStatus::Cancelled->value)->count(),
-                'processing' => $orders->filter(fn (Order $order) => ! in_array($statusValue($order), [OrderStatus::Completed->value, OrderStatus::Cancelled->value, OrderStatus::PendingPayment->value, OrderStatus::PaymentReview->value], true))->count(),
+                'processing' => $orders->filter(fn (Order $order) => ! in_array($statusValue($order), [OrderStatus::Completed->value, OrderStatus::Cancelled->value, OrderStatus::PendingPayment->value], true))->count(),
                 'newCustomers' => $newCustomers,
                 'returningCustomers' => $returningCustomers,
             ],

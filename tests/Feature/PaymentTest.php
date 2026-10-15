@@ -2,14 +2,18 @@
 
 namespace Tests\Feature;
 
-use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
-use App\Notifications\OrderNotification;
-use Illuminate\Http\UploadedFile;
+use App\Http\Requests\CheckoutRequest;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
+use Tests\Fakes\FakeMidtransApi;
 use Tests\TestCase;
 
+/**
+ * Guards the removal of the manual proof and verification workflow.
+ *
+ * The settlement rules themselves live in {@see PaymentGatewayTest}.
+ */
 class PaymentTest extends TestCase
 {
     protected function setUp(): void
@@ -18,110 +22,97 @@ class PaymentTest extends TestCase
         Notification::fake();
     }
 
-    public function test_customer_uploads_private_payment_proof_and_moves_order_to_review(): void
+    public function test_customer_checkout_validation_knows_nothing_about_proofs(): void
     {
-        Storage::fake('local');
-        Storage::fake('public');
+        $rules = (new CheckoutRequest)->rules();
+
+        $this->assertArrayHasKey('payment_method', $rules);
+        foreach (array_keys($rules) as $field) {
+            $this->assertStringNotContainsString('proof', $field);
+            $this->assertStringNotContainsString('material', $field);
+            $this->assertStringNotContainsString('finishing', $field);
+        }
+    }
+
+    public function test_no_customer_route_uploads_a_payment_proof(): void
+    {
+        $routes = app('router')->getRoutes();
+
+        $this->assertNull($routes->getByName('customer.orders.proof'));
+        $this->assertNull($routes->getByName('customer.orders.payment-proof'));
+
+        foreach ($routes as $route) {
+            $this->assertStringNotContainsString('payment-proof', (string) $route->uri());
+        }
+    }
+
+    public function test_admin_has_no_manual_verification_actions_for_payments(): void
+    {
+        $admin = $this->makeAdmin();
         $customer = $this->makeCustomer();
         $order = $this->makeOrder($customer);
-        $payment = $this->makePayment($order);
+        $this->makePaidOrder($order);
 
-        $response = $this->actingAs($customer->user)->post(route('customer.orders.payment', $order), [
-            'proof' => UploadedFile::fake()->create('transfer.pdf', 30, 'application/pdf'),
+        $routes = app('router')->getRoutes();
+
+        $this->assertNull($routes->getByName('admin.payments.verify'));
+        $this->assertNull($routes->getByName('admin.payments.reject'));
+
+        $this->actingAs($admin)->get(route('admin.payments.index'))->assertOk();
+    }
+
+    public function test_customer_order_page_has_no_verification_controls(): void
+    {
+        $customer = $this->makeCustomer();
+        $order = $this->makeOrder($customer);
+        $this->makePayment($order);
+
+        $this->actingAs($customer->user)
+            ->get(route('customer.orders.show', $order))
+            ->assertOk()
+            ->assertDontSee('Unggah bukti pembayaran', false)
+            ->assertDontSee('Verifikasi pembayaran', false)
+            ->assertDontSee('Setujui pembayaran', false)
+            ->assertDontSee('Tolak pembayaran', false);
+    }
+
+    public function test_legacy_payment_proof_stays_downloadable_for_admins(): void
+    {
+        Storage::fake('local');
+        $admin = $this->makeAdmin();
+        $customer = $this->makeCustomer();
+        $order = $this->makeOrder($customer);
+        $oldPath = 'payment-proofs/'.$order->id.'/legacy.png';
+        Storage::disk('local')->put($oldPath, 'legacy proof');
+        $this->makePayment($order, [
+            'status' => PaymentStatus::Paid,
+            'proof_path' => $oldPath,
+            'proof_original_filename' => 'legacy.png',
         ]);
-
-        $response->assertSessionHas('success');
-        $payment->refresh();
-        $this->assertSame(PaymentStatus::WAITING_VERIFICATION, $payment->status);
-        $this->assertSame(OrderStatus::PAYMENT_REVIEW, $order->fresh()->status);
-        $this->assertSame(1, $payment->proof_version);
-        $this->assertNotNull($payment->proof_path);
-        Storage::disk('local')->assertExists($payment->proof_path);
-        Storage::disk('public')->assertMissing($payment->proof_path);
-        $this->assertSame('transfer.pdf', $payment->proof_original_filename);
 
         $this->app['auth']->logout();
         $this->get(route('admin.payments.proof', $order))->assertRedirect(route('login'));
         $this->actingAs($customer->user)
             ->get(route('admin.payments.proof', $order))
             ->assertForbidden();
-        $this->actingAs($this->makeAdmin())
+        $this->actingAs($admin)
             ->get(route('admin.payments.proof', $order))
-            ->assertDownload('transfer.pdf');
+            ->assertDownload('legacy.png');
     }
 
-    public function test_admin_approves_waiting_payment_and_records_verification_and_notification(): void
+    public function test_gateway_secret_is_never_exposed_to_the_browser(): void
     {
-        $admin = $this->makeAdmin();
+        $gateway = new FakeMidtransApi;
+        $gateway->install();
+
         $customer = $this->makeCustomer();
-        $order = $this->makeOrder($customer, ['status' => OrderStatus::PAYMENT_REVIEW]);
-        $payment = $this->makePayment($order, [
-            'status' => PaymentStatus::WAITING_VERIFICATION,
-        ]);
+        $order = $this->makeOrder($customer);
+        $this->makePayment($order, ['status' => PaymentStatus::Pending]);
 
-        $response = $this->actingAs($admin)->post(route('admin.payments.verify', $order));
+        $customerPage = $this->actingAs($customer->user)->get(route('customer.orders.show', $order));
+        $customerPage->assertOk()->assertDontSee(FakeMidtransApi::SERVER_KEY, false);
 
-        $response->assertSessionHas('success');
-        $payment->refresh();
-        $this->assertSame(PaymentStatus::PAID, $payment->status);
-        $this->assertSame($admin->id, $payment->verified_by);
-        $this->assertNotNull($payment->verified_at);
-        $this->assertSame(OrderStatus::PAYMENT_CONFIRMED, $order->fresh()->status);
-        $this->assertNotNull($order->fresh()->paid_at);
-        Notification::assertSentTo($customer->user, OrderNotification::class);
-    }
-
-    public function test_admin_rejection_requires_a_reason_and_customer_can_reupload_a_new_private_version(): void
-    {
-        Storage::fake('local');
-        $admin = $this->makeAdmin();
-        $customer = $this->makeCustomer();
-        $order = $this->makeOrder($customer, ['status' => OrderStatus::PAYMENT_REVIEW]);
-        $oldPath = 'payment-proofs/'.$order->id.'/old.png';
-        Storage::disk('local')->put($oldPath, 'old proof');
-        $payment = $this->makePayment($order, [
-            'status' => PaymentStatus::WAITING_VERIFICATION,
-            'proof_path' => $oldPath,
-            'proof_original_filename' => 'old.png',
-            'proof_version' => 1,
-        ]);
-
-        $this->actingAs($admin)
-            ->post(route('admin.payments.reject', $order), ['reason' => ''])
-            ->assertSessionHasErrors('reason');
-        $this->assertSame(PaymentStatus::WAITING_VERIFICATION, $payment->fresh()->status);
-
-        $this->actingAs($admin)
-            ->post(route('admin.payments.reject', $order), ['reason' => 'Transfer value does not match.'])
-            ->assertSessionHas('success');
-        $this->assertSame(PaymentStatus::REJECTED, $payment->fresh()->status);
-        $this->assertSame('Transfer value does not match.', $payment->fresh()->rejection_reason);
-        $this->assertSame(OrderStatus::PENDING_PAYMENT, $order->fresh()->status);
-
-        $this->actingAs($customer->user)
-            ->post(route('customer.orders.payment', $order), [
-                'proof' => UploadedFile::fake()->create('replacement.pdf', 30, 'application/pdf'),
-            ])
-            ->assertSessionHas('success');
-        $payment->refresh();
-        $this->assertSame(PaymentStatus::WAITING_VERIFICATION, $payment->status);
-        $this->assertSame(2, $payment->proof_version);
-        $this->assertSame(OrderStatus::PAYMENT_REVIEW, $order->fresh()->status);
-        Storage::disk('local')->assertMissing($oldPath);
-        Storage::disk('local')->assertExists($payment->proof_path);
-    }
-
-    public function test_customer_cannot_use_admin_payment_actions(): void
-    {
-        $customer = $this->makeCustomer();
-        $order = $this->makeOrder($customer, ['status' => OrderStatus::PAYMENT_REVIEW]);
-        $this->makePayment($order, ['status' => PaymentStatus::WAITING_VERIFICATION]);
-
-        $this->actingAs($customer->user)
-            ->post(route('admin.payments.verify', $order))
-            ->assertForbidden();
-        $this->actingAs($customer->user)
-            ->post(route('admin.payments.reject', $order), ['reason' => 'No'])
-            ->assertForbidden();
+        $paymentPage = $this->actingAs($customer->user)->get(route('customer.orders.payment', $order));
+        $paymentPage->assertOk()->assertDontSee(FakeMidtransApi::SERVER_KEY, false);
     }
 }

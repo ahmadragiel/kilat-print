@@ -43,7 +43,6 @@
         @foreach ([
             ['label' => 'Keranjang', 'state' => 'done'],
             ['label' => 'Alamat & pengiriman', 'state' => 'current'],
-            ['label' => 'Pembayaran', 'state' => 'todo'],
             ['label' => 'Selesai', 'state' => 'todo'],
         ] as $stepIndex => $step)
             <span @class([
@@ -144,6 +143,27 @@
                     </div>
                     <x-textarea name="shipping_notes" label="Catatan pengiriman" class="mt-5" placeholder="Informasi tambahan untuk kurir" />
                 </section>
+
+                <section class="panel p-5 sm:p-6" aria-labelledby="payment-method-title">
+                    <p class="section-kicker">Pembayaran</p>
+                    <h2 id="payment-method-title" class="mt-1 text-lg font-extrabold text-ink-950">Metode pembayaran</h2>
+                    <div class="mt-5 space-y-3">
+                        @foreach ($paymentMethods ?? \App\Enums\PaymentMethod::cases() as $method)
+                            <label class="flex cursor-pointer items-start gap-3 rounded-lg border border-ink-200 p-4 transition hover:border-brand-300 hover:bg-ink-50 has-checked:border-brand-500 has-checked:bg-brand-50">
+                                <input type="radio" name="payment_method" value="{{ $method->value }}" class="form-check mt-1" @checked(old('payment_method', \App\Enums\PaymentMethod::Qris->value) === $method->value) required>
+                                <span class="min-w-0 flex-1 text-sm">
+                                    <span class="flex flex-wrap items-center gap-2 font-bold text-ink-900">{{ $method->label() }}</span>
+                                    <span class="mt-1 block leading-5 text-ink-500">{{ $method->description() }}</span>
+                                </span>
+                            </label>
+                        @endforeach
+                    </div>
+                    @unless ($gatewayReady ?? false)
+                        <x-alert type="warning" class="mt-4">
+                            Penyedia pembayaran belum dikonfigurasi. Pesanan tetap dapat dibuat, tetapi transaksi pembayaran harus dibuat ulang setelah kredensial <code>PAYMENT_SERVER_KEY</code> diisi.
+                        </x-alert>
+                    @endunless
+                </section>
             </div>
 
             <aside class="panel overflow-hidden lg:sticky lg:top-24" aria-labelledby="checkout-summary-title">
@@ -172,6 +192,7 @@
                 <div class="border-t border-ink-200 p-5">
                     <x-button type="submit" size="lg" class="w-full" x-bind:disabled="addresses.length === 0">Buat pesanan <x-icon name="arrow-right" class="h-4 w-4" /></x-button>
                     <p class="mt-3 flex items-start gap-2 text-xs leading-5 text-accent-900"><x-icon name="info" class="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent-600" /> Periksa kembali alamat dan metode pengiriman sebelum melanjutkan.</p>
+                    <p class="mt-2 flex items-start gap-2 text-xs leading-5 text-ink-500"><x-icon name="info" class="mt-0.5 h-3.5 w-3.5 shrink-0" /> Status pembayaran berubah menjadi berhasil otomatis setelah penyedia pembayaran mengonfirmasi transaksi. Tidak ada unggah bukti pembayaran dan tidak ada verifikasi manual oleh admin.</p>
                 </div>
             </aside>
         </form>

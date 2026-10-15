@@ -12,16 +12,12 @@ class RepeatOrderTest extends TestCase
     {
         $customer = $this->makeCustomer();
         $product = $this->makeProduct(PricingType::PER_ITEM, 10000);
-        $material = $this->attachMaterial($product, PricingType::PER_ITEM, 500);
-        $finishing = $this->attachFinishing($product, PricingType::PER_ITEM, 250);
         $source = $this->makeOrder($customer);
         $this->makeOrderItem($source, $product, [
             'quantity' => 3,
             'size' => 'A3',
             'length_cm' => 30,
             'width_cm' => 42,
-            'material_id' => $material->id,
-            'finishing_id' => $finishing->id,
             'color' => 'Blue',
             'production_method' => 'offset',
             'custom_parameters' => ['bleed' => true],
@@ -40,11 +36,11 @@ class RepeatOrderTest extends TestCase
         $this->assertSame($product->id, $item->product_id);
         $this->assertSame(3, $item->quantity);
         $this->assertSame('A3', $item->size);
-        $this->assertSame($material->id, $item->material_id);
-        $this->assertSame($finishing->id, $item->finishing_id);
+        $this->assertNull($item->material_id);
+        $this->assertNull($item->finishing_id);
         $this->assertSame('offset', $item->production_method);
         $this->assertSame(['bleed' => true], $item->custom_parameters);
-        $this->assertSame((10000 + 500 + 250) * 3, (int) $item->price_at_addition);
+        $this->assertSame(10000 * 3, (int) $item->price_at_addition);
         $this->assertSame($orderCountBefore, $customer->orders()->count());
         $this->assertSame($paymentCountBefore, $source->payment()->count());
         $this->assertDatabaseCount('orders', $orderCountBefore);

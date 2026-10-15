@@ -1,17 +1,17 @@
 # Kilat Print
 
-**Kilat Print** adalah platform e-commerce custom printing dan production management berbasis Laravel untuk mengelola katalog, konfigurasi produk, harga, cart, checkout, pembayaran transfer bank, review desain, produksi, quality control, notification, reporting, dan invoice.
+**Kilat Print** adalah platform e-commerce custom printing dan production management berbasis Laravel untuk mengelola katalog, konfigurasi produk, harga, cart, checkout, pembayaran QRIS dan transfer bank, desain, produksi, quality control, notification, reporting, dan invoice.
 
 ## Fitur
 
 - Autentikasi dengan tiga role: `admin`, `operator`, dan `customer`.
 - Katalog dengan pencarian, filter kategori/rentang harga, sorting, dan pagination.
 - **Product Design Editor** berbasis Fabric.js: preview mockup depan/belakang, upload gambar, teks, stiker, drag/resize/rotate/flip, layer, zoom viewport, mode preview, dan simpan desain terstruktur.
-- Kustomisasi ukuran, material, finishing, warna, metode produksi, quantity, catatan, dan file desain.
+- Kustomisasi ukuran, warna, metode produksi, quantity, dan catatan. Customer **tidak** memilih bahan maupun finishing.
 - Price engine server-side untuk `per_item`, `per_sqm`, `per_meter`, `fixed`, dan `additional_fee`.
 - Cart dan checkout yang selalu menghitung ulang harga di server dalam database transaction.
-- Transfer bank, upload bukti pembayaran, verifikasi/penolakan admin, dan upload ulang.
-- Upload desain privat dengan versioning serta approval/request revision.
+- Pembayaran **QRIS** dan **transfer bank virtual account** melalui payment gateway, dikonfirmasi otomatis lewat webhook bertanda tangan. Tanpa unggah bukti pembayaran dan tanpa verifikasi manual.
+- Upload desain privat dengan versioning; desain langsung siap produksi tanpa tahap review admin.
 - Status order tervalidasi berdasarkan role dan setiap perubahan memiliki history.
 - Production assignment, progress, finishing, quality check PASS/FAIL, rework, foto produksi, dan authorization file.
 - Dashboard customer/admin/operator, notifikasi database, report penjualan, BI, dan invoice printable.
@@ -150,9 +150,10 @@ Ganti password demo sebelum aplikasi dipublikasikan.
 
 ## Roles dan Route Utama
 
-- Customer: `/dashboard`, `/products`, `/products/{slug}/customize`, `/cart`, `/checkout`, `/orders`, `/profile`, `/addresses`, `/notifications`
+- Customer: `/dashboard`, `/products`, `/products/{slug}/customize`, `/cart`, `/checkout`, `/orders`, `/orders/{number}/payment`, `/profile`, `/addresses`, `/notifications`
 - Admin: `/admin/dashboard`, `/admin/products`, `/admin/categories`, `/admin/materials`, `/admin/finishings`, `/admin/prices`, `/admin/orders`, `/admin/payments`, `/admin/designs`, `/admin/production`, `/admin/reports`, `/admin/invoices`
 - Operator: `/operator/dashboard`, `/operator/jobs`
+- Provider: `POST /payments/webhook/midtrans`
 
 Route customer, admin, dan operator dipisahkan oleh authentication, role middleware, dan ownership/production policy.
 
@@ -161,28 +162,235 @@ Route customer, admin, dan operator dipisahkan oleh authentication, role middlew
 ```text
 Checkout
 → PENDING_PAYMENT
-→ Payment proof / PAYMENT_REVIEW
-→ Admin verification / PAYMENT_CONFIRMED
-→ Design review / revision / approval
-→ Operator assignment / DESIGN_APPROVED
-→ IN_PRODUCTION
+→ Customer membayar QRIS / transfer bank ke virtual account
+→ Penyedia pembayaran mengonfirmasi (webhook bertanda tangan)
+→ PAYMENT_CONFIRMED
+→ Operator assignment / IN_PRODUCTION
    (detail: IN_DESIGN → PRINTING → FINISHING → PACKING → QUALITY_CONTROL)
 → QC PASS / COMPLETED
 → atau QC FAIL / rework kembali ke produksi
 ```
 
-Customer hanya dapat mengakses order, alamat, notification, dan design miliknya. Operator hanya dapat melihat job yang ditugaskan dan mengunduh design file job tersebut. Admin melakukan verifikasi pembayaran, review desain, assignment, monitoring, status transition, reporting, dan invoice.
+Customer hanya dapat mengakses order, alamat, notification, dan design miliknya. Operator hanya dapat melihat job yang ditugaskan dan mengunduh design file job tersebut. Admin mengelola assignment, monitoring, status transition, reporting, dan invoice, serta **melihat** status pembayaran secara read-only.
+
+Tidak ada lagi tahap `PAYMENT_REVIEW`, `DESIGN_REVIEW`, `DESIGN_REVISION`, dan `DESIGN_APPROVED`. Review desain manual dan verifikasi pembayaran manual sudah dihapus. Harga **`PAID`** hanya dapat ditulis setelah backend menerima konfirmasi valid dari penyedia pembayaran; ADMIN, OPERATOR, dan CUSTOMER tidak memiliki endpoint untuk memaksa status tersebut.
+
+## Payment Gateway
+
+Kilat Print memakai **Midtrans Snap/Core API** (`payment_type: qris` dan `payment_type: bank_transfer`) sebagai penyedia pembayaran. Driver HTTP berada di `App\Services\Payment\Drivers\MidtransGateway` dan memakai `Http::asJson()->withBasicAuth($serverKey, '')`. SDK tidak ditambahkan sebagai dependency.
+
+### Konfigurasi
+
+```dotenv
+PAYMENT_PROVIDER=midtrans        # midtrans | null
+PAYMENT_SERVER_KEY=              # server key Midtrans (JANGAN di commit)
+PAYMENT_CLIENT_KEY=              # hanya untuk integrasi frontend Snap.js
+PAYMENT_MERCHANT_ID=             # identifikasi akun, tidak dipakai Core API
+PAYMENT_SANDBOX=true             # true = api.sandbox.midtrans.com
+PAYMENT_EXPIRY_HOURS=24
+PAYMENT_BANK_TRANSFER_BANK=bca   # bca | bni | bri | permata | cimb
+PAYMENT_CURRENCY=IDR
+```
+
+Semua variabel dibaca di `config/payments.php`. `PAYMENT_SERVER_KEY` hanya dipakai di
+header `Authorization` untuk request server-to-server dan **tidak pernah** dirender ke
+Blade, JavaScript, log, atau respons browser.
+
+Untuk memasukkan server key tanpa menampilkannya di terminal, riwayat shell, atau
+transkrip percakapan:
+
+```powershell
+php artisan payments:key          # prompt tersembunyi, hanya menulis ke .env
+php artisan optimize:clear
+php artisan payments:check        # verifikasi konfigurasi + konektivitas
+```
+
+Selama `PAYMENT_SERVER_KEY` kosong, driver menolak membuat transaksi
+(`GatewayException`) dan halaman pembayaran menampilkan instruksi konfigurasi —
+aplikasi tidak pernah menampilkan centang berhasil palsu.
+
+### Endpoint
+
+| Environment | Base URL |
+| --- | --- |
+| Sandbox | `https://api.sandbox.midtrans.com` |
+| Production | `https://api.midtrans.com` |
+
+| Method | Path | Fungsi |
+| --- | --- | --- |
+| POST | `{base}/v2/charge` | Membuat transaksi (QRIS / virtual account) |
+| GET | `{base}/v2/{order_id}/status` | Membaca status transaksi |
+| POST | `/payments/webhook/midtrans` | Notifikasi masuk dari Midtrans |
+
+Di dashboard Midtrans, atur **Payment Notification URL** ke
+`https://<domain-publik>/payments/webhook/midtrans`. `localhost` tidak dapat menerima
+callback Midtrans; gunakan HTTPS tunnel atau staging.
+
+### Alur QRIS
+
+1. Checkout memvalidasi `payment_method=QRIS` dan membuat order `PENDING_PAYMENT`
+   plus payment `PENDING`.
+2. Server memanggil `POST {base}/v2/charge` dengan `payment_type: qris`,
+   `order_id` = nomor pesanan, `gross_amount` = total server (integer IDR),
+   `customer_details`, dan `custom_expiry`.
+3. Respons berisi `actions` dengan `generate-qr-code`, yaitu endpoint PNG. URL-nya
+   disimpan pada `payments.qr_image` dan ditampilkan apa adanya sebagai `<img>`.
+4. Halaman `/orders/{number}/payment` menampilkan QR, nominal, referensi transaksi,
+   dan status menunggu.
+5. Customer membayar; Midtrans mengirim notifikasi; status menjadi `PAID`.
+
+### Alur transfer bank
+
+1. Checkout memvalidasi `payment_method=BANK_TRANSFER`.
+2. Driver mengirim `payment_type: bank_transfer` dengan bank **di dalam objek**
+   `bank_transfer`. Field `bank` di level atas akan diabaikan oleh Midtrans:
+
+   ```json
+   { "payment_type": "bank_transfer", "bank_transfer": { "bank": "bca" } }
+   ```
+
+3. Midtrans mengembalikan virtual account di dalam array `va_numbers`:
+
+   ```json
+   { "va_numbers": [ { "bank": "bca", "va_number": "91019021579" } ] }
+   ```
+
+   Nilai tersebut disimpan pada `payments.virtual_account_number` dan
+   `payments.virtual_account_bank`.
+4. Customer transfer ke virtual account itu. Midtrans mengonfirmasi otomatis —
+   **bukan** transfer ke rekening statis yang tidak bisa dideteksi.
+5. Notifikasi diterima → status `PAID`.
+
+### Mekanisme callback/webhook
+
+`POST /payments/webhook/midtrans` ditangani oleh `Webhook\MidtransNotificationController`:
+
+1. **Autentikasi** — Midtrans menaruh `signature_key` di **body** notifikasi,
+   bernilai `sha512(order_id + status_code + gross_amount + server_key)`. Nilai itu
+   dibandingkan dengan `hash_equals`. Header `X-Konexity-Signature` diterima sebagai
+   fallback untuk reverse proxy yang memaparkannya. Signature salah atau payload
+   dimanipulasi → `403`.
+2. **Lookup** — payment dicari berdasarkan `provider` + `provider_reference`.
+   Tidak ditemukan → `404`.
+3. **Pemetaan status** — `capture`/`settlement` → `PAID`, `deny` → `FAILED`,
+   `expire`/`cancel` → `EXPIRED`, selain itu → `PENDING`.
+4. **`status_code`** — hanya `200` yang dianggap sukses. Transaksi yang dibuat tapi
+   belum dibayar melaporkan `201`, dan yang kedaluwarsa melaporkan `202`.
+5. **Validasi nominal dan mata uang** — `gross_amount` harus sama dengan
+   `payments.amount` dan `currency` harus `IDR`.
+6. **Fraud check** — `fraud_status` harus kosong atau `accept`.
+7. **Idempotensi** — payment yang sudah `PAID` mengembalikan `already_paid` tanpa
+   efek samping; transaksi `FAILED`/`EXPIRED`/`CANCELLED` tidak pernah dihidupkan
+   kembali (`final_state`).
+8. **Dampak** — hanya `PaymentSettlementService` yang boleh menulis `PAID`. Service
+   ini mengunci baris payment dan order (`lockForUpdate`), mengisi `paid_at`,
+   memindahkan order `PENDING_PAYMENT → PAYMENT_CONFIRMED` melalui
+   `OrderStatusService::systemTransition()` (history ditulis dengan `changed_by = null`),
+   membuat record produksi berstatus `IN_DESIGN`, lalu mengirim notifikasi.
+
+Tombol "Periksa status pembayaran" di halaman customer hanya memicu
+`GET {base}/v2/{order_id}/status` ke penyedia dari server. Parameter dari browser
+tidak pernah dipercaya.
+
+### Alur pemindaian QRIS
+
+Halaman `/orders/{number}/payment` menampilkan QRIS asli dari penyedia. Setelah
+customer memindai QR, halaman melakukan polling ke
+`GET /orders/{number}/payment/status` setiap 6 detik sehingga hasilnya muncul
+otomatis tanpa refresh manual.
+
+Endpoint tersebut **hanya melaporkan** status yang sudah tercatat di aplikasi.
+Endpoint ini tidak pernah menulis status; satu-satunya penentu tetap
+`PaymentSettlementService` berdasarkan konfirmasi penyedia. Pembacaan penyedia
+dibatasi maksimal sekali per 8 detik per transaksi agar polling tidak membebani
+gateway.
+
+Saat transaksi dibuat, `qr_image` berisi endpoint PNG milik Midtrans
+(`{base}/v2/qris/{transaction_id}/qr-code`). Endpoint itu dapat diambil tanpa
+kredensial apa pun, sehingga `<img>` boleh menunjuk URL tersebut secara langsung
+tanpa pernah mengirim server key ke browser. Host URL tetap dikunci ke domain
+Midtrans agar respons penyedia yang tidak terduga tidak bisa memuat gambar dari
+host lain.
+
+### Menguji pembayaran di sandbox
+
+Halaman `/admin/payment-sandbox` (khusus sandbox) menyediakan dua aksi. Keduanya
+berbicara dengan penyedia, tidak pernah menulis status secara langsung:
+
+| Aksi | Yang terjadi |
+| --- | --- |
+| `Cek ke penyedia` | Membaca `GET {base}/v2/{order_id}/status`, lalu hasilnya diproses alur settlement biasa. |
+| `Paksa kedaluwarsa` | Memanggil `POST {base}/v2/{order_id}/expire` milik Midtrans, sehingga penyedia yang memindahkan status. |
+
+Seluruh halaman dan aksi ditolak dengan `403` bila gateway tidak mengarah ke
+lingkungan uji Midtrans.
+
+**Bayar berhasil (QRIS)**
+
+1. Buat transaksi uji: `php artisan payments:sandbox-transaction --method=qris`.
+2. Salin tautan gambar QRIS dari halaman pembayaran customer.
+3. Buka [Midtrans QRIS Simulator](https://simulator.sandbox.midtrans.com/v2/qris/index),
+   tempel tautan tersebut, klik **Scan QR**, lalu selesaikan dengan e-wallet.
+4. Halaman pembayaran customer berubah menjadi **Pembayaran Berhasil** secara
+   otomatis; pada produksi hal ini terjadi lewat webhook.
+
+**Bayar gagal**
+
+Klik `Paksa kedaluwarsa`. Midtrans mengubah statusnya menjadi `expire`
+(`status_code` 407) dan aplikasi menandai transaksi `EXPIRED`, tanpa
+`paid_at` dan tanpa record produksi.
+
+### Perintah bantu
+
+```powershell
+php artisan payments:check                  # konfigurasi + konektivitas, tanpa membuat transaksi
+php artisan payments:key                    # simpan server key ke .env (input disembunyikan)
+php artisan payments:sandbox-transaction    # buat transaksi uji nyata di Sandbox
+```
+
+`payments:sandbox-transaction` membuat order uji sungguhan, memanggil API Sandbox,
+lalu mencetak reference, QR atau VA dari provider, dan memverifikasi bahwa transaksi
+masih `PENDING` serta belum ada record produksi.
+
+### Status pembayaran
+
+| Status | Artinya |
+| --- | --- |
+| `PENDING` | Transaksi dibuat, belum dikonfirmasi penyedia. |
+| `PAID` | Dikonfirmasi penyedia lewat webhook bertanda tangan atau status endpoint. |
+| `FAILED` | Penyedia melaporkan `deny`. |
+| `EXPIRED` | Penyedia melaporkan `expire`/`cancel`, atau lewat pay window. |
+| `CANCELLED` | Dibatalkan lokal. |
+
+Kolom `proof_*` pada tabel `payments` tetap ada untuk transaksi lama yang sudah
+tercatat sebelumnya, dan tetap bisa diunduh admin lewat `admin.payments.proof`.
+Tidak ada alur baru yang menulis kolom tersebut.
+
+### Driver
+
+`App\Services\Payment\PaymentGateway` adalah kontrak yang dipakai seluruh aplikasi.
+Driver yang tersedia:
+
+- `MidtransGateway` — integrasi HTTP nyata.
+- `NullGateway` — menolak membuat transaksi; dipakai saat kredensial belum ada.
+
+`PaymentGatewayFactory` memilih driver dari `config('payments.driver')`, dan
+`AppServiceProvider` mengikat kontrak ke driver tersebut sehingga test dapat
+mengikat stub tanpa menyentuh jaringan.
 
 ## Price Engine
 
 Harga browser tidak pernah dipercaya. `PriceCalculationService`:
 
 1. Mengambil product price rule aktif dari database.
-2. Memvalidasi material/finishing yang memang terhubung ke product.
-3. Menghitung unit based on `per_item`, `per_sqm`, `per_meter`, atau `fixed`.
-4. Menambahkan material, finishing, serta additional fee.
-5. Menyimpan `price_at_addition` ketika item masuk cart.
-6. Menghitung ulang seluruh item ketika checkout.
+2. Menghitung unit based on `per_item`, `per_sqm`, `per_meter`, atau `fixed`.
+3. Menambahkan `additional_fee` bila ada.
+4. Menyimpan `price_at_addition` ketika item masuk cart.
+5. Menghitung ulang seluruh item ketika checkout.
+
+Bahan dan finishing tidak lagi menjadi input customer maupun komponen harga.
+Kolom `order_items.material_*` dan `order_items.finishing_*` tetap ada (nullable)
+agar data historis tidak hilang, tetapi tidak lagi diisi oleh alur pemesanan baru.
 
 Contoh conversion area:
 
@@ -190,7 +398,7 @@ Contoh conversion area:
 panjang (cm) × lebar (cm) ÷ 10.000 = luas (m²)
 ```
 
-Harga material, finishing, dan aturan harga produk Kilat Print pada seeder adalah
+Harga dan aturan harga produk Kilat Print pada seeder adalah
 **data dummy demo** untuk kalkulator aplikasi, bukan klaim tarif resmi perusahaan.
 
 ## Katalog Produk
@@ -292,7 +500,7 @@ draft serta asal setiap `asset_id`.
 ## Penyimpanan File
 
 - `storage/app/private/designs`: design customer/revisi
-- `storage/app/private/payment-proofs`: bukti pembayaran
+- `storage/app/private/payment-proofs`: bukti pembayaran (historis, read-only)
 - `storage/app/private/design-references`: referensi file saat configure cart
 - `storage/app/private/custom-design-assets`: gambar yang diunggah lewat design editor
 - `storage/app/private/production-photos`: foto progres produksi
@@ -303,7 +511,7 @@ draft serta asal setiap `asset_id`.
 - `public/images/logo-white.png`: versi knockout putih + kilat kuning untuk panel merah / footer gelap
 - `public/images/stickers`: sticker SVG lokal untuk design editor
 
-Seluruh file customer tidak disimpan langsung di `public`. Download design/payment selalu melalui controller dan policy. Jangan depress disk `local` atau mengubah file menjadi public.
+Seluruh file customer tidak disimpan langsung di `public`. Download design selalu melalui controller dan policy. Jangan depress disk `local` atau mengubah file menjadi public.
 
 ## Project Structure
 
@@ -336,11 +544,13 @@ Service utama:
 - `PriceCalculationService`
 - `OrderService`
 - `OrderStatusService`
-- `PaymentVerificationService`
-- `DesignReviewService`
 - `ProductionService`
 - `RepeatOrderService`
 - `CustomDesignService`
+- `DesignUploadService`
+- `Payment\PaymentTransactionService` — membuat transaksi yang payable
+- `Payment\PaymentSettlementService` — satu-satunya tempat yang boleh menulis `PAID`
+- `Payment\PaymentGatewayFactory` + `Payment\Drivers\*` — driver penyedia pembayaran
 
 ## Testing
 
@@ -350,13 +560,15 @@ Test otomatis memakai in-memory SQLite:
 php artisan test
 ```
 
-Suite saat ini berisi **104 test / 750+ assertions** dan mencakup authentication, authorization/ownership, katalog Kilat Print (produk laporan hadir, produk lama tidak aktif, pencarian, material/finishing, harga), price calculation, cart, checkout, payment, design review, design editor persistence, status transition, master-data CRUD, repeat order, production, QC, dashboard, reporting, dan rendering markup (deteksi kebocoran komponen Blade).
+Suite saat ini berisi **138 test / 1030+ assertions** dan mencakup authentication, authorization/ownership, katalog Kilat Print, price calculation, cart, checkout tanpa bahan/finishing, payment gateway (webhook, signature, idempotensi, nominal, mata uang, fraud, status final), design upload tanpa review admin, design editor persistence, status transition, master-data CRUD, repeat order, production, QC, dashboard, reporting, dan rendering markup.
+
+Test payment memakai **HTTP stub** (`Tests\Fakes\FakeMidtransApi`) terhadap endpoint Midtrans, sehingga driver, controller, service, dan webhook berjalan sungguhan tanpa jaringan. Stub ini bukan akun sandbox Midtrans: test ini **tidak** membuktikan pembayaran live berhasil.
 
 Verifikasi sebelum release:
 
 ```powershell
 php artisan optimize:clear
-php artisan migrate:fresh --seed
+php artisan migrate
 php artisan route:list
 php artisan test
 npm run build
@@ -367,8 +579,10 @@ npm run build
 - Set `APP_ENV=production`, `APP_DEBUG=false`, dan URL HTTPS.
 - Gunakan credential MySQL khusus aplikasi, bukan root tanpa password.
 - Ganti seluruh password dan rekening demo.
+- Set `PAYMENT_PROVIDER=midtrans`, `PAYMENT_SERVER_KEY=<server key live>`, dan `PAYMENT_SANDBOX=false`.
+- Daftarkan `https://<domain>/payments/webhook/midtrans` sebagai notification URL di Midtrans.
 - Set `SESSION_SECURE_COOKIE=true` dan `SESSION_ENCRYPT=true`.
-- Gunakan private disk/managed object storage untuk design dan payment proof.
+- Gunakan private disk/managed object storage untuk design.
 - Jalankan queue worker, scheduled task, backup database, dan log monitoring.
 - Jalankan `php artisan config:cache`, `route:cache`, dan `view:cache` hanya setelah environment benar.
 

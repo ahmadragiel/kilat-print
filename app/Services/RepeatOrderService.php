@@ -25,8 +25,6 @@ class RepeatOrderService
                     'quantity' => $item->quantity,
                     'length_cm' => $item->length_cm,
                     'width_cm' => $item->width_cm,
-                    'material_id' => $item->material_id,
-                    'finishing_id' => $item->finishing_id,
                 ]);
                 $cart->items()->create([
                     'product_id' => $item->product_id,
@@ -34,8 +32,6 @@ class RepeatOrderService
                     'size' => $item->size,
                     'length_cm' => $item->length_cm,
                     'width_cm' => $item->width_cm,
-                    'material_id' => $item->material_id,
-                    'finishing_id' => $item->finishing_id,
                     'color' => $item->color,
                     'production_method' => $item->production_method,
                     'custom_parameters' => $item->custom_parameters,

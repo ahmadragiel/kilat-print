@@ -18,7 +18,7 @@ class DashboardController extends Controller
     public function __invoke(): View
     {
         $orders = Order::query()->get(['id', 'number', 'status', 'customer_id', 'grand_total', 'created_at']);
-        $paidStatuses = [OrderStatus::PaymentConfirmed, OrderStatus::DesignReview, OrderStatus::DesignRevision, OrderStatus::DesignApproved, OrderStatus::InProduction, OrderStatus::Completed];
+        $paidStatuses = [OrderStatus::PaymentConfirmed, OrderStatus::InProduction, OrderStatus::Completed];
         $paidStatusValues = array_map(fn (OrderStatus $status) => $status->value, $paidStatuses);
         $statusValue = fn (Order $order) => $order->status instanceof OrderStatus ? $order->status->value : (string) $order->status;
 
@@ -54,7 +54,7 @@ class DashboardController extends Controller
                 ['label' => 'Completed Orders', 'value' => $orders->filter(fn (Order $order) => $statusValue($order) === OrderStatus::Completed->value)->count(), 'icon' => 'check-circle'],
                 ['label' => 'Cancelled Orders', 'value' => $cancelledCount, 'icon' => 'x-circle'],
                 ['label' => 'Revenue', 'value' => 'Rp '.number_format((int) $paid->sum('grand_total'), 0, ',', '.'), 'icon' => 'wallet'],
-                ['label' => 'Pending Payments', 'value' => Payment::whereIn('status', [PaymentStatus::Unpaid, PaymentStatus::WaitingVerification])->count(), 'icon' => 'credit-card'],
+                ['label' => 'Pending Payments', 'value' => Payment::where('status', PaymentStatus::Pending)->count(), 'icon' => 'credit-card'],
                 ['label' => 'Active Customers', 'value' => $activeCustomers, 'icon' => 'user'],
             ],
             'totalOrders' => $orders->count(),
@@ -69,10 +69,11 @@ class DashboardController extends Controller
             'activeCustomers' => $activeCustomers,
             'cancellationRate' => $orders->count() ? round($cancelledCount / $orders->count() * 100, 1) : 0,
             'bestSellingProduct' => $popularProducts->first()?->product_name,
-            'pendingPayments' => Payment::whereIn('status', [PaymentStatus::Unpaid, PaymentStatus::WaitingVerification])->count(),
+            'pendingPayments' => Payment::where('status', PaymentStatus::Pending)->count(),
             'latestOrders' => Order::with(['customer.user', 'items'])->latest()->limit(8)->get(),
-            'pendingPaymentOrders' => Order::with(['customer.user', 'payment'])->whereHas('payment', fn ($query) => $query->whereIn('status', [PaymentStatus::Unpaid, PaymentStatus::WaitingVerification]))->latest()->limit(8)->get(),
-            'waitingDesigns' => Order::with(['customer.user', 'designFiles'])->whereIn('status', [OrderStatus::DesignReview, OrderStatus::DesignRevision])->latest()->limit(8)->get(),
+            'pendingPaymentOrders' => Order::with(['customer.user', 'payment'])->whereHas('payment', fn ($query) => $query->where('status', PaymentStatus::Pending))->latest()->limit(8)->get(),
+            // Paid orders that are queued for production but not yet assigned.
+            'waitingProductionOrders' => Order::with(['customer.user', 'designFiles'])->where('status', OrderStatus::PaymentConfirmed)->latest()->limit(8)->get(),
             'currentProduction' => Order::with(['production.operator.user'])->whereHas('production')->whereNotIn('status', [OrderStatus::Completed, OrderStatus::Cancelled])->latest()->limit(8)->get(),
             'charts' => [
                 'labels' => $months->map(fn (Carbon $month) => $month->translatedFormat('M Y'))->values(),

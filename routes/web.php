@@ -9,6 +9,8 @@ use App\Http\Controllers\Public\CatalogController;
 use App\Http\Controllers\Public\HomeController;
 use App\Http\Controllers\Public\ProductController;
 use App\Http\Controllers\Public\TrackingController;
+use App\Http\Controllers\Webhook\MidtransNotificationController;
+use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', HomeController::class)->name('home');
@@ -44,12 +46,13 @@ Route::middleware(['auth', 'role:customer'])->group(function () {
     Route::get('/checkout', [Customer\CheckoutController::class, 'index'])->name('checkout.index');
     Route::post('/checkout', [Customer\CheckoutController::class, 'store'])->name('checkout.store');
 
+    Route::get('/orders/{order:number}/payment', [Customer\PaymentController::class, 'show'])->name('customer.orders.payment');
+    Route::post('/orders/{order:number}/payment/refresh', [Customer\PaymentController::class, 'refresh'])->name('customer.orders.payment-refresh');
+    Route::get('/orders/{order:number}/payment/status', [Customer\PaymentController::class, 'status'])->name('customer.orders.payment-status');
+
     Route::get('/orders', [Customer\OrderController::class, 'index'])->name('customer.orders.index');
     Route::get('/orders/{order:number}', [Customer\OrderController::class, 'show'])->name('customer.orders.show');
-    Route::post('/orders/{order:number}/payment-proof', [Customer\OrderController::class, 'uploadPayment'])->middleware('throttle:uploads')->name('customer.orders.payment');
     Route::post('/orders/{order:number}/design', [Customer\OrderController::class, 'uploadDesign'])->middleware('throttle:uploads')->name('customer.orders.design');
-    Route::post('/orders/{order:number}/designs/{design}/approve', [Customer\OrderController::class, 'approveDesign'])->name('customer.orders.design.approve');
-    Route::post('/orders/{order:number}/designs/{design}/revision', [Customer\OrderController::class, 'requestDesignRevision'])->name('customer.orders.design.revision');
     Route::get('/orders/{order:number}/designs/{design}/download', [Customer\OrderController::class, 'downloadDesign'])->name('customer.orders.design-download');
     Route::post('/orders/{order:number}/repeat', [Customer\OrderController::class, 'repeat'])->name('customer.orders.repeat');
     Route::post('/orders/{order:number}/cancel', [Customer\OrderController::class, 'cancel'])->name('customer.orders.cancel');
@@ -66,6 +69,13 @@ Route::middleware(['auth', 'role:customer'])->group(function () {
     Route::post('/notifications/read-all', [Customer\NotificationController::class, 'readAll'])->name('customer.notifications.read-all');
     Route::get('/notifications/{notification}', [Customer\NotificationController::class, 'read'])->name('customer.notifications.read');
 });
+
+// Midtrans posts the transaction notification here. The route is unauthenticated
+// by design and instead verifies the `X-Konexity-Signature` header against the
+// server key before the settlement service is allowed to read the payload.
+Route::post('/payments/webhook/midtrans', MidtransNotificationController::class)
+    ->withoutMiddleware([ValidateCsrfToken::class])
+    ->name('payments.webhook.midtrans');
 
 // Custom design assets are streamed through the app on a private disk. This route is
 // intentionally outside the `role:customer` group so an admin or the assigned operator
@@ -100,14 +110,21 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
 
     Route::get('/payments', [Admin\PaymentController::class, 'index'])->name('payments.index');
     Route::get('/payments/{order:number}/proof', [Admin\PaymentController::class, 'proof'])->name('payments.proof');
-    Route::post('/payments/{order:number}/verify', [Admin\PaymentController::class, 'verify'])->name('payments.verify');
-    Route::post('/payments/{order:number}/reject', [Admin\PaymentController::class, 'reject'])->name('payments.reject');
+
+    // Gateway credentials entered from the dashboard are stored encrypted and are
+    // never rendered back; these routes are the only way to change them.
+    Route::get('/payment-settings', [Admin\PaymentSettingController::class, 'edit'])->name('payment-settings.edit');
+    Route::put('/payment-settings', [Admin\PaymentSettingController::class, 'update'])->name('payment-settings.update');
+    Route::delete('/payment-settings', [Admin\PaymentSettingController::class, 'destroy'])->name('payment-settings.destroy');
+
+    // Sandbox helpers. The controller refuses every action unless the gateway
+    // points at the Midtrans test environment.
+    Route::get('/payment-sandbox', [Admin\PaymentSandboxController::class, 'index'])->name('payment-sandbox.index');
+    Route::post('/payment-sandbox/{payment}/check', [Admin\PaymentSandboxController::class, 'check'])->name('payment-sandbox.check');
+    Route::post('/payment-sandbox/{payment}/expire', [Admin\PaymentSandboxController::class, 'expire'])->name('payment-sandbox.expire');
 
     Route::get('/designs', [Admin\DesignController::class, 'index'])->name('designs.index');
     Route::get('/designs/{design}/download', [Admin\DesignController::class, 'download'])->name('designs.download');
-    Route::post('/designs/{design}/approve', [Admin\DesignController::class, 'approve'])->name('designs.approve');
-    Route::post('/designs/{design}/revision', [Admin\DesignController::class, 'requestRevision'])->name('designs.revision');
-    Route::post('/orders/{order:number}/send-design-review', [Admin\DesignController::class, 'sendToReview'])->name('designs.send-review');
 
     Route::get('/production', [Admin\ProductionController::class, 'index'])->name('production.index');
     Route::post('/production/{production}/assign', [Admin\ProductionController::class, 'assign'])->name('production.assign');

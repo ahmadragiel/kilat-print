@@ -5,8 +5,6 @@
 
 @section('content')
 @php
-    $materials = $materials ?? data_get($product, 'materials', []);
-    $finishings = $finishings ?? data_get($product, 'finishings', []);
     $image = data_get($product, 'thumbnail_url') ?? data_get($product, 'image_url') ?? data_get($product, 'thumbnail') ?? data_get($product, 'image');
     $price = data_get($product, 'starting_price') ?? data_get($product, 'min_price') ?? data_get($product, 'base_price') ?? data_get($product, 'price');
     $priceRules = data_get($product, 'priceRules');
@@ -62,16 +60,6 @@
                     <input type="hidden" name="product_id" value="{{ data_get($product, 'id') }}">
 
                     <div class="grid gap-5 sm:grid-cols-2">
-                        <x-select name="material_id" label="Material" :value="data_get($product, 'default_material_id')" placeholder="Tanpa material">
-                            @foreach ($materials as $material)
-                                <option value="{{ data_get($material, 'id') }}">{{ data_get($material, 'name', 'Material') }}</option>
-                            @endforeach
-                        </x-select>
-                        <x-select name="finishing_id" label="Finishing" :value="data_get($product, 'default_finishing_id')" placeholder="Tanpa finishing">
-                            @foreach ($finishings as $finishing)
-                                <option value="{{ data_get($finishing, 'id') }}">{{ data_get($finishing, 'name', 'Finishing') }}</option>
-                            @endforeach
-                        </x-select>
                         <x-input name="size" label="Ukuran / orientasi" :value="data_get($product, 'default_size')" placeholder="Contoh: A4" />
                         <x-input name="color" label="Warna" placeholder="Contoh: Merah" />
                         <x-input name="length_cm" label="Panjang (cm)" type="number" step="0.01" min="0" placeholder="Panjang" />

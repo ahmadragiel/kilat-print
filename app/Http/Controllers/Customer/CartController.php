@@ -21,7 +21,7 @@ class CartController extends Controller
     public function index(Request $request): View
     {
         $cart = $this->cart($request);
-        $cart->load(['items.product.category', 'items.material', 'items.finishing']);
+        $cart->load(['items.product.category']);
 
         return view('cart.index', [
             'cart' => $cart,
@@ -84,8 +84,6 @@ class CartController extends Controller
                     'size' => $data['size'] ?? null,
                     'length_cm' => $data['length_cm'] ?? null,
                     'width_cm' => $data['width_cm'] ?? null,
-                    'material_id' => $data['material_id'] ?? null,
-                    'finishing_id' => $data['finishing_id'] ?? null,
                     'color' => $data['color'] ?? null,
                     'production_method' => $data['production_method'],
                     'custom_parameters' => $customParameters,
@@ -138,8 +136,6 @@ class CartController extends Controller
             'size' => ['nullable', 'string', 'max:80'],
             'length_cm' => ['nullable', 'numeric', 'min:0', 'max:100000'],
             'width_cm' => ['nullable', 'numeric', 'min:0', 'max:100000'],
-            'material_id' => ['nullable', 'integer', 'exists:materials,id'],
-            'finishing_id' => ['nullable', 'integer', 'exists:finishings,id'],
             'color' => ['nullable', 'string', 'max:100'],
             'production_method' => ['required', Rule::in(['digital', 'offset', 'large_format', 'sublimation'])],
             'notes' => ['nullable', 'string', 'max:2000'],

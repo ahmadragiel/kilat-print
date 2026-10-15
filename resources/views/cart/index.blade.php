@@ -37,12 +37,6 @@
                                     @if(data_get($item, 'custom_design_draft_id'))
                                         <span class="mt-1.5 inline-flex"><x-badge color="brand">Desain editor</x-badge></span>
                                     @endif
-                                    @if (data_get($item, 'material.name'))
-                                        <p class="mt-1 text-xs text-ink-500">Material: {{ data_get($item, 'material.name') }}</p>
-                                    @endif
-                                    @if (data_get($item, 'finishing.name'))
-                                        <p class="mt-0.5 text-xs text-ink-500">Finishing: {{ data_get($item, 'finishing.name') }}</p>
-                                    @endif
                                     <p class="mt-2 text-sm text-ink-600">Harga konfigurasi: <x-money :value="$lineTotal" /></p>
                                     @if(data_get($item, 'product.status') === 'active')
                                         <a href="{{ route('cart.customize', $item) }}" class="action-link mt-2 !text-xs"><x-icon name="edit" class="h-3.5 w-3.5" /> Edit konfigurasi & desain</a>
@@ -58,8 +52,6 @@
                                 <input type="hidden" name="size" value="{{ data_get($item, 'size') }}">
                                 <input type="hidden" name="length_cm" value="{{ data_get($item, 'length_cm') }}">
                                 <input type="hidden" name="width_cm" value="{{ data_get($item, 'width_cm') }}">
-                                <input type="hidden" name="material_id" value="{{ data_get($item, 'material_id') }}">
-                                <input type="hidden" name="finishing_id" value="{{ data_get($item, 'finishing_id') }}">
                                 <input type="hidden" name="color" value="{{ data_get($item, 'color') }}">
                                 <input type="hidden" name="production_method" value="{{ data_get($item, 'production_method') }}">
                                 <input type="hidden" name="notes" value="{{ data_get($item, 'notes') }}">

@@ -100,8 +100,8 @@ class CustomDesignService
         'hidden',
     ];
 
-    /** Bounded specification fields: integers. */
-    public const SPECIFICATION_INTEGER_FIELDS = ['quantity', 'material_id', 'finishing_id'];
+    /** Bounded specification fields: integers. Material and finishing are no longer customer inputs. */
+    public const SPECIFICATION_INTEGER_FIELDS = ['quantity'];
 
     /** Bounded specification fields: decimals. */
     public const SPECIFICATION_DECIMAL_FIELDS = ['length_cm', 'width_cm'];
@@ -146,8 +146,6 @@ class CustomDesignService
             $prefix.'.size' => ['sometimes', 'nullable', 'string', 'max:100'],
             $prefix.'.length_cm' => ['sometimes', 'nullable', 'numeric', 'min:0', 'max:100000'],
             $prefix.'.width_cm' => ['sometimes', 'nullable', 'numeric', 'min:0', 'max:100000'],
-            $prefix.'.material_id' => ['sometimes', 'nullable', 'integer', Rule::exists('materials', 'id')],
-            $prefix.'.finishing_id' => ['sometimes', 'nullable', 'integer', Rule::exists('finishings', 'id')],
             $prefix.'.production_method' => ['sometimes', 'nullable', Rule::in(self::PRODUCTION_METHODS)],
             $prefix.'.color' => ['sometimes', 'nullable', 'string', 'max:100'],
             $prefix.'.notes' => ['sometimes', 'nullable', 'string', 'max:2000'],

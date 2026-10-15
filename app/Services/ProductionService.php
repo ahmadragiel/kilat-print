@@ -23,7 +23,11 @@ class ProductionService
         return DB::transaction(function () use ($production, $operator, $admin, $deadline) {
             $order = $production->order;
             $orderStatus = $order->status instanceof OrderStatus ? $order->status : OrderStatus::from($order->status);
-            abort_unless(in_array($orderStatus, [OrderStatus::DesignApproved, OrderStatus::InProduction], true), 422, 'Desain harus disetujui sebelum operator ditugaskan.');
+            abort_unless(
+                in_array($orderStatus, [OrderStatus::PaymentConfirmed, OrderStatus::InProduction], true),
+                422,
+                'Pembayaran harus dikonfirmasi penyedia pembayaran sebelum operator ditugaskan.',
+            );
             abort_unless($operator->is_active && $operator->user?->is_active, 422, 'Operator tidak aktif.');
 
             $production->assignments()->where('is_current', true)->update(['is_current' => false, 'unassigned_at' => now()]);
@@ -39,7 +43,7 @@ class ProductionService
                 'is_current' => true,
                 'notes' => $orderStatus === OrderStatus::InProduction ? 'Reassignment job produksi.' : 'Penugasan awal produksi.',
             ]);
-            if ($orderStatus === OrderStatus::DesignApproved) {
+            if ($orderStatus === OrderStatus::PaymentConfirmed) {
                 $order = $this->statuses->transition($order, OrderStatus::InProduction, $admin, "Ditugaskan ke {$operator->user->name}.");
             }
             $operator->user?->notify(new OrderNotification(

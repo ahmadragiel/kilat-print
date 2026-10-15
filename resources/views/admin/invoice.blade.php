@@ -44,7 +44,7 @@
                         <tr>
                             <td class="font-semibold text-ink-950">
                                 {{ $item->product_name }}
-                                <p class="mt-1 text-xs font-normal text-ink-500">{{ collect([$item->size, $item->material_name, $item->finishing_name, $item->production_method])->filter()->implode(' • ') }}</p>
+                                <p class="mt-1 text-xs font-normal text-ink-500">{{ collect([$item->size, $item->color, $item->production_method])->filter()->implode(' • ') }}</p>
                             </td>
                             <td>{{ $item->quantity }}</td>
                             <td class="text-right"><x-money :value="$item->unit_price" /></td>

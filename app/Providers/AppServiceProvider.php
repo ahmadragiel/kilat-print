@@ -15,7 +15,12 @@ use App\Policies\CustomDesignDraftPolicy;
 use App\Policies\DesignFilePolicy;
 use App\Policies\OrderPolicy;
 use App\Policies\ProductionOrderPolicy;
+use App\Services\Payment\Drivers\MidtransGateway;
+use App\Services\Payment\Drivers\NullGateway;
+use App\Services\Payment\PaymentGateway;
+use App\Services\Payment\PaymentSettings;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Gate;
@@ -27,7 +32,17 @@ class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        //
+        // The driver is chosen per request from configuration, so credentials can
+        // be rotated without a rebuild. `null` is the safe default: it refuses to
+        // create transactions instead of pretending a payment succeeded.
+        $this->app->singleton(PaymentSettings::class);
+
+        $this->app->bind(PaymentGateway::class, function (Application $app): PaymentGateway {
+            return match ($app->make(PaymentSettings::class)->driver()) {
+                'midtrans' => $app->make(MidtransGateway::class),
+                default => $app->make(NullGateway::class),
+            };
+        });
     }
 
     public function boot(): void
