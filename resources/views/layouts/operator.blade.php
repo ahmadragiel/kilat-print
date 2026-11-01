@@ -16,7 +16,7 @@
 <body x-data="{ sidebar: false }" @keydown.escape.window="sidebar = false" class="bg-ink-50">
     <div class="min-h-screen lg:grid lg:grid-cols-[240px_1fr]">
         <div class="fixed inset-0 z-40 hidden bg-ink-950/60 lg:hidden" x-show="sidebar" x-cloak x-transition.opacity x-on:click="sidebar = false" aria-hidden="true"></div>
-        <aside class="fixed inset-y-0 left-0 z-50 w-60 -translate-x-full transition-transform duration-200 lg:static lg:translate-x-0" x-show="sidebar || window.innerWidth >= 1024" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="-translate-x-full" x-transition:enter-end="translate-x-0" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="translate-x-0" x-transition:leave-end="-translate-x-full" x-cloak>
+        <aside class="fixed inset-y-0 left-0 z-50 w-60 transition-transform duration-200 lg:static lg:translate-x-0" x-show="sidebar || window.innerWidth >= 1024" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="-translate-x-full" x-transition:enter-end="translate-x-0" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="translate-x-0" x-transition:leave-end="-translate-x-full" x-cloak>
             <div class="flex h-full flex-col bg-brand-700 text-brand-100">
                 <div class="flex h-16 items-center border-b border-white/10 bg-brand-800 px-4">
                     <x-brand inverse />

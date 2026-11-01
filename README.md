@@ -595,4 +595,3 @@ KilatPrint adalah **proprietary software**. Hak cipta atas source code dan aset 
 Penggunaan, penyalinan, modifikasi, dan distribusi tidak diberikan secara otomatis kepada pihak lain. Melihat repository ini tidak memberikan lisensi apa pun. Penggunaan oleh pihak ketiga memerlukan izin tertulis dari pemilik.
 
 Dependency dan library pihak ketiga, termasuk Laravel, Tailwind CSS, Fabric.js, serta paket Composer dan npm lainnya, tetap tunduk pada lisensi masing-masing. Lisensi pihak ketiga tidak berubah oleh status proprietary KilatPrint.
-
