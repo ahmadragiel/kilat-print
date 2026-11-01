@@ -596,4 +596,3 @@ Penggunaan, penyalinan, modifikasi, dan distribusi tidak diberikan secara otomat
 
 Dependency dan library pihak ketiga, termasuk Laravel, Tailwind CSS, Fabric.js, serta paket Composer dan npm lainnya, tetap tunduk pada lisensi masing-masing. Lisensi pihak ketiga tidak berubah oleh status proprietary KilatPrint.
 
-Nama pemegang hak cipta pada file `LICENSE` masih berupa placeholder sampai pemilik menetapkannya. Repository ini sebaiknya disimpan dengan visibility **Private**; pemilik mengatur visibility melalui GitHub Settings secara manual.
