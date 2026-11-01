@@ -1,0 +1,33 @@
+KILATPRINT PROPRIETARY SOFTWARE LICENSE
+
+Copyright (c) [2026] [Ahmad Ragiel Zaini]
+All Rights Reserved.
+
+This notice governs the original source code, documentation, designs, images, and other original materials created for KilatPrint (the "Software"). The Software is proprietary and confidential property of the copyright holder identified above.
+
+1. NO LICENSE GRANTED
+
+No license, right, title, or interest in the Software is granted to any person or entity except by a separate written agreement signed by the copyright holder. Viewing, accessing, or cloning this repository does not grant permission to use the Software.
+
+2. RESTRICTIONS
+
+Unless the copyright holder has granted prior written permission, you may not:
+
+a. use the Software in any product, service, or business;
+b. copy, reproduce, publish, or distribute the Software;
+c. modify, adapt, translate, or create derivative works from the Software;
+d. sublicense, sell, lease, rent, or otherwise transfer the Software;
+e. reverse engineer, decompile, or disassemble the Software, except where mandatory law expressly permits it;
+f. remove or alter any copyright, trademark, or proprietary notice in the Software.
+
+3. THIRD-PARTY COMPONENTS
+
+The Software depends on third-party libraries and tools, including Laravel, Tailwind CSS, Fabric.js, Composer packages, and npm packages. Those components remain under their respective licenses. Nothing in this notice changes, restricts, or replaces the license terms of any third-party component. The applicable dependency licenses are recorded in composer.lock, package-lock.json, and the package metadata of each dependency.
+
+4. NO WARRANTY
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT. THE COPYRIGHT HOLDER IS NOT LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY ARISING FROM THE SOFTWARE OR ITS USE.
+
+5. PERMISSION REQUESTS
+
+Requests for permission to use, copy, modify, or distribute the Software must be made in writing to the copyright holder at [Copyright Holder Contact].

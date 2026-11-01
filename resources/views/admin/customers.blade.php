@@ -19,7 +19,7 @@
                         <td><div class="flex items-center gap-3"><span class="grid h-9 w-9 place-items-center rounded-lg bg-brand-600 text-xs font-bold text-white">{{ strtoupper(substr(data_get($customer, 'user.name', data_get($customer, 'name', 'P')), 0, 1)) }}</span><span class="font-semibold text-ink-950">{{ data_get($customer, 'user.name', data_get($customer, 'name', 'Pelanggan')) }}</span></div></td>
                         <td><p>{{ data_get($customer, 'user.email', data_get($customer, 'email', 'Belum tersedia')) }}</p><p class="mt-1 text-xs text-ink-500">{{ data_get($customer, 'user.phone', data_get($customer, 'phone', 'Belum ada telepon')) }}</p></td>
                         <td>{{ data_get($customer, 'orders_count', 'Belum tersedia') }}</td>
-                        <td>{{ data_get($customer, 'created_at')?->format('d M Y') ?? 'Belum tersedia' }}</td>
+                        <td>{{ data_get($customer, 'created_at')?->translatedFormat('d M Y') ?? 'Belum tersedia' }}</td>
                         <td><x-status-badge :status="data_get($customer, 'user.is_active') === false ? 'inactive' : 'active'" /></td>
                         <td class="text-right"><form method="POST" action="{{ route('admin.customers.toggle', data_get($customer, 'id')) }}">@csrf<x-button type="submit" size="sm" variant="secondary">Aktif/nonaktif</x-button></form></td>
                     </tr>

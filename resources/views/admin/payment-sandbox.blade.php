@@ -72,7 +72,7 @@
                                     <p class="mt-1 font-mono text-xs break-all text-ink-500">{{ $payment->provider_reference }}</p>
                                 </td>
                                 <td>{{ $payment->paymentMethod()?->label() ?? $payment->method }}</td>
-                                <td class="font-extrabold text-brand-600"><x-money :value="$payment->amount" /></td>
+                                <td class="font-extrabold text-brand-700"><x-money :value="$payment->amount" /></td>
                                 <td>
                                     @if ($isQris && $qr)
                                         <a href="{{ $qr }}" target="_blank" rel="noopener" class="action-link">Buka QR</a>

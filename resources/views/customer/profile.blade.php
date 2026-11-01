@@ -25,7 +25,7 @@
             <h2 id="profile-form-title" class="text-lg font-extrabold text-ink-950">Informasi akun</h2>
             <form method="POST" action="{{ \Illuminate\Support\Facades\Route::has('customer.profile.update') ? route('customer.profile.update') : route('customer.profile.update') }}" class="mt-6 space-y-5">
                 @csrf
-                @method('PATCH')
+                @method('PUT')
                 <div class="grid gap-5 sm:grid-cols-2">
                     <x-input name="name" label="Nama lengkap" :value="auth()->user()->name" autocomplete="name" required />
                     <x-input name="email" label="Email" type="email" :value="auth()->user()->email" autocomplete="email" required />

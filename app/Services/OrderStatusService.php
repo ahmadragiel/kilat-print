@@ -40,6 +40,32 @@ class OrderStatusService
         ],
     ];
 
+    /**
+     * Statuses the given role may move this order to, filtered by the
+     * operational preconditions the transition service enforces.
+     *
+     * @return list<OrderStatus>
+     */
+    public function allowedTransitions(Order $order, string $role): array
+    {
+        $current = $order->status instanceof OrderStatus ? $order->status->value : (string) $order->status;
+        $allowed = self::TRANSITIONS[$role][$current] ?? [];
+
+        $statuses = array_values(array_filter(array_map(
+            fn (string $value) => OrderStatus::tryFrom($value),
+            $allowed,
+        )));
+
+        return array_values(array_filter($statuses, function (OrderStatus $status) use ($order) {
+            if ($status !== OrderStatus::InProduction) {
+                return true;
+            }
+
+            return $order->payment()->where('status', 'PAID')->exists()
+                && $order->production()->whereNotNull('operator_id')->exists();
+        }));
+    }
+
     public function transition(Order $order, OrderStatus|string $newStatus, User $actor, ?string $note = null): Order
     {
         return $this->apply(

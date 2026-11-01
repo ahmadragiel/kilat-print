@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Customer;
 
+use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
@@ -66,6 +67,56 @@ class PaymentController extends Controller
         abort_if(! $payment, 404, 'Transaksi pembayaran tidak ditemukan.');
 
         return response()->json($poller->current($payment));
+    }
+
+    /**
+     * Create the provider transaction when the first attempt failed.
+     *
+     * Checkout stores the order even when the gateway is unreachable, so the
+     * customer needs a way to ask for the transaction again. This never reopens
+     * a final payment; it only fills in a missing provider reference.
+     */
+    public function retry(
+        Request $request,
+        Order $order,
+        PaymentTransactionService $transactions,
+    ): RedirectResponse {
+        $this->authorize('view', $order);
+
+        $payment = $order->payment;
+        if (! $payment) {
+            return redirect()->route('customer.orders.show', $order)
+                ->with('warning', 'Pesanan ini belum memiliki transaksi pembayaran.');
+        }
+
+        if ($payment->isFinal()) {
+            return redirect()->route('customer.orders.show', $order)
+                ->with('warning', 'Transaksi pembayaran ini sudah berakhir. Silakan buat pesanan baru.');
+        }
+
+        $status = $order->status instanceof OrderStatus ? $order->status : OrderStatus::from((string) $order->status);
+        if ($status !== OrderStatus::PendingPayment) {
+            return redirect()->route('customer.orders.show', $order)
+                ->with('warning', 'Pesanan ini tidak sedang menunggu pembayaran.');
+        }
+
+        $method = $payment->paymentMethod();
+        if (! $method) {
+            return redirect()->route('customer.orders.show', $order)
+                ->with('warning', 'Metode pembayaran pesanan ini tidak dikenal.');
+        }
+
+        try {
+            $transactions->initiate($order, $method);
+        } catch (GatewayException $exception) {
+            report($exception);
+
+            return redirect()->route('customer.orders.payment', $order)
+                ->with('warning', 'Transaksi pembayaran belum dapat dibuat. Silakan coba lagi.');
+        }
+
+        return redirect()->route('customer.orders.payment', $order)
+            ->with('success', 'Transaksi pembayaran berhasil dibuat.');
     }
 
     /**

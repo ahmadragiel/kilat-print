@@ -9,6 +9,7 @@ use App\Models\Product;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class CatalogController extends Controller
 {
@@ -17,9 +18,9 @@ class CatalogController extends Controller
         $request->validate([
             'search' => ['nullable', 'string', 'max:120'],
             'category' => ['nullable', 'string', 'max:120'],
-            'min_price' => ['nullable', 'integer', 'min:0'],
-            'max_price' => ['nullable', 'integer', 'gte:min_price'],
-            'sort' => ['nullable', 'in:popular,newest,price_low,price_high'],
+            'min_price' => ['nullable', 'numeric', 'min:0'],
+            'max_price' => ['nullable', 'numeric', Rule::when($request->filled('min_price'), ['gte:min_price'])],
+            'sort' => ['nullable', 'in:latest,newest,popular,name,price_low,price_high'],
         ]);
 
         $products = Product::query()
@@ -28,20 +29,23 @@ class CatalogController extends Controller
                 ->selectRaw('(price_rules.price * (100 - price_rules.discount_percent) / 100)')
                 ->whereColumn('price_rules.product_id', 'products.id')
                 ->where('price_rules.active', true)
+                ->where('price_rules.is_wholesale', false)
+                ->whereNull('price_rules.deleted_at')
                 ->orderByRaw('(price_rules.price * (100 - price_rules.discount_percent) / 100)')
                 ->limit(1)])
             ->with(['category', 'priceRules'])
             ->where('status', 'active')
-            ->whereHas('priceRules', fn (Builder $price) => $price->where('active', true))
+            ->whereHas('priceRules', fn (Builder $price) => $price->where('active', true)->where('is_wholesale', false))
             ->when($request->filled('search'), fn (Builder $query) => $query->where('name', 'like', '%'.$request->string('search')->trim().'%'))
             ->when($request->filled('category'), fn (Builder $query) => $query->whereHas('category', fn (Builder $category) => $category->where('slug', $request->string('category'))))
-            ->when($request->filled('min_price'), fn (Builder $query) => $query->whereHas('priceRules', fn (Builder $price) => $price->whereRaw('(price_rules.price * (100 - price_rules.discount_percent) / 100) >= ?', [(int) $request->input('min_price')])))
-            ->when($request->filled('max_price'), fn (Builder $query) => $query->whereHas('priceRules', fn (Builder $price) => $price->whereRaw('(price_rules.price * (100 - price_rules.discount_percent) / 100) <= ?', [(int) $request->input('max_price')])));
+            ->when($request->filled('min_price'), fn (Builder $query) => $query->whereHas('priceRules', fn (Builder $price) => $price->where('active', true)->where('is_wholesale', false)->whereRaw('(price_rules.price * (100 - price_rules.discount_percent) / 100) >= CAST(? AS DECIMAL(12,2))', [(float) $request->input('min_price')])))
+            ->when($request->filled('max_price'), fn (Builder $query) => $query->whereHas('priceRules', fn (Builder $price) => $price->where('active', true)->where('is_wholesale', false)->whereRaw('(price_rules.price * (100 - price_rules.discount_percent) / 100) <= CAST(? AS DECIMAL(12,2))', [(float) $request->input('max_price')])));
 
         match ($request->string('sort')->value) {
             'price_low' => $products->orderBy('starting_price'),
             'price_high' => $products->orderByDesc('starting_price'),
             'popular' => $products->orderByDesc('popularity_count'),
+            'name' => $products->orderBy('name'),
             default => $products->latest(),
         };
 

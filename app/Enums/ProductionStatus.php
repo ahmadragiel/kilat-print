@@ -30,13 +30,13 @@ enum ProductionStatus: string
     public function label(): string
     {
         return match ($this) {
-            self::InDesign => 'In-Design',
-            self::Printing => 'Printing',
+            self::InDesign => 'Tahap desain',
+            self::Printing => 'Tahap cetak',
             self::Finishing => 'Finishing',
             self::Packing => 'Packing',
-            self::QualityControl => 'Quality Control',
-            self::Completed => 'Completed',
-            self::Cancelled => 'Cancelled',
+            self::QualityControl => 'Kontrol kualitas',
+            self::Completed => 'Selesai',
+            self::Cancelled => 'Dibatalkan',
         };
     }
 

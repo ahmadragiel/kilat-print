@@ -18,6 +18,7 @@ class Address extends Model
         'recipient',
         'phone',
         'address',
+        'address_line2',
         'district',
         'city',
         'province',

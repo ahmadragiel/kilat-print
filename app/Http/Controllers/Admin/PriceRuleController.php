@@ -41,7 +41,10 @@ class PriceRuleController extends Controller
 
     public function store(PriceRuleRequest $request): RedirectResponse
     {
-        PriceRule::create($request->validated() + ['active' => $request->boolean('active')]);
+        PriceRule::create($request->validated() + [
+            'active' => $request->boolean('active'),
+            'is_wholesale' => $request->boolean('is_wholesale'),
+        ]);
 
         return redirect()->route('admin.prices.index')->with('success', 'Aturan harga berhasil ditambahkan.');
     }
@@ -53,7 +56,10 @@ class PriceRuleController extends Controller
 
     public function update(PriceRuleRequest $request, PriceRule $priceRule): RedirectResponse
     {
-        $priceRule->update($request->validated() + ['active' => $request->boolean('active')]);
+        $priceRule->update($request->validated() + [
+            'active' => $request->boolean('active'),
+            'is_wholesale' => $request->boolean('is_wholesale'),
+        ]);
 
         return redirect()->route('admin.prices.index')->with('success', 'Aturan harga berhasil diperbarui.');
     }
@@ -71,6 +77,24 @@ class PriceRuleController extends Controller
             'priceRule' => $priceRule,
             'products' => Product::orderBy('name')->get(['id', 'name']),
             'pricingTypes' => PricingType::cases(),
+            'variantOptions' => $this->variantOptions(),
         ]);
+    }
+
+    /**
+     * @return list<array{product_id:int,value:string,label:string}>
+     */
+    private function variantOptions(): array
+    {
+        return Product::query()
+            ->orderBy('name')
+            ->get(['id', 'name', 'variations'])
+            ->flatMap(fn (Product $product) => collect($product->variationOptions())->map(fn (array $option) => [
+                'product_id' => $product->id,
+                'value' => $option['value'],
+                'label' => $product->name.' — '.$option['label'],
+            ]))
+            ->values()
+            ->all();
     }
 }

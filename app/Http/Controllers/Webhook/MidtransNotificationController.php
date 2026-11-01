@@ -29,7 +29,7 @@ class MidtransNotificationController extends Controller
     ): JsonResponse {
         $payload = $request->json()->all();
 
-        if (! $gateway->verifyNotificationSignature($payload, $request->header('X-Konexity-Signature'))) {
+        if (! $gateway->verifyNotificationSignature($payload)) {
             Log::warning('Rejected Midtrans notification with an invalid signature.', [
                 'order_id' => $payload['order_id'] ?? null,
                 'transaction_status' => $payload['transaction_status'] ?? null,

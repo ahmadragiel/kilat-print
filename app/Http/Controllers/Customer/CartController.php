@@ -82,6 +82,8 @@ class CartController extends Controller
                     'product_id' => $product->id,
                     'quantity' => $data['quantity'],
                     'size' => $data['size'] ?? null,
+                    'variant' => $calculation['variant'] ?? null,
+                    'variant_label' => $calculation['variant_label'] ?? null,
                     'length_cm' => $data['length_cm'] ?? null,
                     'width_cm' => $data['width_cm'] ?? null,
                     'color' => $data['color'] ?? null,
@@ -134,6 +136,7 @@ class CartController extends Controller
         $data = $request->validate([
             'quantity' => ['required', 'integer', 'min:1', 'max:100000'],
             'size' => ['nullable', 'string', 'max:80'],
+            'variant' => ['nullable', 'string', 'max:80'],
             'length_cm' => ['nullable', 'numeric', 'min:0', 'max:100000'],
             'width_cm' => ['nullable', 'numeric', 'min:0', 'max:100000'],
             'color' => ['nullable', 'string', 'max:100'],
@@ -142,7 +145,12 @@ class CartController extends Controller
         ]);
         $calculation = $calculator->calculate($item->product, $data);
         $customParameters = array_merge($item->custom_parameters ?? [], $data);
-        $item->update($data + ['price_at_addition' => $calculation['total'], 'custom_parameters' => $customParameters]);
+        $item->update($data + [
+            'variant' => $calculation['variant'] ?? null,
+            'variant_label' => $calculation['variant_label'] ?? null,
+            'price_at_addition' => $calculation['total'],
+            'custom_parameters' => $customParameters,
+        ]);
 
         return back()->with('success', 'Item keranjang diperbarui.');
     }

@@ -55,6 +55,7 @@ class PaymentSettlementService
             if ($status->status === PaymentStatus::Paid) {
                 $attributes['paid_at'] = $this->paidAt($status);
                 $attributes['failure_reason'] = null;
+                $attributes['expired_locally'] = false;
             } elseif ($status->status === PaymentStatus::Failed || $status->status === PaymentStatus::Expired) {
                 $attributes['failure_reason'] = match ($status->status) {
                     PaymentStatus::Failed => 'Penyedia pembayaran melaporkan transaksi gagal.',
@@ -86,9 +87,18 @@ class PaymentSettlementService
             return 'already_paid';
         }
 
-        // A failed, expired or cancelled transaction is never revived.
+        // A failed, expired or cancelled transaction is never revived. The one
+        // exception is an expiry this application applied on its own: the
+        // provider may still settle the transaction afterwards, and refusing
+        // that confirmation would lose a real payment.
         if ($current->isFinal()) {
-            return 'final_state';
+            $latePaidAfterLocalExpiry = $current === PaymentStatus::Expired
+                && $payment->expired_locally
+                && $status->status === PaymentStatus::Paid;
+
+            if (! $latePaidAfterLocalExpiry) {
+                return 'final_state';
+            }
         }
 
         if ($status->status !== PaymentStatus::Paid) {
@@ -127,6 +137,18 @@ class PaymentSettlementService
     private function markOrderPaid(Order $order, Payment $payment): void
     {
         $current = $order->status instanceof OrderStatus ? $order->status : OrderStatus::from((string) $order->status);
+
+        // A cancelled order must not be pulled back into production by a late
+        // provider confirmation. The payment record keeps the provider's truth,
+        // but the order stays cancelled for the operator to handle as a refund.
+        if ($current === OrderStatus::Cancelled) {
+            Log::warning('Payment settled for a cancelled order; production was not created.', [
+                'order' => $order->number,
+                'payment' => $payment->id,
+            ]);
+
+            return;
+        }
 
         if ($current === OrderStatus::PendingPayment) {
             $order->forceFill(['paid_at' => $payment->paid_at ?? now()])->save();
@@ -203,6 +225,7 @@ class PaymentSettlementService
             ->each(function (Payment $payment) use (&$expired) {
                 $payment->forceFill([
                     'status' => PaymentStatus::Expired,
+                    'expired_locally' => true,
                     'failure_reason' => 'Waktu pembayaran habis sebelum transaksi dikonfirmasi.',
                 ])->save();
                 $expired++;

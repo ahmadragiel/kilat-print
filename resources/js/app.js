@@ -1,4 +1,3 @@
-import './bootstrap';
 import { createDesignEditor } from './design-editor';
 import Alpine from 'alpinejs';
 import { Chart, registerables } from 'chart.js';
@@ -87,15 +86,17 @@ Alpine.data('kilatChart', (configuration) => ({
     chart: null,
 
     hasData() {
-        return Array.isArray(this.configuration?.labels) &&
-            this.configuration.labels.length > 0 &&
-            Array.isArray(this.configuration?.datasets) &&
-            this.configuration.datasets.length > 0;
+        const data = this.configuration?.data ?? this.configuration;
+
+        return Array.isArray(data?.labels) &&
+            data.labels.length > 0 &&
+            Array.isArray(data?.datasets) &&
+            data.datasets.length > 0;
     },
 
     init() {
         this.$nextTick(() => {
-            if (!this.hasData() || !this.$refs.canvas) {
+            if (this.chart || !this.hasData() || !this.$refs.canvas) {
                 return;
             }
 

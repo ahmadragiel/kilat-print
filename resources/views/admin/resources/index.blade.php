@@ -37,8 +37,9 @@
                         @foreach ($resourceItems as $resource)
                             @php
                                 $productPrice = data_get($resource, 'base_price');
-                                $priceRules = data_get($resource, 'priceRules');
-                                if ($productPrice === null && is_object($priceRules) && method_exists($priceRules, 'min')) {
+                                $priceRules = collect(data_get($resource, 'priceRules', []))
+                                    ->filter(fn ($rule) => ! data_get($rule, 'is_wholesale', false));
+                                if ($productPrice === null && $priceRules->isNotEmpty()) {
                                     $productPrice = $priceRules->min('price');
                                 }
                                 $resourcePricingType = data_get($resource, 'pricing_type');
@@ -56,7 +57,7 @@
                                 <td>
                                     <div class="flex items-center gap-3">
                                         @if($resourceType === 'products')
-                                            <div class="h-10 w-10 shrink-0 overflow-hidden rounded-lg border border-ink-200"><x-product-image :src="data_get($resource, 'thumbnail_url') ?? data_get($resource, 'image_url') ?? data_get($resource, 'thumbnail') ?? data_get($resource, 'image')" :alt="''" class="h-full w-full" /></div>
+                                            <div class="h-10 w-10 shrink-0 overflow-hidden rounded-lg border border-ink-200"><x-product-image :src="data_get($resource, 'thumbnail_url') ?? data_get($resource, 'image_url') ?? data_get($resource, 'thumbnail') ?? data_get($resource, 'image')" :alt="data_get($resource, 'name', 'Produk')" fit="contain" class="h-full w-full" /></div>
                                         @else
                                             <span class="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-ink-100 text-ink-600"><x-icon :name="$resourceType === 'categories' ? 'category' : ($resourceType === 'materials' ? 'layers' : 'palette')" class="h-5 w-5" /></span>
                                         @endif
@@ -68,7 +69,7 @@
                                 </td>
                                 @if($resourceType === 'products')
                                     <td>{{ data_get($resource, 'category.name', 'Belum diatur') }}</td>
-                                    <td class="font-extrabold text-brand-600"><x-money :value="$productPrice" /></td>
+                                    <td class="font-extrabold text-brand-700"><x-money :value="$productPrice" /></td>
                                     <td><x-status-badge :status="data_get($resource, 'status')" /></td>
                                 @endif
                                 @if($resourceType === 'categories')
@@ -78,7 +79,7 @@
                                 @endif
                                 @if(in_array($resourceType, ['materials', 'finishings'], true))
                                     <td>{{ $resourcePricingLabel }}</td>
-                                    <td class="font-extrabold text-brand-600"><x-money :value="data_get($resource, 'price')" /></td>
+                                    <td class="font-extrabold text-brand-700"><x-money :value="data_get($resource, 'price')" /></td>
                                     <td><x-status-badge :status="data_get($resource, 'status')" /></td>
                                 @endif
                                 <td class="text-right">
@@ -88,7 +89,7 @@
                                             @csrf
                                             @method('DELETE')
                                             <input type="hidden" name="resourceType" value="{{ $resourceType }}">
-                                            <button type="submit" class="grid h-9 w-9 place-items-center rounded-lg text-ink-500 transition hover:bg-danger-50 hover:text-danger-600" aria-label="Hapus {{ data_get($resource, 'name', $resourceLabel) }}"><x-icon name="trash" class="h-4 w-4" /></button>
+                                            <button type="submit" class="grid h-11 w-11 place-items-center rounded-lg text-ink-500 transition hover:bg-danger-50 hover:text-danger-600" aria-label="Hapus {{ data_get($resource, 'name', $resourceLabel) }}"><x-icon name="trash" class="h-4 w-4" /></button>
                                         </form>
                                     </div>
                                 </td>

@@ -11,6 +11,7 @@
     $statusUrl = route('customer.orders.payment-status', $order);
     $isSandbox = app(\App\Services\Payment\PaymentStatusPoller::class)->isSandbox();
     $simulatorUrl = \App\Services\Payment\PaymentStatusPoller::simulatorUrl();
+    $hasProviderReference = filled(data_get($payment, 'provider_reference'));
 @endphp
 
 {{-- After a scan the provider decides the outcome. This polls our own record,
@@ -46,9 +47,9 @@
      x-init="start()" x-on:beforeunload="stop()" x-show="true">
 
     <nav class="mb-6 flex items-center gap-2 text-sm text-ink-500" aria-label="Breadcrumb">
-        <a href="{{ route('customer.orders.index') }}" class="hover:text-brand-700">Pesanan</a>
+        <a href="{{ route('customer.orders.index') }}" class="breadcrumb-link">Pesanan</a>
         <x-icon name="chevron-right" class="h-3.5 w-3.5" />
-        <a href="{{ route('customer.orders.show', $order) }}" class="hover:text-brand-700">{{ data_get($order, 'number') }}</a>
+        <a href="{{ route('customer.orders.show', $order) }}" class="breadcrumb-link">{{ data_get($order, 'number') }}</a>
         <x-icon name="chevron-right" class="h-3.5 w-3.5" />
         <span class="font-medium text-ink-700">Pembayaran</span>
     </nav>
@@ -86,18 +87,39 @@
 
             @if (! $gatewayReady && ! $isPaid)
                 <section class="panel p-6" aria-labelledby="unavailable-title">
-                    <h2 id="unavailable-title" class="font-extrabold text-ink-950">Pembayaran online belum tersedia</h2>
+                    <h2 id="unavailable-title" class="font-extrabold text-ink-950">Pembayaran online sedang tidak tersedia</h2>
                     <p class="mt-2 text-sm leading-6 text-ink-600">
-                        Penyedia pembayaran belum dikonfigurasi pada lingkungan ini, sehingga transaksi belum dapat dibuat.
-                        Pesanan Anda tetap tersimpan dan belum berstatus lunas.
+                        Pesanan <strong class="text-ink-900">{{ data_get($order, 'number') }}</strong> sudah tersimpan, tetapi saluran pembayaran online belum dapat digunakan saat ini.
+                        Pesanan Anda belum berstatus lunas dan tidak akan diproses sampai pembayaran berhasil.
                     </p>
-                    <x-alert type="warning" class="mt-4">
-                        Isi <code>PAYMENT_PROVIDER</code>, <code>PAYMENT_SERVER_KEY</code>, dan <code>PAYMENT_SANDBOX</code> pada file <code>.env</code>, lalu jalankan <code>php artisan optimize:clear</code>.
-                    </x-alert>
-                    <x-button :href="route('customer.orders.show', $order)" variant="secondary" class="mt-5">Kembali ke pesanan</x-button>
+                    <div class="mt-4 rounded-xl border border-ink-200 bg-ink-50 p-4">
+                        <p class="text-sm font-bold text-ink-900">Langkah yang bisa Anda lakukan</p>
+                        <ol class="mt-2 list-decimal space-y-1.5 pl-5 text-sm leading-6 text-ink-600">
+                            <li>Simpan nomor pesanan di atas.</li>
+                            <li>Hubungi admin Kilat Print dan sebutkan nomor pesanan tersebut.</li>
+                            <li>Admin akan memberi tahu kapan pembayaran dapat dilanjutkan atau menyiapkan saluran pembayaran lain.</li>
+                        </ol>
+                    </div>
+                    <div class="mt-5 flex flex-col gap-3 sm:flex-row">
+                        <x-button :href="route('customer.orders.show', $order)" variant="secondary">Kembali ke pesanan</x-button>
+                        <x-button :href="route('tracking.index')" variant="outline">Lacak pesanan</x-button>
+                    </div>
                 </section>
             @else
                 @unless ($isPaid)
+                    @if (! $hasProviderReference)
+                        <section class="panel p-6" aria-labelledby="retry-title">
+                            <h2 id="retry-title" class="font-extrabold text-ink-950">Transaksi pembayaran belum dibuat</h2>
+                            <p class="mt-2 text-sm leading-6 text-ink-600">
+                                Pesanan sudah tersimpan, tetapi transaksi di penyedia pembayaran belum berhasil dibuat.
+                                Buat transaksi sekarang untuk mendapatkan QRIS atau nomor virtual account.
+                            </p>
+                            <form method="POST" action="{{ route('customer.orders.payment-retry', $order) }}" class="mt-5">
+                                @csrf
+                                <x-button type="submit"><x-icon name="refresh" class="h-4 w-4" /> Buat transaksi pembayaran</x-button>
+                            </form>
+                        </section>
+                    @else
                     <section class="panel p-6" aria-labelledby="instruction-title">
                         <h2 id="instruction-title" class="font-extrabold text-ink-950">
                             {{ $isQris ? 'Pindai QRIS' : 'Nomor virtual account' }}
@@ -134,6 +156,7 @@
                             @endif
                         </div>
                     </section>
+                    @endif
                 @endunless
 
                 <section class="panel p-5 sm:p-6" aria-labelledby="status-title">
@@ -151,7 +174,7 @@
                     <dl class="mt-4 grid gap-4 sm:grid-cols-2">
                         <div>
                             <dt class="text-xs font-semibold text-ink-500">Nominal</dt>
-                            <dd class="mt-1 text-lg font-extrabold text-brand-600"><x-money :value="data_get($payment, 'amount')" /></dd>
+                            <dd class="mt-1 text-lg font-extrabold text-brand-700"><x-money :value="data_get($payment, 'amount')" /></dd>
                         </div>
                         <div>
                             <dt class="text-xs font-semibold text-ink-500">Referensi transaksi</dt>
@@ -163,7 +186,7 @@
                         </div>
                         <div>
                             <dt class="text-xs font-semibold text-ink-500">Batas pembayaran</dt>
-                            <dd class="mt-1 text-sm font-semibold text-ink-800">{{ data_get($payment, 'expires_at')?->format('d F Y, H:i') ?? '—' }}</dd>
+                            <dd class="mt-1 text-sm font-semibold text-ink-800">{{ data_get($payment, 'expires_at')?->translatedFormat('d F Y, H:i') ?? 'Tidak ada batas waktu' }}</dd>
                         </div>
                     </dl>
 
@@ -171,14 +194,16 @@
                         <x-alert type="warning" class="mt-4">{{ data_get($payment, 'failure_reason') }}</x-alert>
                     @endif
 
-                    <form method="POST" action="{{ route('customer.orders.payment-refresh', $order) }}" class="mt-5 border-t border-ink-100 pt-5">
-                        @csrf
-                        <x-button type="submit" variant="secondary" x-show="state.pending"><x-icon name="refresh" class="h-4 w-4" /> Periksa sekarang</x-button>
-                        <p class="mt-3 text-xs leading-5 text-ink-500">
-                            Halaman ini otomatis memeriksa penyedia setiap beberapa detik setelah QR dipindai.
-                            Tombol di atas hanya meminta server memeriksa lebih cepat; tidak ada jalur untuk mengubah status secara manual.
-                        </p>
-                    </form>
+                    @if ($hasProviderReference)
+                        <form method="POST" action="{{ route('customer.orders.payment-refresh', $order) }}" class="mt-5 border-t border-ink-100 pt-5">
+                            @csrf
+                            <x-button type="submit" variant="secondary" x-show="state.pending"><x-icon name="refresh" class="h-4 w-4" /> Periksa sekarang</x-button>
+                            <p class="mt-3 text-xs leading-5 text-ink-500">
+                                Halaman ini otomatis memeriksa penyedia setiap beberapa detik setelah QR dipindai.
+                                Tombol di atas hanya meminta server memeriksa lebih cepat; tidak ada jalur untuk mengubah status secara manual.
+                            </p>
+                        </form>
+                    @endif
                 </section>
             @endif
         </div>
@@ -203,7 +228,7 @@
                 <div class="flex justify-between text-ink-600"><span>Ongkos kirim</span><span class="font-semibold text-ink-900"><x-money :value="data_get($order, 'shipping_fee')" /></span></div>
                 <div class="flex items-end justify-between gap-4 rounded-lg bg-accent-100 px-4 py-3">
                     <span class="text-xs font-extrabold tracking-[0.14em] text-accent-800 uppercase">Total</span>
-                    <span class="text-xl font-black text-brand-600"><x-money :value="data_get($order, 'grand_total')" /></span>
+                    <span class="text-xl font-black text-brand-700"><x-money :value="data_get($order, 'grand_total')" /></span>
                 </div>
             </div>
         </aside>

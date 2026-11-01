@@ -22,16 +22,19 @@ class ProfileController extends Controller
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
+            'phone' => ['nullable', 'string', 'max:30', 'regex:/^[0-9+ -]+$/'],
             'current_password' => ['nullable', 'required_with:password', 'current_password'],
             'password' => ['nullable', 'confirmed', 'min:8'],
         ]);
-        unset($data['current_password']);
+        $phone = $data['phone'] ?? null;
+        unset($data['current_password'], $data['phone']);
         if (! empty($data['password'])) {
             $data['password'] = Hash::make($data['password']);
         } else {
             unset($data['password']);
         }
         $user->update($data);
+        $user->customer?->update(['phone' => $phone]);
 
         return back()->with('success', 'Profil berhasil diperbarui.');
     }

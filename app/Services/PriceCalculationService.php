@@ -16,7 +16,7 @@ class PriceCalculationService
      * configuration, so they are deliberately ignored here.
      *
      * @param  array<string, mixed>  $configuration
-     * @return array{product:Product,quantity:int,unit_price:int,total:int,breakdown:array<string,int>,dimensions:array<string,float>}
+     * @return array{product:Product,quantity:int,unit_price:int,total:int,breakdown:array<string,int>,dimensions:array<string,float>,variant:?string,variant_label:?string}
      */
     public function calculate(Product $product, array $configuration): array
     {
@@ -32,18 +32,29 @@ class PriceCalculationService
             ]);
         }
 
+        [$variant, $variantLabel] = $this->resolveVariant($product, $configuration);
+
         $area = $length > 0 && $width > 0 ? ($length / 100) * ($width / 100) : 0;
         $meters = $length > 0 ? $length / 100 : 0;
 
         $rules = $product->priceRules()
             ->where('active', true)
             ->where('min_quantity', '<=', $quantity)
+            ->when(
+                $variant !== null,
+                fn ($query) => $query->where(fn ($nested) => $nested->whereNull('variant_key')->orWhere('variant_key', $variant)),
+                fn ($query) => $query->whereNull('variant_key'),
+            )
+            // A variant-specific tariff beats the generic tariff at the same
+            // quantity tier. A higher quantity tier still wins, which is how the
+            // disabled wholesale tier will behave once its threshold is agreed.
             ->orderByDesc('min_quantity')
+            ->orderByRaw('CASE WHEN variant_key IS NULL THEN 1 ELSE 0 END')
             ->orderBy('id')
             ->get();
 
         if ($rules->isEmpty()) {
-            throw ValidationException::withMessages(['product_id' => 'Produk belum memiliki aturan harga aktif.']);
+            throw ValidationException::withMessages(['product_id' => 'Produk belum memiliki aturan harga aktif untuk pilihan ini.']);
         }
 
         $breakdown = ['product' => 0];
@@ -73,7 +84,7 @@ class PriceCalculationService
         }
 
         $total = array_sum($breakdown);
-        $dimensions = $this->dimensionsFor($product, $length, $width, $quantity, $area, $meters);
+        $dimensions = $this->dimensionsFor($length, $width, $quantity, $area, $meters);
 
         return [
             'product' => $product,
@@ -82,7 +93,48 @@ class PriceCalculationService
             'total' => $total,
             'breakdown' => $breakdown,
             'dimensions' => $dimensions,
+            'variant' => $variant,
+            'variant_label' => $variantLabel,
         ];
+    }
+
+    /**
+     * Validate the selected variation against the product definition. The label
+     * is always resolved from the server-side definition so a browser cannot
+     * inject an arbitrary snapshot.
+     *
+     * @param  array<string, mixed>  $configuration
+     * @return array{0:?string,1:?string}
+     */
+    private function resolveVariant(Product $product, array $configuration): array
+    {
+        $definition = $product->variationDefinition();
+
+        if ($definition === null) {
+            return [null, null];
+        }
+
+        $requested = trim((string) ($configuration['variant'] ?? ''));
+
+        if ($requested === '') {
+            if ($definition['required']) {
+                throw ValidationException::withMessages([
+                    'variant' => "Pilih {$definition['label']} terlebih dahulu.",
+                ]);
+            }
+
+            return [null, null];
+        }
+
+        $option = $product->variationOption($requested);
+
+        if ($option === null) {
+            throw ValidationException::withMessages([
+                'variant' => "Pilihan {$definition['label']} tidak tersedia.",
+            ]);
+        }
+
+        return [$option['value'], $option['label']];
     }
 
     private function multiplier(PricingType $type, int $quantity, float $area, float $meters): ?float
@@ -96,7 +148,7 @@ class PriceCalculationService
     }
 
     /** @return array<string, float> */
-    private function dimensionsFor(Product $product, float $length, float $width, int $quantity, float $area, float $meters): array
+    private function dimensionsFor(float $length, float $width, int $quantity, float $area, float $meters): array
     {
         return [
             'length_cm' => $length,

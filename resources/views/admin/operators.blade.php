@@ -19,7 +19,7 @@
                         <td class="font-semibold text-ink-900">{{ data_get($operator, 'user.name', data_get($operator, 'name', 'Operator')) }}</td>
                         <td>{{ data_get($operator, 'user.email', data_get($operator, 'email', 'Belum tersedia')) }}</td>
                         <td>{{ data_get($operator, 'production_orders_count', data_get($operator, 'jobs_count', 'Belum tersedia')) }}</td>
-                        <td>{{ data_get($operator, 'created_at')?->format('d M Y') ?? 'Belum tersedia' }}</td>
+                        <td>{{ data_get($operator, 'created_at')?->translatedFormat('d M Y') ?? 'Belum tersedia' }}</td>
                         <td><x-status-badge :status="data_get($operator, 'user.is_active') === false ? 'inactive' : 'active'" /></td>
                         <td class="text-right"><form method="POST" action="{{ route('admin.operators.toggle', data_get($operator, 'id')) }}">@csrf<x-button type="submit" size="sm" variant="secondary">Aktif/nonaktif</x-button></form></td>
                     </tr>

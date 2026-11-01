@@ -18,7 +18,7 @@
 
     @if ($sandbox)
         <x-alert type="warning" title="Mode sandbox aktif">
-            Semua transaksi diarahkan ke <code>{{ $baseUrl }}</code>. Jangan gunakan kredensial sandbox untuk transaksi production.
+            Semua transaksi diarahkan ke <code class="break-all">{{ $baseUrl }}</code>. Jangan gunakan kredensial sandbox untuk transaksi production.
         </x-alert>
     @endif
 
@@ -64,7 +64,7 @@
                             @if ($record?->hasClientKey())
                                 <span class="font-semibold text-emerald-700">Tersimpan ({{ $sourceLabel($sources['client_key']) }})</span> — biarkan kosong untuk mempertahankan nilai saat ini.
                             @else
-                                Opsional. Hanya dibutuhkan untuk integrasi frontend Snap.js.
+                                Opsional. Tidak dipakai alur Core API; disimpan untuk identifikasi akun.
                             @endif
                         </p>
                     </div>
@@ -144,7 +144,7 @@
                     </div>
                     <div class="flex justify-between gap-3">
                         <dt class="text-ink-500">Diperbarui</dt>
-                        <dd class="text-ink-700">{{ $record?->updated_at?->format('d M Y, H:i') ?? '—' }}</dd>
+                        <dd class="text-ink-700">{{ $record?->updated_at?->translatedFormat('d M Y, H:i') ?? '—' }}</dd>
                     </div>
                 </dl>
 

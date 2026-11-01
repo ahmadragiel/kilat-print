@@ -6,17 +6,12 @@ use App\Enums\DesignStatus;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
-use App\Enums\PricingType;
 use App\Enums\ProductionStatus;
-use App\Enums\UserRole;
 use App\Models\Address;
 use App\Models\Cart;
 use App\Models\CartItem;
-use App\Models\Category;
 use App\Models\Customer;
 use App\Models\DesignFile;
-use App\Models\Finishing;
-use App\Models\Material;
 use App\Models\Notification as DatabaseNotification;
 use App\Models\Operator;
 use App\Models\Order;
@@ -24,7 +19,6 @@ use App\Models\OrderAddress;
 use App\Models\OrderItem;
 use App\Models\OrderStatusHistory;
 use App\Models\Payment;
-use App\Models\PriceRule;
 use App\Models\Product;
 use App\Models\ProductionAssignment;
 use App\Models\ProductionOrder;
@@ -33,372 +27,42 @@ use App\Models\ProductionStatusHistory;
 use App\Models\QualityCheck;
 use App\Models\User;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
 
+/**
+ * Demo transaction history for local development and automated tests.
+ *
+ * The catalog itself is owned by RealCatalogSeeder. This seeder only adds
+ * accounts, a cart, orders, production records, and notifications so the
+ * dashboards have something to display. It is skipped in production and never
+ * creates demo products.
+ */
 class DemoDataSeeder extends Seeder
 {
     public function run(): void
     {
-        $accounts = $this->seedAccounts();
-        $catalog = $this->seedCatalog();
+        if (app()->environment('production')) {
+            $this->command?->warn('DemoDataSeeder dilewati di production. Jalankan RealCatalogSeeder untuk katalog nyata.');
+
+            return;
+        }
+
+        $this->call([RealCatalogSeeder::class, DemoAccountSeeder::class]);
+
+        $accounts = [
+            'admin' => User::where('email', 'admin@kilatprint.test')->firstOrFail(),
+            'operator' => User::where('email', 'operator@kilatprint.test')->firstOrFail(),
+            'customer' => User::where('email', 'customer@kilatprint.test')->firstOrFail(),
+        ];
+
         $this->seedCustomerProfile($accounts['customer']);
-        $this->seedCart($accounts['customer'], $catalog['products']['mug-custom']);
-        $this->seedOrders($accounts, $catalog);
+        $this->seedCart($accounts['customer'], $this->product('gelas-mug-custom'));
+        $this->seedOrders($accounts);
         $this->seedNotifications($accounts['customer']);
     }
 
-    /**
-     * @return array{admin: User, operator: User, customer: User}
-     */
-    private function seedAccounts(): array
+    private function product(string $catalogKey): Product
     {
-        $admin = User::updateOrCreate(
-            ['email' => 'admin@kilatprint.test'],
-            [
-                'name' => 'Admin Demo Kilat Print',
-                'password' => Hash::make('password'),
-                'email_verified_at' => now(),
-                'role' => UserRole::ADMIN,
-                'is_active' => true,
-            ],
-        );
-
-        $operatorUser = User::updateOrCreate(
-            ['email' => 'operator@kilatprint.test'],
-            [
-                'name' => 'Operator Demo Kilat Print',
-                'password' => Hash::make('password'),
-                'email_verified_at' => now(),
-                'role' => UserRole::OPERATOR,
-                'is_active' => true,
-            ],
-        );
-
-        $customerUser = User::updateOrCreate(
-            ['email' => 'customer@kilatprint.test'],
-            [
-                'name' => 'Customer Demo Kilat Print',
-                'password' => Hash::make('password'),
-                'email_verified_at' => now(),
-                'role' => UserRole::CUSTOMER,
-                'is_active' => true,
-            ],
-        );
-
-        Operator::updateOrCreate(
-            ['user_id' => $operatorUser->id],
-            [
-                'employee_code' => 'OP-DEMO-001',
-                'phone' => '081200000001',
-                'specialization' => 'Digital printing and finishing',
-                'notes' => 'Demo operator account for the Kilat Print dashboard.',
-                'is_active' => true,
-            ],
-        );
-
-        Customer::updateOrCreate(
-            ['user_id' => $customerUser->id],
-            [
-                'customer_code' => 'CUST-DEMO-001',
-                'phone' => '081200000002',
-                'company' => 'Demo Creative Studio',
-                'notes' => 'Demo customer profile; replace this data before production use.',
-                'is_active' => true,
-            ],
-        );
-
-        return [
-            'admin' => $admin,
-            'operator' => $operatorUser,
-            'customer' => $customerUser,
-        ];
-    }
-
-    /**
-     * Master data katalog Kilat Print.
-     *
-     * Produk, kategori, material, dan finishing di bawah ini mengikuti produk yang
-     * disebut pada laporan Kerja Praktek: Mug Custom, Bando Tuning Custom,
-     * Paper Bag Custom, Kertas Kado, Apotek Mini, Topper Cake, dan Topeng Muka.
-     * Harga, minimum order, dan hari produksi berstatus data demo untuk kalkulator
-     * aplikasi, bukan klaim tarif resmi perusahaan.
-     *
-     * @return array{categories: array<string, Category>, materials: array<string, Material>, finishings: array<string, Finishing>, products: array<string, Product>}
-     */
-    private function seedCatalog(): array
-    {
-        $categories = $this->seedCategories();
-        $materials = $this->seedMaterials();
-        $finishings = $this->seedFinishings();
-        $products = $this->seedProducts($categories, $materials, $finishings);
-
-        return compact('categories', 'materials', 'finishings', 'products');
-    }
-
-    /** @return array<string, Category> */
-    private function seedCategories(): array
-    {
-        $definitions = [
-            'custom' => [
-                'name' => 'Produk Custom',
-                'description' => 'Produk custom Kilat Print: Mug Custom, Bando Tuning Custom, Topper Cake, dan Topeng Muka.',
-            ],
-            'printing-custom' => [
-                'name' => 'Printing Custom',
-                'description' => 'Printing custom Kilat Print untuk kebutuhan cetak dan kemasan: Paper Bag Custom, Kertas Kado, dan Apotek Mini.',
-            ],
-        ];
-
-        $categories = [];
-        foreach ($definitions as $key => $definition) {
-            $categories[$key] = Category::updateOrCreate(
-                ['slug' => Str::slug($definition['name'])],
-                [
-                    'name' => $definition['name'],
-                    'description' => $definition['description'],
-                    'image' => null,
-                    'status' => 'active',
-                ],
-            );
-        }
-
-        return $categories;
-    }
-
-    /**
-     * Pilihan bahan bersifat generik karena laporan KP hanya menyatakan bahwa bahan
-     * menyesuaikan jenis produk. Harga bahan di sini adalah data demo kalkulator.
-     *
-     * @return array<string, Material>
-     */
-    private function seedMaterials(): array
-    {
-        $definitions = [
-            'mug' => ['Bahan Mug', 'Bahan dasar untuk Mug Custom.'],
-            'bando' => ['Bahan Bando', 'Bahan dasar untuk Bando Tuning Custom.'],
-            'kraft' => ['Kertas Kraft', 'Kertas kemasan untuk Paper Bag Custom.'],
-            'kertas-cetak' => ['Kertas Cetak', 'Kertas cetak untuk produk kertas Kilat Print.'],
-        ];
-
-        $materials = [];
-        foreach ($definitions as $key => [$name, $usage]) {
-            $materials[$key] = Material::updateOrCreate(
-                ['slug' => Str::slug($name)],
-                [
-                    'name' => $name,
-                    'description' => $usage.' Data demo untuk kalkulator harga, bukan daftar material resmi Kilat Print.',
-                    'pricing_type' => PricingType::PER_ITEM,
-                    'price' => 0,
-                    'status' => 'active',
-                ],
-            );
-        }
-
-        return $materials;
-    }
-
-    /** @return array<string, Finishing> */
-    private function seedFinishings(): array
-    {
-        $definitions = [
-            'matte' => ['Matte', 0],
-            'glossy' => ['Glossy', 5000],
-            'lamination' => ['Laminasi', 8000],
-        ];
-
-        $finishings = [];
-        foreach ($definitions as $key => [$name, $price]) {
-            $finishings[$key] = Finishing::updateOrCreate(
-                ['slug' => Str::slug($name)],
-                [
-                    'name' => $name,
-                    'description' => 'Pilihan finishing Kilat Print. Harga pada seeder ini data demo, bukan tarif resmi perusahaan.',
-                    'pricing_type' => PricingType::PER_ITEM,
-                    'price' => $price,
-                    'status' => 'active',
-                ],
-            );
-        }
-
-        return $finishings;
-    }
-
-    /**
-     * Definisi produk Kilat Print. Kunci material/finishing berisi tambahan biaya
-     * demo per item; null berarti memakai harga master pada tabel material/finishing.
-     *
-     * @param  array<string, Category>  $categories
-     * @param  array<string, Material>  $materials
-     * @param  array<string, Finishing>  $finishings
-     * @return array<string, Product>
-     */
-    private function seedProducts(array $categories, array $materials, array $finishings): array
-    {
-        $definitions = [
-            'mug-custom' => [
-                'name' => 'Mug Custom',
-                'category' => 'custom',
-                'description' => 'Produk mug custom yang dapat disesuaikan dengan desain dan kebutuhan pelanggan.',
-                'base_price' => 25000,
-                'minimum_order' => 1,
-                'production_days' => 3,
-                'materials' => ['mug' => null],
-                'finishings' => ['matte' => null, 'glossy' => 3000],
-                'is_featured' => true,
-                'popularity_count' => 42,
-            ],
-            'bando-tuning-custom' => [
-                'name' => 'Bando Tuning Custom',
-                'category' => 'custom',
-                'description' => 'Produk bando tuning custom yang dapat disesuaikan dengan desain dan kebutuhan pelanggan.',
-                'base_price' => 35000,
-                'minimum_order' => 1,
-                'production_days' => 3,
-                'materials' => ['bando' => null],
-                'finishings' => ['matte' => null, 'glossy' => 3000],
-                'is_featured' => true,
-                'popularity_count' => 35,
-            ],
-            'paper-bag-custom' => [
-                'name' => 'Paper Bag Custom',
-                'category' => 'printing-custom',
-                'description' => 'Produk paper bag custom untuk kebutuhan cetak dan kemasan sesuai kebutuhan pelanggan.',
-                'base_price' => 4500,
-                'minimum_order' => 1,
-                'production_days' => 4,
-                'materials' => ['kraft' => null, 'kertas-cetak' => 2000],
-                'finishings' => ['matte' => null, 'lamination' => 2500],
-                'is_featured' => true,
-                'popularity_count' => 28,
-            ],
-            'kertas-kado' => [
-                'name' => 'Kertas Kado',
-                'category' => 'printing-custom',
-                'description' => 'Produk kertas kado untuk kebutuhan cetak sesuai desain pelanggan.',
-                'base_price' => 3000,
-                'minimum_order' => 1,
-                'production_days' => 2,
-                'materials' => ['kertas-cetak' => null],
-                'finishings' => ['glossy' => 1500, 'lamination' => 2000],
-                'is_featured' => false,
-                'popularity_count' => 21,
-            ],
-            'apotek-mini' => [
-                'name' => 'Apotek Mini',
-                'category' => 'printing-custom',
-                'description' => 'Produk apotek mini untuk kebutuhan cetak dan kemasan sesuai desain pelanggan.',
-                'base_price' => 8500,
-                'minimum_order' => 1,
-                'production_days' => 3,
-                'materials' => ['kertas-cetak' => null],
-                'finishings' => ['matte' => null, 'glossy' => 1500],
-                'is_featured' => false,
-                'popularity_count' => 11,
-            ],
-            'topper-cake' => [
-                'name' => 'Topper Cake',
-                'category' => 'custom',
-                'description' => 'Produk topper cake yang dapat disesuaikan dengan desain dan kebutuhan pelanggan.',
-                'base_price' => 12000,
-                'minimum_order' => 1,
-                'production_days' => 2,
-                'materials' => ['kertas-cetak' => null],
-                'finishings' => ['matte' => null, 'glossy' => 1500],
-                'is_featured' => false,
-                'popularity_count' => 17,
-            ],
-            'topeng-muka' => [
-                'name' => 'Topeng Muka',
-                'category' => 'custom',
-                'description' => 'Produk topeng muka yang dapat disesuaikan dengan desain dan kebutuhan pelanggan.',
-                'base_price' => 15000,
-                'minimum_order' => 1,
-                'production_days' => 3,
-                'materials' => ['kertas-cetak' => null],
-                'finishings' => ['matte' => null, 'glossy' => 1500],
-                'is_featured' => false,
-                'popularity_count' => 14,
-            ],
-        ];
-
-        $products = [];
-        foreach ($definitions as $key => $definition) {
-            $slug = Str::slug($definition['name']);
-
-            $product = Product::updateOrCreate(
-                ['slug' => $slug],
-                [
-                    'category_id' => $categories[$definition['category']]->id,
-                    'name' => $definition['name'],
-                    'description' => $definition['description'],
-                    'specifications' => [
-                        'demo' => true,
-                        'size' => 'Sesuai kebutuhan pelanggan',
-                        'material' => $this->optionNames($materials, $definition['materials']),
-                        'finishing' => $this->optionNames($finishings, $definition['finishings']),
-                        'catatan' => 'Data demo untuk pengembangan aplikasi. Ganti dengan spesifikasi resmi Kilat Print sebelum dipakai nyata.',
-                    ],
-                    'thumbnail' => 'images/products/'.$slug.'.svg',
-                    'front_mockup' => 'images/products/'.$slug.'.svg',
-                    'back_mockup' => 'images/mockups/product-back.svg',
-                    'base_price' => $definition['base_price'],
-                    'status' => 'active',
-                    'is_featured' => $definition['is_featured'],
-                    'minimum_order' => $definition['minimum_order'],
-                    'production_days' => $definition['production_days'],
-                    'popularity_count' => $definition['popularity_count'],
-                ],
-            );
-
-            $product->materials()->sync($this->optionSync($materials, $definition['materials']));
-            $product->finishings()->sync($this->optionSync($finishings, $definition['finishings']));
-
-            // Hapus aturan harga lama (misalnya aturan per meter persegi dari katalog demo
-            // sebelumnya) supaya kalkulator tidak menjumlahkan dua basis harga.
-            $product->priceRules()->where('name', '!=', 'Harga demo per item')->delete();
-
-            PriceRule::updateOrCreate(
-                ['product_id' => $product->id, 'name' => 'Harga demo per item'],
-                [
-                    'pricing_type' => PricingType::PER_ITEM,
-                    'price' => $definition['base_price'],
-                    'min_quantity' => 1,
-                    'active' => true,
-                    'description' => 'Harga demo per item untuk kalkulator aplikasi. Ganti dengan tarif resmi Kilat Print sebelum dipakai nyata.',
-                ],
-            );
-
-            $products[$key] = $product;
-        }
-
-        return $products;
-    }
-
-    /**
-     * @param  array<string, Material|Finishing>  $options
-     * @param  array<string, int|null>  $selection  option key => surcharge per item
-     * @return array<int, array{price_override: int|null}>
-     */
-    private function optionSync(array $options, array $selection): array
-    {
-        $payload = [];
-        foreach ($selection as $key => $surcharge) {
-            $payload[$options[$key]->id] = ['price_override' => $surcharge];
-        }
-
-        return $payload;
-    }
-
-    /**
-     * @param  array<string, Material|Finishing>  $options
-     * @param  array<string, int|null>  $selection
-     */
-    private function optionNames(array $options, array $selection): string
-    {
-        return collect(array_keys($selection))
-            ->map(fn (string $key): string => $options[$key]->name)
-            ->implode(', ');
+        return Product::withTrashed()->where('catalog_key', $catalogKey)->firstOrFail();
     }
 
     private function seedCustomerProfile(User $customerUser): void
@@ -433,6 +97,8 @@ class DemoDataSeeder extends Seeder
             [
                 'quantity' => $quantity,
                 'size' => null,
+                'variant' => null,
+                'variant_label' => null,
                 'length_cm' => null,
                 'width_cm' => null,
                 'material_id' => null,
@@ -448,21 +114,22 @@ class DemoDataSeeder extends Seeder
 
     /**
      * @param  array{admin: User, operator: User, customer: User}  $accounts
-     * @param  array{products: array<string, Product>}  $catalog
      */
-    private function seedOrders(array $accounts, array $catalog): void
+    private function seedOrders(array $accounts): void
     {
         $customer = Customer::where('user_id', $accounts['customer']->id)->firstOrFail();
         $operator = Operator::where('user_id', $accounts['operator']->id)->firstOrFail();
-        $products = $catalog['products'];
 
-        // Jumlah pesanan demo mengikuti katalog laporan KP; seluruh produk dihitung
-        // per item sehingga tidak ada dimensi luas (meter persegi) pada order item.
+        $mug = $this->product('gelas-mug-custom');
+        $paperBag = $this->product('paper-bag-custom');
+        $kertasKado = $this->product('kertas-kado-custom');
+        $topi = $this->product('topi-ultah-custom');
+
         $this->seedOrder(
             $accounts,
             $customer,
             $operator,
-            $products['mug-custom'],
+            $mug,
             'KP-DEMO-0001',
             OrderStatus::PENDING_PAYMENT,
             PaymentStatus::Pending,
@@ -474,19 +141,20 @@ class DemoDataSeeder extends Seeder
             $accounts,
             $customer,
             $operator,
-            $products['bando-tuning-custom'],
+            $topi,
             'KP-DEMO-0002',
             OrderStatus::PENDING_PAYMENT,
             PaymentStatus::Expired,
-            2,
+            3,
             false,
+            variant: 'polkadot',
         );
 
         $this->seedOrder(
             $accounts,
             $customer,
             $operator,
-            $products['kertas-kado'],
+            $kertasKado,
             'KP-DEMO-0003',
             OrderStatus::PAYMENT_CONFIRMED,
             PaymentStatus::Paid,
@@ -498,20 +166,21 @@ class DemoDataSeeder extends Seeder
             $accounts,
             $customer,
             $operator,
-            $products['paper-bag-custom'],
+            $paperBag,
             'KP-DEMO-0004',
             OrderStatus::IN_PRODUCTION,
             PaymentStatus::Paid,
             100,
             true,
             ProductionStatus::Printing,
+            variant: 'large',
         );
 
         $this->seedOrder(
             $accounts,
             $customer,
             $operator,
-            $products['topper-cake'],
+            $mug,
             'KP-DEMO-0005',
             OrderStatus::COMPLETED,
             PaymentStatus::Paid,
@@ -525,25 +194,27 @@ class DemoDataSeeder extends Seeder
             $accounts,
             $customer,
             $operator,
-            $products['topeng-muka'],
+            $topi,
             'KP-DEMO-0006',
             OrderStatus::PAYMENT_CONFIRMED,
             PaymentStatus::Paid,
             6,
             true,
+            variant: 'love',
         );
 
         $this->seedOrder(
             $accounts,
             $customer,
             $operator,
-            $products['apotek-mini'],
+            $paperBag,
             'KP-DEMO-0007',
             OrderStatus::IN_PRODUCTION,
             PaymentStatus::Paid,
             15,
             true,
             ProductionStatus::Printing,
+            variant: 'medium',
         );
 
         $reworkOrder = Order::where('number', 'KP-DEMO-0007')->first();
@@ -571,8 +242,10 @@ class DemoDataSeeder extends Seeder
         bool $withDesign,
         ?ProductionStatus $productionStatus = null,
         bool $withQualityCheck = false,
+        ?string $variant = null,
     ): void {
-        $unitPrice = (int) $product->base_price;
+        $variantLabel = $variant !== null ? $product->variantLabel($variant) : null;
+        $unitPrice = $this->unitPrice($product, $variant);
         $lineTotal = $unitPrice * $quantity;
 
         $order = Order::updateOrCreate(
@@ -602,12 +275,14 @@ class DemoDataSeeder extends Seeder
                 'product_slug' => $product->slug,
                 'quantity' => $quantity,
                 'size' => null,
+                'variant' => $variant,
+                'variant_label' => $variantLabel,
                 'length_cm' => null,
                 'width_cm' => null,
                 'color' => 'Full Color',
                 'production_method' => 'digital',
                 'custom_parameters' => ['demo' => true],
-                'configuration' => ['source' => 'DemoDataSeeder'],
+                'configuration' => ['source' => 'DemoDataSeeder', 'variant' => $variant],
                 'design_reference' => null,
                 'notes' => 'Demo configuration snapshot.',
                 'unit_price' => $unitPrice,
@@ -800,6 +475,21 @@ class DemoDataSeeder extends Seeder
                 );
             }
         }
+    }
+
+    private function unitPrice(Product $product, ?string $variant): int
+    {
+        $query = $product->priceRules()->where('active', true)->where('is_wholesale', false);
+
+        $price = null;
+
+        if ($variant !== null) {
+            $price = (clone $query)->where('variant_key', $variant)->orderByDesc('min_quantity')->value('price');
+        }
+
+        $price ??= (clone $query)->whereNull('variant_key')->orderByDesc('min_quantity')->value('price');
+
+        return (int) ($price ?? $product->base_price);
     }
 
     private function history(Order $order, ?OrderStatus $old, OrderStatus $new, ?int $changedBy, string $note): void

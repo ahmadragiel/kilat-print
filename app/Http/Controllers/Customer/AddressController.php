@@ -67,9 +67,11 @@ class AddressController extends Controller
     private function validated(Request $request, ?Address $address = null): array
     {
         return $request->validate([
+            'label' => ['nullable', 'string', 'max:80'],
             'recipient' => ['required', 'string', 'max:255'],
             'phone' => ['required', 'string', 'max:30'],
             'address' => ['required', 'string', 'max:1000'],
+            'address_line2' => ['nullable', 'string', 'max:255'],
             'district' => ['required', 'string', 'max:100'],
             'city' => ['required', 'string', 'max:100'],
             'province' => ['required', 'string', 'max:100'],

@@ -2,9 +2,8 @@
 
 return [
     'bank_name' => env('BANK_NAME', 'Bank Digital Demo'),
-    'bank_account_number' => env('BANK_ACCOUNT_NUMBER', '0000-0000-0000'),
-    'bank_account_name' => env('BANK_ACCOUNT_NAME', 'Kilat Print'),
-    'delivery_fee' => (int) env('DELIVERY_FEE', 0),
+    'delivery_fee' => env('DELIVERY_FEE'),
+    'delivery_free' => (bool) env('DELIVERY_FREE', false),
     'design_max_kilobytes' => (int) env('DESIGN_MAX_KILOBYTES', 10240),
     'payment_max_kilobytes' => (int) env('PAYMENT_MAX_KILOBYTES', 5120),
     'custom_design_max_kilobytes' => (int) env('CUSTOM_DESIGN_MAX_KILOBYTES', 5120),

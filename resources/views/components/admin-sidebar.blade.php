@@ -8,7 +8,7 @@
     ];
     $active = fn (array $patterns) => collect($patterns)->contains(fn ($pattern) => request()->routeIs($pattern));
     /* Sidebar link contract: dark red base, red-700 active fill, yellow left indicator. */
-    $link = 'group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold transition text-brand-100 hover:bg-brand-800/60 hover:text-white';
+    $link = 'group relative flex min-h-11 items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold transition text-brand-100 hover:bg-brand-800/60 hover:text-white';
     $linkActive = 'bg-brand-800 text-white shadow-sm';
 @endphp
 
@@ -90,7 +90,7 @@
         </div>
         <form method="POST" action="{{ route('logout') }}">
             @csrf
-            <button type="submit" class="mt-1 flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-semibold text-brand-100 transition hover:bg-brand-700 hover:text-white">
+            <button type="submit" class="mt-1 flex min-h-11 w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-semibold text-brand-100 transition hover:bg-brand-700 hover:text-white">
                 <x-icon name="logout" class="h-5 w-5" /> Keluar
             </button>
         </form>

@@ -1,5 +1,6 @@
 @props([
     'name',
+    'id' => null,
     'label' => null,
     'value' => null,
     'placeholder' => null,
@@ -13,28 +14,31 @@
     $errors = $errors ?? new \Illuminate\Support\ViewErrorBag;
     $textareaValue = old($name, $value);
     $textareaError = $error ?: $errors->first($name);
+    $textareaId = $id ?? $name;
+    $describedBy = trim(($help && ! $textareaError ? $textareaId.'-help ' : '').($textareaError ? $textareaId.'-error' : ''));
 @endphp
 
 <div {{ $attributes->class(['w-full']) }}>
     @if ($label)
-        <label for="{{ $name }}" class="form-label">
+        <label for="{{ $textareaId }}" class="form-label">
             {{ $label }}
             @if($required)<span class="text-danger-600" aria-hidden="true">*</span>@endif
         </label>
     @endif
     <textarea
-        id="{{ $name }}"
+        id="{{ $textareaId }}"
         name="{{ $name }}"
         rows="{{ $rows }}"
         @if($placeholder) placeholder="{{ $placeholder }}" @endif
         @required($required)
-        @if($textareaError) aria-invalid="true" aria-describedby="{{ $name }}-error" @endif
+        @if($describedBy) aria-describedby="{{ $describedBy }}" @endif
+        @if($textareaError) aria-invalid="true" @endif
         {{ $attributes->class(['form-control resize-y', 'form-control-error' => (bool) $textareaError]) }}
     >{{ $textareaValue }}</textarea>
     @if ($help && !$textareaError)
-        <p class="mt-1.5 text-xs text-ink-500">{{ $help }}</p>
+        <p id="{{ $textareaId }}-help" class="mt-1.5 text-xs text-ink-500">{{ $help }}</p>
     @endif
     @if ($textareaError)
-        <p id="{{ $name }}-error" class="mt-1.5 text-xs font-medium text-danger-600">{{ $textareaError }}</p>
+        <p id="{{ $textareaId }}-error" class="mt-1.5 text-xs font-medium text-danger-600">{{ $textareaError }}</p>
     @endif
 </div>

@@ -33,7 +33,7 @@
                     :aria-expanded="productMenuOpen.toString()"
                     aria-haspopup="true"
                     aria-controls="product-dropdown"
-                    class="inline-flex items-center gap-1.5 rounded-lg px-1 py-2 text-sm font-semibold transition {{ request()->routeIs('products.*') ? 'text-brand-700' : 'text-ink-600 hover:text-ink-950' }}"
+                    class="inline-flex min-h-11 items-center gap-1.5 rounded-lg px-2 py-2 text-sm font-semibold transition {{ request()->routeIs('products.*') ? 'text-brand-700' : 'text-ink-600 hover:text-ink-950' }}"
                 >
                     Produk
                     <x-icon name="chevron-down" class="h-4 w-4 transition-transform" x-bind:class="productMenuOpen ? 'rotate-180' : ''" />
@@ -42,7 +42,7 @@
                 <div id="product-dropdown" x-show="productMenuOpen" x-cloak x-transition class="absolute left-0 top-full z-50 w-56 pt-2">
                     <div class="max-h-80 overflow-y-auto rounded-xl border border-ink-200 bg-white p-1.5 shadow-panel-lg" aria-label="Kategori produk">
                         @forelse ($navCategories as $category)
-                            <a href="{{ route('products.index', ['category' => $category->slug]) }}" class="block rounded-lg px-3 py-2.5 text-sm font-semibold transition {{ request('category') === $category->slug ? 'bg-brand-50 text-brand-700' : 'text-ink-700 hover:bg-ink-50 hover:text-ink-950' }}">
+                            <a href="{{ route('products.index', ['category' => $category->slug]) }}" class="flex min-h-11 items-center rounded-lg px-3 py-2.5 text-sm font-semibold transition {{ request('category') === $category->slug ? 'bg-brand-50 text-brand-700' : 'text-ink-700 hover:bg-ink-50 hover:text-ink-950' }}">
                                 {{ $category->name }}
                             </a>
                         @empty
@@ -53,12 +53,12 @@
             </div>
             @auth
                 @unless ($isAdmin)
-                <a href="{{ route('customer.orders.index') }}" class="relative rounded-lg px-1 py-2 text-sm font-semibold transition {{ request()->routeIs('customer.orders.*') ? 'text-brand-700' : 'text-ink-600 hover:text-ink-950' }}">
+                <a href="{{ route('customer.orders.index') }}" class="relative inline-flex min-h-11 items-center rounded-lg px-2 py-2 text-sm font-semibold transition {{ request()->routeIs('customer.orders.*') ? 'text-brand-700' : 'text-ink-600 hover:text-ink-950' }}">
                     Pesanan
                     @if (request()->routeIs('customer.orders.*'))<span class="absolute inset-x-1 -bottom-0.5 h-0.5 rounded-full bg-brand-600"></span>@endif
                 </a>
                 @endunless
-                <a href="{{ route($dashboardRoute) }}" class="relative rounded-lg px-1 py-2 text-sm font-semibold transition {{ request()->routeIs($dashboardRoute) ? 'text-brand-700' : 'text-ink-600 hover:text-ink-950' }}">
+                <a href="{{ route($dashboardRoute) }}" class="relative inline-flex min-h-11 items-center rounded-lg px-2 py-2 text-sm font-semibold transition {{ request()->routeIs($dashboardRoute) ? 'text-brand-700' : 'text-ink-600 hover:text-ink-950' }}">
                     Dashboard
                     @if (request()->routeIs($dashboardRoute))<span class="absolute inset-x-1 -bottom-0.5 h-0.5 rounded-full bg-brand-600"></span>@endif
                 </a>
@@ -71,18 +71,18 @@
             <form method="GET" action="{{ route('products.index') }}" role="search" class="relative mr-1 hidden xl:block">
                 <label for="nav-search" class="sr-only">Cari produk</label>
                 <x-icon name="search" class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-500" />
-                <input id="nav-search" type="search" name="search" value="{{ request('search', request('q')) }}" placeholder="Cari produk…" class="h-10 w-48 rounded-lg border border-ink-200 bg-ink-50 pl-9 pr-3 text-sm text-ink-900 transition placeholder:text-ink-500 focus:border-brand-500 focus:bg-white focus:ring-3 focus:ring-brand-100 focus:outline-none">
+                <input id="nav-search" type="search" name="search" value="{{ request('search', request('q')) }}" placeholder="Cari produk…" class="h-11 w-48 rounded-lg border border-ink-200 bg-ink-50 pl-9 pr-3 text-sm text-ink-900 transition placeholder:text-ink-500 focus:border-brand-500 focus:bg-white focus:ring-3 focus:ring-brand-100 focus:outline-none">
             </form>
             @endunless
             @auth
                 @unless ($isAdmin)
-                <a href="{{ \Illuminate\Support\Facades\Route::has('customer.notifications') ? route('customer.notifications') : route('customer.notifications.index') }}" class="relative grid h-10 w-10 place-items-center rounded-lg text-ink-600 transition hover:bg-brand-50 hover:text-brand-700" aria-label="Notifikasi">
+                <a href="{{ \Illuminate\Support\Facades\Route::has('customer.notifications') ? route('customer.notifications') : route('customer.notifications.index') }}" class="relative grid h-11 w-11 place-items-center rounded-lg text-ink-600 transition hover:bg-brand-50 hover:text-brand-700" aria-label="Notifikasi">
                     <x-icon name="bell" class="h-5 w-5" />
                     @if ((int) $unreadNotifications > 0)
                         <span class="absolute right-1 top-1 grid min-h-4 min-w-4 place-items-center rounded-full bg-accent-400 px-1 text-[10px] font-black text-ink-950 ring-2 ring-white">{{ $unreadNotifications > 99 ? '99+' : $unreadNotifications }}</span>
                     @endif
                 </a>
-                <a href="{{ route('cart.index') }}" class="relative grid h-10 w-10 place-items-center rounded-lg text-ink-600 transition hover:bg-brand-50 hover:text-brand-700" aria-label="Keranjang">
+                <a href="{{ route('cart.index') }}" class="relative grid h-11 w-11 place-items-center rounded-lg text-ink-600 transition hover:bg-brand-50 hover:text-brand-700" aria-label="Keranjang">
                     <x-icon name="cart" class="h-5 w-5" />
                     @if ((int) $cartCount > 0)
                         <span class="absolute right-0 top-0 grid min-h-5 min-w-5 place-items-center rounded-full bg-brand-600 px-1 text-[10px] font-black text-white ring-2 ring-white">{{ $cartCount > 99 ? '99+' : $cartCount }}</span>
@@ -104,7 +104,7 @@
                         :aria-expanded="accountMenuOpen.toString()"
                         aria-haspopup="true"
                         aria-controls="account-dropdown"
-                        class="inline-flex items-center gap-2 rounded-lg border border-ink-200 py-1.5 pl-1.5 pr-3 text-sm font-semibold text-ink-800 transition hover:border-brand-300 hover:bg-brand-50"
+                        class="inline-flex min-h-11 items-center gap-2 rounded-lg border border-ink-200 py-1.5 pl-1.5 pr-3 text-sm font-semibold text-ink-800 transition hover:border-brand-300 hover:bg-brand-50"
                     >
                         <span class="grid h-7 w-7 place-items-center rounded-lg bg-brand-600 text-xs font-bold text-white">{{ strtoupper(substr($user->name ?? 'P', 0, 1)) }}</span>
                         <span class="max-w-32 truncate">{{ $user->name ?? 'Pelanggan' }}</span>
@@ -118,13 +118,13 @@
                                 <p class="truncate text-xs text-ink-500">{{ $user->email ?? '' }}</p>
                             </div>
                             @unless ($isAdmin)
-                            <a href="{{ route('customer.profile.edit') }}" role="menuitem" class="block rounded-lg px-3 py-2.5 text-sm font-semibold text-ink-700 transition hover:bg-brand-50 hover:text-brand-700">Profil</a>
+                            <a href="{{ route('customer.profile.edit') }}" role="menuitem" class="flex min-h-11 items-center rounded-lg px-3 py-2.5 text-sm font-semibold text-ink-700 transition hover:bg-brand-50 hover:text-brand-700">Profil</a>
                             @endunless
-                            <a href="{{ route($dashboardRoute) }}" role="menuitem" class="block rounded-lg px-3 py-2.5 text-sm font-semibold text-ink-700 transition hover:bg-brand-50 hover:text-brand-700">Dashboard</a>
+                            <a href="{{ route($dashboardRoute) }}" role="menuitem" class="flex min-h-11 items-center rounded-lg px-3 py-2.5 text-sm font-semibold text-ink-700 transition hover:bg-brand-50 hover:text-brand-700">Dashboard</a>
                             @unless ($isAdmin)
-                            <a href="{{ route('customer.orders.index') }}" role="menuitem" class="block rounded-lg px-3 py-2.5 text-sm font-semibold text-ink-700 transition hover:bg-brand-50 hover:text-brand-700">Pesanan</a>
-                            <a href="{{ route('customer.addresses.index') }}" role="menuitem" class="block rounded-lg px-3 py-2.5 text-sm font-semibold text-ink-700 transition hover:bg-brand-50 hover:text-brand-700">Alamat</a>
-                            <a href="{{ route('customer.notifications.index') }}" role="menuitem" class="flex items-center justify-between rounded-lg px-3 py-2.5 text-sm font-semibold text-ink-700 transition hover:bg-brand-50 hover:text-brand-700">
+                            <a href="{{ route('customer.orders.index') }}" role="menuitem" class="flex min-h-11 items-center rounded-lg px-3 py-2.5 text-sm font-semibold text-ink-700 transition hover:bg-brand-50 hover:text-brand-700">Pesanan</a>
+                            <a href="{{ route('customer.addresses.index') }}" role="menuitem" class="flex min-h-11 items-center rounded-lg px-3 py-2.5 text-sm font-semibold text-ink-700 transition hover:bg-brand-50 hover:text-brand-700">Alamat</a>
+                            <a href="{{ route('customer.notifications.index') }}" role="menuitem" class="flex min-h-11 items-center justify-between rounded-lg px-3 py-2.5 text-sm font-semibold text-ink-700 transition hover:bg-brand-50 hover:text-brand-700">
                                 Notifikasi
                                 @if ((int) $unreadNotifications > 0)
                                     <span class="grid min-h-5 min-w-5 place-items-center rounded-full bg-accent-400 px-1 text-[10px] font-black text-ink-950">{{ $unreadNotifications > 99 ? '99+' : $unreadNotifications }}</span>
@@ -134,7 +134,7 @@
                             @endunless
                             <form method="POST" action="{{ route('logout') }}">
                                 @csrf
-                                <button type="submit" role="menuitem" class="w-full rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-ink-600 transition hover:bg-red-50 hover:text-red-700">Keluar</button>
+                                <button type="submit" role="menuitem" class="min-h-11 w-full rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-ink-600 transition hover:bg-red-50 hover:text-red-700">Keluar</button>
                             </form>
                         </div>
                     </div>
@@ -145,7 +145,7 @@
             @endauth
         </div>
 
-        <button type="button" class="grid h-10 w-10 place-items-center rounded-lg border border-ink-200 text-ink-800 transition hover:border-brand-300 hover:bg-brand-50 hover:text-brand-700 lg:hidden" x-on:click="mobileMenu = !mobileMenu" :aria-expanded="mobileMenu.toString()" aria-controls="mobile-navigation" aria-label="Buka navigasi">
+        <button type="button" class="grid h-11 w-11 place-items-center rounded-lg border border-ink-200 text-ink-800 transition hover:border-brand-300 hover:bg-brand-50 hover:text-brand-700 lg:hidden" x-on:click="mobileMenu = !mobileMenu" :aria-expanded="mobileMenu.toString()" aria-controls="mobile-navigation" :aria-label="mobileMenu ? 'Tutup navigasi' : 'Buka navigasi'">
             <x-icon name="menu" class="h-5 w-5" x-show="!mobileMenu" />
             <x-icon name="x" class="h-5 w-5" x-show="mobileMenu" x-cloak />
         </button>
@@ -167,7 +167,7 @@
                 </button>
                 <div id="mobile-product-categories" x-show="productCategoriesOpen" x-cloak x-transition class="space-y-1 py-1 pl-3">
                     @forelse ($navCategories as $category)
-                        <a href="{{ route('products.index', ['category' => $category->slug]) }}" @click="mobileMenu = false" class="block rounded-lg px-3 py-2.5 text-sm font-medium {{ request('category') === $category->slug ? 'bg-brand-50 text-brand-700' : 'text-ink-600 hover:bg-ink-50 hover:text-ink-950' }}">{{ $category->name }}</a>
+                        <a href="{{ route('products.index', ['category' => $category->slug]) }}" @click="mobileMenu = false" class="flex min-h-11 items-center rounded-lg px-3 py-2.5 text-sm font-medium {{ request('category') === $category->slug ? 'bg-brand-50 text-brand-700' : 'text-ink-600 hover:bg-ink-50 hover:text-ink-950' }}">{{ $category->name }}</a>
                     @empty
                         <p class="px-3 py-2.5 text-sm text-ink-500">Belum ada kategori.</p>
                     @endforelse

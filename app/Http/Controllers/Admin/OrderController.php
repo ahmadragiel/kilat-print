@@ -51,12 +51,18 @@ class OrderController extends Controller
         ]);
     }
 
-    public function show(Order $order): View
+    public function show(Order $order, OrderStatusService $statuses): View
     {
         $this->authorize('view', $order);
         $order->load(['customer.user', 'items.product', 'items.customDesignDraft.assets', 'payment', 'address', 'statusHistories.changer', 'designFiles', 'production.operator.user', 'production.qualityChecks.checker']);
 
-        return view('admin.orders.show', compact('order'));
+        $statusOptions = $statuses->allowedTransitions($order, 'admin');
+        $currentStatus = $order->status;
+        if ($currentStatus instanceof OrderStatus && ! in_array($currentStatus, $statusOptions, true)) {
+            array_unshift($statusOptions, $currentStatus);
+        }
+
+        return view('admin.orders.show', compact('order', 'statusOptions'));
     }
 
     public function status(Request $request, Order $order, OrderStatusService $statuses): RedirectResponse

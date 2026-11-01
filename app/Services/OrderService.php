@@ -6,15 +6,18 @@ use App\Enums\DesignStatus;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
+use App\Models\Address;
 use App\Models\Cart;
 use App\Models\Customer;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\OrderStatusHistory;
 use App\Notifications\OrderNotification;
+use App\Support\DeliveryFee;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 use RuntimeException;
 
 /**
@@ -42,9 +45,26 @@ class OrderService
                 throw new RuntimeException('Keranjang belanja kosong.');
             }
 
+            if (($checkout['shipping_method'] ?? null) !== 'delivery') {
+                throw ValidationException::withMessages([
+                    'shipping_method' => 'Pengambilan di lokasi sudah tidak tersedia. Pesanan hanya dapat dikirim ke alamat.',
+                ]);
+            }
+
+            $address = Address::query()
+                ->where('customer_id', $customer->id)
+                ->find($checkout['address_id'] ?? null);
+
+            if (! $address) {
+                throw ValidationException::withMessages([
+                    'address_id' => 'Pilih alamat pengiriman yang tersimpan dan milik akun Anda.',
+                ]);
+            }
+
             $calculations = $cart->items->map(function ($item) {
                 $configuration = [
                     'quantity' => $item->quantity,
+                    'variant' => $item->variant,
                     'length_cm' => $item->length_cm,
                     'width_cm' => $item->width_cm,
                 ];
@@ -56,7 +76,7 @@ class OrderService
             });
 
             $subtotal = $calculations->sum(fn (array $row) => $row[1]['total']);
-            $shippingFee = $checkout['shipping_method'] === 'delivery' ? (int) config('printing.delivery_fee') : 0;
+            $shippingFee = DeliveryFee::amount();
 
             // The order starts waiting for payment. It is promoted to
             // PAYMENT_CONFIRMED only after the provider confirms the transaction,
@@ -71,7 +91,7 @@ class OrderService
                 'subtotal' => $subtotal,
                 'shipping_fee' => $shippingFee,
                 'grand_total' => $subtotal + $shippingFee,
-                'shipping_method' => $checkout['shipping_method'],
+                'shipping_method' => 'delivery',
                 'paid_at' => null,
                 'deadline' => now()->addDays(max(1, (int) $cart->items->max(fn ($item) => $item->product->production_days))),
             ]);
@@ -87,6 +107,8 @@ class OrderService
                     'product_slug' => $product->slug,
                     'quantity' => $item->quantity,
                     'size' => $item->size,
+                    'variant' => $calculation['variant'] ?? $item->variant,
+                    'variant_label' => $calculation['variant_label'] ?? $item->variant_label,
                     'length_cm' => $item->length_cm,
                     'width_cm' => $item->width_cm,
                     'color' => $item->color,
@@ -109,15 +131,18 @@ class OrderService
             $this->attachDesignFiles($order, $orderItems, $customer);
 
             $order->address()->create([
-                'recipient' => $checkout['recipient'],
-                'phone' => $checkout['address_phone'],
-                'address' => $checkout['address'],
-                'district' => $checkout['district'],
-                'city' => $checkout['city'],
-                'province' => $checkout['province'],
-                'postal_code' => $checkout['postal_code'],
-                'country' => 'Indonesia',
-                'shipping_method' => $checkout['shipping_method'],
+                'label' => $address->label,
+                'recipient' => $address->recipient,
+                'phone' => $address->phone,
+                'address' => $address->address,
+                'address_line2' => $address->address_line2,
+                'district' => $address->district,
+                'city' => $address->city,
+                'province' => $address->province,
+                'postal_code' => $address->postal_code,
+                'country' => $address->country,
+                'shipping_method' => 'delivery',
+                'notes' => $checkout['shipping_notes'] ?? null,
             ]);
 
             // A PENDING payment only: the customer pays through QRIS or bank

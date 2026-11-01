@@ -7,6 +7,8 @@
 /storage/pail
 /vendor
 .env
+.env.*
+!.env.example
 .env.backup
 .env.production
 .phpactor.json
@@ -18,8 +20,18 @@ yarn-error.log
 /auth.json
 /database/*.sqlite
 /database/*.sqlite-*
+*.sql
+!database/schema/*.sql
+baseline-test-output.txt
+.DS_Store
+Thumbs.db
+Desktop.ini
 /.fleet
 /.idea
 /.nova
 /.vscode
 /.zed
+
+# Documentation: only the project README is published.
+*.md
+!/README.md

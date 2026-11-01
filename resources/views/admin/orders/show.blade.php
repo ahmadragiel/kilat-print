@@ -8,13 +8,19 @@
     $designFiles = collect($designFiles instanceof \Illuminate\Support\Collection ? $designFiles : [$designFiles]);
     $orderDesign = $design ?? $designFiles->sortByDesc('created_at')->first();
     $production = $production ?? data_get($order, 'production');
-    $statusOptions = $statuses ?? (class_exists(\App\Enums\OrderStatus::class) ? \App\Enums\OrderStatus::cases() : []);
+    $statusOptions = $statusOptions ?? (class_exists(\App\Enums\OrderStatus::class) ? \App\Enums\OrderStatus::cases() : []);
     $currentOrderStatus = data_get($order, 'status');
     $currentOrderStatusValue = $currentOrderStatus instanceof \BackedEnum ? $currentOrderStatus->value : $currentOrderStatus;
     $statusUrl = \Illuminate\Support\Facades\Route::has('orders.status') ? route('orders.status', $order) : route('admin.orders.status', $order);
     $paymentProofUrl = data_get($orderPayment, 'proof_url') ?? (\Illuminate\Support\Facades\Route::has('admin.payments.proof') && data_get($orderPayment, 'proof_path') ? route('admin.payments.proof', $order) : null);
     $designDownloadUrl = $orderDesign ? (\Illuminate\Support\Facades\Route::has('design.download') && data_get($orderDesign, 'path') ? route('design.download', $orderDesign) : (\Illuminate\Support\Facades\Route::has('admin.designs.download') && data_get($orderDesign, 'path') ? route('admin.designs.download', $orderDesign) : data_get($orderDesign, 'file_url'))) : null;
     $productionAssignUrl = $production ? (\Illuminate\Support\Facades\Route::has('production.assign') ? route('production.assign', $production) : route('admin.production.assign', $production)) : (\Illuminate\Support\Facades\Route::has('production.assign') ? route('production.assign', $order) : null);
+    $shippingMethod = (string) data_get($order, 'shipping_method', '');
+    $shippingMethodLabel = match ($shippingMethod) {
+        'pickup' => 'Ambil di lokasi (pesanan lama)',
+        'delivery' => 'Kirim ke alamat',
+        default => 'Belum ditentukan',
+    };
 @endphp
 
 @section('title', 'Pesanan #'.data_get($order, 'number', data_get($order, 'order_number', data_get($order, 'id'))))
@@ -25,16 +31,16 @@
         <div>
             <div class="flex flex-wrap items-center gap-2"><p class="section-kicker">Detail pesanan</p><x-status-badge :status="data_get($order, 'status')" /></div>
             <h1 class="mt-2 text-2xl font-extrabold tracking-tight text-ink-950 sm:text-3xl">#{{ data_get($order, 'number', data_get($order, 'order_number', data_get($order, 'id'))) }}</h1>
-            <p class="mt-1 text-sm text-ink-500">Dibuat {{ data_get($order, 'created_at')?->format('d F Y, H:i') ?? 'belum tersedia' }}</p>
+            <p class="mt-1 text-sm text-ink-500">Dibuat {{ data_get($order, 'created_at')?->translatedFormat('d F Y, H:i') ?? 'belum tersedia' }}</p>
         </div>
         <div class="flex flex-wrap gap-2">
-            <x-button :href="\Illuminate\Support\Facades\Route::has('admin.invoice') ? route('admin.invoice', $order) : route('admin.invoices.show', $order)" variant="secondary"><x-icon name="receipt" class="h-4 w-4" /> Invoice</x-button>
+            <x-button :href="\Illuminate\Support\Facades\Route::has('admin.invoice') ? route('admin.invoice', $order) : route('admin.invoices.show', $order)" variant="secondary"><x-icon name="receipt" class="h-4 w-4" /> Faktur</x-button>
             <x-button :href="route('admin.orders.index')" variant="ghost">Kembali</x-button>
         </div>
     </div>
 
-    <div class="grid items-start gap-7 xl:grid-cols-[1fr_350px]">
-        <div class="space-y-7">
+    <div class="grid min-w-0 items-start gap-7 xl:grid-cols-[1fr_350px]">
+        <div class="min-w-0 space-y-7">
             <section class="panel overflow-hidden">
                 <div class="panel-head"><h2 class="font-extrabold text-ink-950">Item pesanan</h2></div>
                 @if($orderItems->isNotEmpty())
@@ -55,6 +61,9 @@
                                             {{ data_get($item, 'product_name', data_get($item, 'product.name', 'Produk')) }}
                                         </td>
                                         <td>
+                                            @if (data_get($item, 'variant_label'))
+                                                <span class="mb-1 block font-semibold text-ink-800">{{ data_get($item, 'variant_label') }}</span>
+                                            @endif
                                             {{ data_get($item, 'specification', data_get($item, 'material.name', data_get($item, 'size', 'Tidak ada'))) }}
                                             @if (data_get($item, 'customDesignDraft'))
                                                 @php
@@ -68,7 +77,7 @@
                                             @endif
                                         </td>
                                         <td>{{ data_get($item, 'quantity', 1) }}</td>
-                                        <td class="text-right font-extrabold text-brand-600">
+                                        <td class="text-right font-extrabold text-brand-700">
                                             <x-money :value="data_get($item, 'line_total', data_get($item, 'subtotal', data_get($item, 'total')))" />
                                         </td>
                                     </tr>
@@ -81,15 +90,16 @@
                     <div class="flex justify-between text-ink-600"><span>Subtotal</span><span class="font-semibold text-ink-900"><x-money :value="data_get($order, 'subtotal')" /></span></div>
                     <div class="flex justify-between text-ink-600"><span>Ongkos kirim</span><span class="font-semibold text-ink-900"><x-money :value="data_get($order, 'shipping_fee', data_get($order, 'shipping_cost'))" /></span></div>
                     <div class="flex items-end justify-between gap-4 rounded-lg bg-white px-4 py-3 ring-1 ring-ink-200">
-                        <span class="text-2xs font-extrabold tracking-[0.14em] text-brand-600 uppercase">Total</span>
-                        <span class="text-xl font-black text-brand-600"><x-money :value="data_get($order, 'grand_total', data_get($order, 'total'))" /></span>
+                        <span class="text-2xs font-extrabold tracking-[0.14em] text-brand-700 uppercase">Total</span>
+                        <span class="text-xl font-black text-brand-700"><x-money :value="data_get($order, 'grand_total', data_get($order, 'total'))" /></span>
                     </div>
                 </div>
             </section>
 
             <section class="panel p-5 sm:p-6">
-                <h2 class="font-extrabold text-ink-950">Alamat pengiriman</h2>
+                <h2 class="font-extrabold text-ink-950">Alamat pesanan</h2>
                 <address class="mt-4 text-sm not-italic leading-6 text-ink-600"><strong class="block text-ink-950">{{ data_get($order, 'address.recipient', data_get($order, 'shipping_address.recipient_name', 'Belum tersedia')) }}</strong>{{ data_get($order, 'address.phone', data_get($order, 'phone')) }}<br>{{ data_get($order, 'address.address', data_get($order, 'shipping_address.address_line1')) }}<br>@if(data_get($order, 'address.district')){{ data_get($order, 'address.district') }}<br>@endif{{ data_get($order, 'address.city', data_get($order, 'city')) }}, {{ data_get($order, 'address.province', data_get($order, 'province')) }} {{ data_get($order, 'address.postal_code', data_get($order, 'postal_code')) }}</address>
+                <p class="mt-3 text-xs text-ink-500">Metode pengiriman: <span class="font-semibold text-ink-800">{{ $shippingMethodLabel }}</span></p>
             </section>
 
             <section class="panel p-5 sm:p-6">
@@ -98,7 +108,7 @@
             </section>
         </div>
 
-        <aside class="space-y-6">
+        <aside class="min-w-0 space-y-6">
             <section class="panel p-5">
                 <h2 class="font-extrabold text-ink-950">Ubah status</h2>
                 <form method="POST" action="{{ $statusUrl }}" class="mt-4 space-y-3">
@@ -106,7 +116,10 @@
                     @if(\Illuminate\Support\Facades\Route::has('orders.status')) @method('PATCH') @endif
                     <x-select name="status" label="Status baru" :value="data_get($order, 'status')" required>
                         @forelse($statusOptions as $status)
-                            @php $statusValue = $status instanceof \BackedEnum ? $status->value : (is_array($status) ? data_get($status, 'value', data_get($status, 'key')) : $status); $statusText = $status instanceof \UnitEnum ? $status->name : (is_array($status) ? data_get($status, 'label', data_get($status, 'name')) : $status); @endphp
+                            @php
+                                $statusValue = $status instanceof \BackedEnum ? $status->value : (is_array($status) ? data_get($status, 'value', data_get($status, 'key')) : $status);
+                                $statusText = $status instanceof \UnitEnum && method_exists($status, 'label') ? $status->label() : (is_array($status) ? data_get($status, 'label', data_get($status, 'name')) : $status);
+                            @endphp
                             <option value="{{ $statusValue }}" @selected((string) $currentOrderStatusValue === (string) $statusValue)>{{ $statusText }}</option>
                         @empty
                             <option value="{{ $currentOrderStatusValue }}" selected>{{ $currentOrderStatusValue }}</option>
@@ -120,7 +133,7 @@
             <section class="panel p-5">
                 <div class="flex items-center justify-between gap-3"><h2 class="font-extrabold text-ink-950">Pembayaran</h2><x-status-badge :status="data_get($orderPayment, 'status')" /></div>
                 @if($orderPayment)
-                    <p class="mt-3 text-sm text-ink-500">{{ data_get($orderPayment, 'method', 'Metode belum tersedia') }}</p>
+                    <p class="mt-3 text-sm text-ink-500">{{ $orderPayment instanceof \App\Models\Payment ? ($orderPayment->paymentMethod()?->label() ?? $orderPayment->method) : data_get($orderPayment, 'method', 'Metode belum tersedia') }}</p>
                     @if($paymentProofUrl)<a href="{{ $paymentProofUrl }}" target="_blank" rel="noopener" class="action-link mt-3">Bukti pembayaran <x-icon name="external" class="h-4 w-4" /></a>@endif
                     <p class="mt-4 border-t border-ink-100 pt-4 text-xs leading-5 text-ink-500">Pembayaran diverifikasi otomatis saat pesanan dibuat.</p>
                 @else<x-empty-state compact title="Data pembayaran belum tersedia" icon="credit-card" />@endif
@@ -143,7 +156,7 @@
                         <x-select name="operator_id" label="Operator" :value="data_get($production, 'operator_id')" placeholder="Pilih operator" required>
                             @foreach(($operators ?? []) as $operator)<option value="{{ data_get($operator, 'id') }}">{{ data_get($operator, 'user.name', data_get($operator, 'name', 'Operator')) }}</option>@endforeach
                         </x-select>
-                        <x-input name="deadline" label="Deadline" type="date" :value="data_get($production, 'deadline')" />
+                        <x-input name="deadline" label="Batas waktu" type="date" :value="data_get($production, 'deadline')" />
                         <x-button type="submit" variant="secondary" class="w-full"><x-icon name="user-cog" class="h-4 w-4" /> Tugaskan operator</x-button>
                     </form>
                 </section>

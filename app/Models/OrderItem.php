@@ -19,6 +19,8 @@ class OrderItem extends Model
         'product_slug',
         'quantity',
         'size',
+        'variant',
+        'variant_label',
         'length_cm',
         'width_cm',
         'material_id',

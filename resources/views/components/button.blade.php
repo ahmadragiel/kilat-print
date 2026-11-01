@@ -23,16 +23,16 @@
         'ghost' => 'text-ink-700 hover:bg-ink-100 hover:text-ink-950 focus-visible:outline-ink-700',
         'dark' => 'bg-ink-950 text-white hover:bg-ink-800 active:bg-ink-900 focus-visible:outline-ink-950',
         'danger' => 'bg-danger-700 text-white hover:bg-danger-800 active:bg-danger-900 focus-visible:outline-danger-800 shadow-sm',
-        'success' => 'bg-emerald-600 text-white hover:bg-emerald-700 active:bg-emerald-800 focus-visible:outline-emerald-700',
+        'success' => 'bg-emerald-700 text-white hover:bg-emerald-800 active:bg-emerald-900 focus-visible:outline-emerald-800',
     ];
     /* Backwards-compatible alias: `secondary` === `outline`. */
     $variants['secondary'] = $variants['outline'];
 
     $sizes = [
-        'sm' => 'min-h-9 px-3 py-1.5 text-xs',
+        'sm' => 'min-h-11 px-3 py-1.5 text-xs',
         'md' => 'min-h-11 px-4 py-2.5 text-sm',
         'lg' => 'min-h-12 px-6 py-3 text-base',
-        'icon' => 'h-10 w-10 p-0',
+        'icon' => 'h-11 w-11 p-0',
     ];
     $classes = 'btn-base '.($variants[$variant] ?? $variants['primary']).' '.($sizes[$size] ?? $sizes['md']);
 @endphp

@@ -23,7 +23,7 @@
                     <span class="ml-2 rounded bg-accent-400 px-1.5 py-0.5 text-[10px] font-black tracking-wide text-ink-950 uppercase">Operator</span>
                 </div>
                 <nav class="flex-1 space-y-1 px-3 py-5" aria-label="Navigasi operator">
-                    @php $opLink = 'group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold transition text-brand-100 hover:bg-brand-800/60 hover:text-white'; @endphp
+                    @php $opLink = 'group relative flex min-h-11 items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold transition text-brand-100 hover:bg-brand-800/60 hover:text-white'; @endphp
                     <a href="{{ route('operator.dashboard') }}" class="{{ $opLink }} {{ request()->routeIs('operator.dashboard') ? 'bg-brand-800 text-white shadow-sm before:absolute before:inset-y-2 before:left-0 before:w-1 before:rounded-full before:bg-accent-400' : '' }}">
                         <x-icon name="home" class="h-5 w-5" /> Dashboard
                     </a>
@@ -41,7 +41,7 @@
                     </div>
                     <form method="POST" action="{{ route('logout') }}">
                         @csrf
-                        <button type="submit" class="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-semibold text-brand-100 transition hover:bg-brand-700 hover:text-white">
+                        <button type="submit" class="flex min-h-11 w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-semibold text-brand-100 transition hover:bg-brand-700 hover:text-white">
                             <x-icon name="logout" class="h-5 w-5" /> Keluar
                         </button>
                     </form>
@@ -53,7 +53,7 @@
             <header class="sticky top-0 z-30 border-b border-ink-200 bg-white/95 backdrop-blur">
                 <div class="h-1 bg-linear-to-r from-brand-700 via-brand-500 to-accent-400"></div>
                 <div class="flex h-16 items-center px-4 sm:px-6 lg:px-8">
-                <button type="button" class="mr-3 grid h-10 w-10 place-items-center rounded-lg border border-ink-200 text-ink-700 transition hover:border-brand-300 hover:bg-brand-50 hover:text-brand-700 lg:hidden" x-on:click="sidebar = !sidebar" aria-label="Buka sidebar">
+                <button type="button" class="mr-3 grid h-11 w-11 place-items-center rounded-lg border border-ink-200 text-ink-700 transition hover:border-brand-300 hover:bg-brand-50 hover:text-brand-700 lg:hidden" x-on:click="sidebar = !sidebar" aria-label="Buka sidebar">
                     <x-icon name="menu" class="h-5 w-5" />
                 </button>
                 <div class="min-w-0 flex-1">
@@ -64,10 +64,10 @@
                 </div>
             </header>
 
-            @if (session('success') || session('status') || session('error') || $errors->any())
+            @if (session('success') || session('status') || session('warning') || session('error') || $errors->any())
                 <div x-data="flash" x-show="visible" x-transition class="px-4 pt-5 sm:px-6 lg:px-8">
-                    <x-alert :type="session('error') || $errors->any() ? 'error' : 'success'">
-                        {{ session('success') ?? session('status') ?? ($errors->any() ? $errors->first() : '') }}
+                    <x-alert :type="session('error') || $errors->any() ? 'error' : (session('warning') ? 'warning' : 'success')">
+                        {{ session('error') ?? session('warning') ?? session('success') ?? session('status') ?? ($errors->any() ? $errors->first() : '') }}
                     </x-alert>
                 </div>
             @endif

@@ -13,7 +13,7 @@ return [
     | customer uploaded proof and no admin verification are required.
     |
     | Supported drivers:
-    |   - `midtrans`  Midtrans Snap/Core API (QRIS + virtual account)
+    |   - `midtrans`  Midtrans Core API (QRIS + virtual account)
     |   - `null`      Refuses to create transactions. Use it to keep the site
     |                 reachable while credentials are still being provisioned.
     |
@@ -31,14 +31,11 @@ return [
     /*
      | Client key and merchant id are not required by the Core API charge and
      | notification flow. They are stored so an account can be identified in
-     | diagnostics and so a future Snap.js frontend has what it needs, but they
-     | are never a substitute for the server key.
+     | diagnostics, but they are never a substitute for the server key.
      */
     'client_key' => env('PAYMENT_CLIENT_KEY'),
 
     'merchant_id' => env('PAYMENT_MERCHANT_ID'),
-
-    'webhook_secret' => env('PAYMENT_WEBHOOK_SECRET'),
 
     /*
      | Sandbox mode routes every API call to the provider test environment. It

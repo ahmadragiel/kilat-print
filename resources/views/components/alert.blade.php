@@ -21,7 +21,7 @@
         @endif
         <div class="{{ $title ? 'mt-0.5' : '' }}">{{ $slot }}</div>
     </div>
-    <button type="button" x-on:click="visible = false" class="-m-1 rounded p-1 opacity-60 transition hover:opacity-100" aria-label="Tutup pemberitahuan">
+    <button type="button" x-on:click="visible = false" class="-m-2 grid h-11 w-11 shrink-0 place-items-center rounded-lg opacity-70 transition hover:bg-black/5 hover:opacity-100" aria-label="Tutup pemberitahuan">
         <x-icon name="x" class="h-4 w-4" />
     </button>
 </div>

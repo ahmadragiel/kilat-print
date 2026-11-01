@@ -17,6 +17,19 @@
     $selectedFinishings = collect(data_get($record, 'finishings', []))->pluck('id')->all();
     $currentPricingType = data_get($record, 'pricing_type');
     $currentPricingTypeValue = $currentPricingType instanceof \BackedEnum ? $currentPricingType->value : $currentPricingType;
+    $variationOptionsText = collect(data_get($record, 'variations.options', []))
+        ->map(fn ($option) => data_get($option, 'value').'|'.data_get($option, 'label'))
+        ->implode("\n");
+    $oldVariationOptions = old('variations.options');
+    $variationOptionsValue = is_string($oldVariationOptions)
+        ? $oldVariationOptions
+        : collect(is_array($oldVariationOptions) ? $oldVariationOptions : data_get($record, 'variations.options', []))
+            ->map(fn ($option) => data_get($option, 'value').'|'.data_get($option, 'label'))
+            ->implode("\n");
+    $specificationsText = collect(data_get($record, 'specifications', []))
+        ->filter(fn ($value) => is_scalar($value) && trim((string) $value) !== '')
+        ->map(fn ($value, $key) => $key.'|'.$value)
+        ->implode("\n");
 @endphp
 
 @section('title', ($editing ? 'Edit ' : 'Tambah ') . $resourceLabel)
@@ -54,6 +67,28 @@
                 </x-select>
                 <x-input name="minimum_order" label="Minimum pesan" type="number" min="1" :value="data_get($record, 'minimum_order', 1)" required />
                 <x-input name="production_days" label="Estimasi produksi (hari)" type="number" min="1" :value="data_get($record, 'production_days', 1)" required />
+                <x-input name="base_price" label="Harga dasar (Rp)" type="number" step="0.01" min="0" :value="data_get($record, 'base_price')" help="Dipakai membuat aturan harga default per item bila produk baru." />
+                <x-select name="price_display" label="Label harga" :value="data_get($record, 'price_display', 'starting')">
+                    <option value="starting" @selected(data_get($record, 'price_display', 'starting') === 'starting')>Mulai dari</option>
+                    <option value="exact" @selected(data_get($record, 'price_display') === 'exact')>Harga</option>
+                    <option value="per_unit" @selected(data_get($record, 'price_display') === 'per_unit')>Harga per unit</option>
+                </x-select>
+                <div class="sm:col-span-2 rounded-xl border border-ink-200 bg-ink-50 p-4">
+                    <p class="text-sm font-bold text-ink-900">Varian produk</p>
+                    <p class="mt-1 text-xs leading-5 text-ink-500">Kosongkan bila produk tidak punya pilihan. Isi satu dimensi saja, misalnya ukuran atau model.</p>
+                    <div class="mt-4 grid gap-4 sm:grid-cols-2">
+                        <x-input name="variations[key]" label="Kunci varian" :value="old('variations.key', data_get($record, 'variations.key'))" placeholder="size" help="Huruf kecil, tanpa spasi. Contoh: size, model." />
+                        <x-input name="variations[label]" label="Label varian" :value="old('variations.label', data_get($record, 'variations.label'))" placeholder="Ukuran" />
+                    </div>
+                    <div class="mt-4">
+                        <x-textarea name="variations[options]" label="Pilihan varian" :value="$variationOptionsValue" :rows="5" help="Satu pilihan per baris dengan format nilai|label. Contoh: large|Large" />
+                    </div>
+                    <label class="mt-3 flex items-center gap-2.5 text-sm font-medium text-ink-700">
+                        <input type="hidden" name="variations[required]" value="0">
+                        <input type="checkbox" name="variations[required]" value="1" class="form-check rounded" @checked((bool) old('variations.required', data_get($record, 'variations.required', true)))>
+                        Wajib dipilih saat memesan
+                    </label>
+                </div>
                 <div class="sm:col-span-2"><x-input name="thumbnail" label="Thumbnail produk" type="file" accept=".jpg,.jpeg,.png,.webp" /></div>
                 <div class="sm:col-span-2 grid gap-4 sm:grid-cols-2">
                     @foreach(['front_mockup' => 'Mockup depan', 'back_mockup' => 'Mockup belakang'] as $field => $label)
@@ -79,9 +114,8 @@
                         @endforeach
                     </x-select>
                 </div>
-                <div class="sm:col-span-2 grid gap-5 sm:grid-cols-2">
-                    <x-input name="specifications[size]" label="Ukuran" :value="data_get($record, 'specifications.size')" />
-                    <x-input name="specifications[material]" label="Catatan material" :value="data_get($record, 'specifications.material')" />
+                <div class="sm:col-span-2">
+                    <x-textarea name="specifications" label="Spesifikasi" :value="$specificationsText" :rows="5" help="Satu spesifikasi per baris dengan format kunci|nilai. Contoh: ukuran|A3. Baris dengan kunci catatan tidak ditampilkan di halaman publik." />
                 </div>
             @elseif($resourceType === 'categories')
                 <x-input name="slug" label="Slug" :value="data_get($record, 'slug')" placeholder="Dibuat otomatis jika kosong" />

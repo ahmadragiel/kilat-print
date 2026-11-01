@@ -61,6 +61,7 @@ class ProductController extends Controller
         $specification = $draft?->specification ?? ($cartItem ? [
             'quantity' => $cartItem->quantity,
             'size' => $cartItem->size,
+            'variant' => $cartItem->variant,
             'length_cm' => $cartItem->length_cm,
             'width_cm' => $cartItem->width_cm,
             'color' => $cartItem->color,
@@ -69,6 +70,7 @@ class ProductController extends Controller
         ] : [
             'quantity' => $product->minimum_order,
             'size' => null,
+            'variant' => $product->defaultVariant(),
             'length_cm' => null,
             'width_cm' => null,
             'color' => null,
@@ -136,6 +138,7 @@ class ProductController extends Controller
     {
         $data = $request->validate([
             'quantity' => ['required', 'integer', 'min:1', 'max:100000'],
+            'variant' => ['nullable', 'string', 'max:80'],
             'length_cm' => ['nullable', 'numeric', 'min:0', 'max:100000'],
             'width_cm' => ['nullable', 'numeric', 'min:0', 'max:100000'],
         ]);
@@ -144,6 +147,8 @@ class ProductController extends Controller
 
         return response()->json([
             'quantity' => $calculation['quantity'],
+            'variant' => $calculation['variant'],
+            'variant_label' => $calculation['variant_label'],
             'unit_price' => $calculation['unit_price'],
             'total' => $calculation['total'],
             'formatted' => [

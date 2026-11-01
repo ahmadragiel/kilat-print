@@ -137,6 +137,14 @@
         outline-offset: 2px;
     }
 
+    a:focus-visible,
+    button:focus-visible,
+    [role='button']:focus-visible,
+    summary:focus-visible {
+        outline: 2px solid var(--color-brand-600);
+        outline-offset: 2px;
+    }
+
     button,
     a {
         -webkit-tap-highlight-color: transparent;
@@ -183,7 +191,7 @@
        TYPE
        ================================================================ */
     .section-kicker {
-        @apply text-2xs font-extrabold tracking-[0.18em] text-brand-600 uppercase;
+        @apply text-2xs font-extrabold tracking-[0.18em] text-brand-700 uppercase;
     }
 
     .page-title {
@@ -265,7 +273,11 @@
        LINKS / SMALL TEXT ACTIONS
        ================================================================ */
     .action-link {
-        @apply inline-flex items-center justify-center gap-2 text-sm font-semibold text-ink-700 transition hover:text-brand-700 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand-600;
+        @apply inline-flex min-h-11 min-w-11 items-center justify-center gap-2 text-sm font-semibold text-ink-700 transition hover:text-brand-700 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand-600;
+    }
+
+    .breadcrumb-link {
+        @apply inline-flex min-h-11 items-center transition hover:text-brand-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600;
     }
 
     /* ================================================================
@@ -320,7 +332,7 @@
        DESIGN EDITOR
        ================================================================ */
     .editor-toolbar-tab {
-        @apply inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-md px-3 text-xs font-bold text-ink-600 transition hover:bg-white;
+        @apply inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-md px-3 text-xs font-bold text-ink-600 transition hover:bg-white;
     }
 
     .editor-toolbar-tab-active {
@@ -331,7 +343,7 @@
     .editor-toolbar-button,
     .editor-mini-button,
     .editor-layer-button {
-        @apply inline-flex min-h-9 min-w-9 items-center justify-center gap-1.5 rounded-lg border border-transparent px-2.5 text-xs font-bold text-ink-600 transition hover:bg-ink-100 hover:text-ink-950 disabled:cursor-not-allowed disabled:opacity-40;
+        @apply inline-flex min-h-11 min-w-11 items-center justify-center gap-1.5 rounded-lg border border-transparent px-2.5 text-xs font-bold text-ink-600 transition hover:bg-ink-100 hover:text-ink-950 disabled:cursor-not-allowed disabled:opacity-40;
     }
 
     .editor-toolbar-button {
@@ -344,7 +356,7 @@
     }
 
     .editor-mini-button {
-        @apply min-h-8 min-w-8;
+        @apply min-h-11 min-w-11;
     }
 
     .editor-layer-button {
@@ -356,7 +368,7 @@
     }
 
     .editor-secondary-button {
-        @apply inline-flex min-h-10 items-center gap-2 rounded-lg border border-brand-200 bg-white px-3 py-2 text-xs font-bold text-brand-700 transition hover:border-brand-500 hover:bg-brand-50;
+        @apply inline-flex min-h-11 items-center gap-2 rounded-lg border border-brand-200 bg-white px-3 py-2 text-xs font-bold text-brand-700 transition hover:border-brand-500 hover:bg-brand-50;
     }
 
     .editor-control-label {
@@ -396,6 +408,21 @@
 @media (max-width: 640px) {
     .design-canvas-host {
         min-height: 300px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    html {
+        scroll-behavior: auto;
+    }
+
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
     }
 }
 

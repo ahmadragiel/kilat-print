@@ -56,9 +56,9 @@
                                 </td>
                                 <td>{{ data_get($paymentOrder, 'customer.user.name', data_get($paymentOrder, 'customer_name', 'Pelanggan')) }}</td>
                                 <td>{{ $payment->paymentMethod()?->label() ?? data_get($payment, 'method', 'Belum tersedia') }}</td>
-                                <td class="font-extrabold text-brand-600"><x-money :value="data_get($payment, 'amount')" /></td>
+                                <td class="font-extrabold text-brand-700"><x-money :value="data_get($payment, 'amount')" /></td>
                                 <td class="font-mono text-xs break-all text-ink-600">{{ data_get($payment, 'provider_reference', 'Belum dibuat') }}</td>
-                                <td class="whitespace-nowrap text-ink-600">{{ data_get($payment, 'paid_at')?->format('d M Y, H:i') ?? '—' }}</td>
+                                <td class="whitespace-nowrap text-ink-600">{{ data_get($payment, 'paid_at')?->translatedFormat('d M Y, H:i') ?? '—' }}</td>
                                 <td><x-status-badge :status="data_get($payment, 'status')" /></td>
                             </tr>
                         @endforeach

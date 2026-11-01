@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Payment;
 use App\Services\Payment\Drivers\MidtransGateway;
 use App\Services\Payment\GatewayException;
+use App\Services\Payment\PaymentSettings;
 use App\Services\Payment\PaymentStatusPoller;
 use App\Services\Payment\PaymentTransactionService;
 use Illuminate\Contracts\View\View;
@@ -79,8 +80,12 @@ class PaymentSandboxController extends Controller
      * This is a real provider call: Midtrans moves the state and notifies the
      * webhook, which is exactly how an abandoned payment ends in production.
      */
-    public function expire(Request $request, Payment $payment, PaymentTransactionService $transactions): RedirectResponse
-    {
+    public function expire(
+        Request $request,
+        Payment $payment,
+        PaymentTransactionService $transactions,
+        PaymentSettings $settings,
+    ): RedirectResponse {
         $this->guardSandbox(app(PaymentStatusPoller::class));
 
         if (! filled($payment->provider_reference)) {
@@ -91,7 +96,7 @@ class PaymentSandboxController extends Controller
 
         try {
             $response = Http::asJson()
-                ->withBasicAuth((string) config('payments.server_key'), '')
+                ->withBasicAuth((string) $settings->serverKey(), '')
                 ->timeout(20)
                 ->post($gateway->baseUrl().'/v2/'.urlencode($payment->provider_reference).'/expire');
         } catch (\Throwable $exception) {

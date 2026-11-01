@@ -1,131 +1,134 @@
 @extends('layouts.app')
 
 @section('title', 'Kilat Print')
-@section('meta_description', 'Percetakan online Kilat Print. Pesan lebih cepat, cetak lebih mudah, dari desain hingga produksi.')
+@section('meta_description', 'Kilat Print melayani cetak dan produksi kustom: pilih produk, atur ukuran dan jumlah, lihat estimasi harga, lalu pantau pesanan dari satu dashboard.')
 
 @section('content')
 @php
     $popular = collect($popularProducts ?? []);
     $latest = collect($latestProducts ?? []);
-    $featuredProduct = $popular->first() ?? $latest->first();
-    $featuredImage = data_get($featuredProduct, 'image_url') ?? data_get($featuredProduct, 'image');
+    $featured = collect($featuredProducts ?? []);
+    $showcaseProduct = $featured->first() ?? $popular->first() ?? $latest->first();
+    $showcaseImage = data_get($showcaseProduct, 'thumbnail_url')
+        ?? data_get($showcaseProduct, 'image_url')
+        ?? data_get($showcaseProduct, 'thumbnail')
+        ?? data_get($showcaseProduct, 'image');
+    $showcasePriceRules = collect(data_get($showcaseProduct, 'priceRules', []))
+        ->filter(fn ($rule) => data_get($rule, 'active', true) && ! data_get($rule, 'is_wholesale', false))
+        ->sortBy(fn ($rule) => data_get($rule, 'discounted_price', data_get($rule, 'price', 0)));
+    $showcasePriceLabel = is_object($showcaseProduct) && method_exists($showcaseProduct, 'priceDisplayLabel')
+        ? $showcaseProduct->priceDisplayLabel()
+        : 'Mulai dari';
+    $showcasePrice = data_get($showcasePriceRules->first(), 'discounted_price')
+        ?? data_get($showcaseProduct, 'starting_price')
+        ?? data_get($showcaseProduct, 'min_price')
+        ?? data_get($showcaseProduct, 'base_price')
+        ?? data_get($showcaseProduct, 'price');
+    $catalogHighlights = $popular
+        ->concat($latest)
+        ->unique(fn ($product) => data_get($product, 'id') ?? data_get($product, 'slug'))
+        ->take(8);
+    $categoryList = collect($categories ?? []);
+    $previewCategories = $categoryList->take(4);
 @endphp
 
 {{-- ============================= HERO ============================= --}}
 <section class="page-shell pt-6 sm:pt-8">
-    <div class="relative overflow-hidden rounded-[2rem] border border-[#f4a5a5] bg-[#f4f2f1] px-5 pb-5 pt-4 shadow-panel-lg sm:px-7 sm:pb-7 lg:px-9 lg:pb-8">
-        <div class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(244,63,80,0.06),_transparent_26%),radial-gradient(circle_at_bottom_right,_rgba(251,191,36,0.08),_transparent_28%)]"></div>
+    <div class="relative overflow-hidden rounded-[2rem] border border-ink-200 bg-white shadow-panel-lg">
+        <div class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(225,29,46,0.06),_transparent_28%),radial-gradient(circle_at_bottom_right,_rgba(251,191,36,0.12),_transparent_30%)]"></div>
 
-        <div class="relative pb-5 sm:pb-6"></div>
-
-        <div class="relative grid items-end gap-7 lg:grid-cols-[0.9fr_1.1fr]">
-            <div class="max-w-lg pt-2 sm:pt-4">
-                <p class="mb-4 inline-flex items-center gap-2 rounded-full border border-ink-900 bg-ink-950 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.18em] text-white">
-                    <span class="h-2 w-2 rounded-full bg-brand-400"></span> KILAT PRINT READY
-                </p>
-                <h1 class="max-w-md text-3xl font-black leading-none tracking-[-0.06em] text-ink-900 sm:text-4xl lg:text-[3rem]">
-                    CETAK CEPAT.<br>
-                    <span class="block text-ink-900">TAMPIL KONSISTEN.</span>
+        <div class="relative grid gap-8 p-6 sm:p-9 lg:grid-cols-[1.05fr_.95fr] lg:items-center lg:gap-12 lg:p-12">
+            <div>
+                <p class="section-kicker">Percetakan online</p>
+                <h1 class="mt-3 max-w-xl text-3xl font-black leading-[1.08] tracking-[-0.04em] text-ink-950 sm:text-4xl lg:text-[3.25rem]">
+                    Cetak kebutuhan usaha dan hadiah, dari desain sampai jadi.
                 </h1>
+                <p class="mt-5 max-w-xl text-base leading-7 text-ink-600">
+                    Pilih produk, atur ukuran dan jumlah, lalu lihat estimasi harga sebelum masuk keranjang.
+                    Setelah dibayar, status produksi dan pengiriman bisa dipantau dari dashboard.
+                </p>
+                <div class="mt-7 flex flex-col gap-3 sm:flex-row">
+                    <x-button :href="route('products.index')" size="lg">
+                        Lihat katalog <x-icon name="arrow-right" class="h-4 w-4" />
+                    </x-button>
+                    <x-button :href="route('tracking.index')" variant="outline" size="lg">
+                        <x-icon name="search" class="h-4 w-4" /> Lacak pesanan
+                    </x-button>
+                </div>
+                <dl class="mt-8 grid gap-4 border-t border-ink-100 pt-6 text-sm sm:grid-cols-3">
+                    <div>
+                        <dt class="text-ink-500">Katalog</dt>
+                        <dd class="mt-1 font-bold text-ink-900">{{ $categoryList->count() }} kategori produk</dd>
+                    </div>
+                    <div>
+                        <dt class="text-ink-500">Harga</dt>
+                        <dd class="mt-1 font-bold text-ink-900">Estimasi sebelum bayar</dd>
+                    </div>
+                    <div>
+                        <dt class="text-ink-500">Pesanan</dt>
+                        <dd class="mt-1 font-bold text-ink-900">Status bisa dipantau</dd>
+                    </div>
+                </dl>
             </div>
 
-            <div class="flex justify-end">
-                <div class="w-full max-w-xl">
-                    <div class="mb-4 text-right text-[10px] font-bold uppercase tracking-[0.2em] text-ink-500">Best Seller</div>
-                </div>
-            </div>
+            @if ($showcaseProduct)
+                <a href="{{ route('products.show', $showcaseProduct) }}" class="group block overflow-hidden rounded-2xl border border-ink-200 bg-ink-50 transition hover:border-brand-300 hover:shadow-panel-lg">
+                    <div class="overflow-hidden">
+                        <x-product-image :src="$showcaseImage" :alt="data_get($showcaseProduct, 'name', 'Produk Kilat Print')" fit="contain" class="aspect-[4/3] transition duration-300 group-hover:scale-[1.02]" />
+                    </div>
+                    <div class="border-t border-ink-200 bg-white p-5">
+                        @if (data_get($showcaseProduct, 'category.name'))
+                            <p class="text-2xs font-extrabold tracking-[0.14em] text-brand-700 uppercase">{{ data_get($showcaseProduct, 'category.name') }}</p>
+                        @endif
+                        <h2 class="mt-1 text-xl font-extrabold tracking-tight text-ink-950">{{ data_get($showcaseProduct, 'name', 'Produk Kilat Print') }}</h2>
+                        <p class="mt-2 text-sm text-ink-500">
+                            {{ $showcasePriceLabel }}
+                            <span class="ml-1 font-extrabold text-brand-700"><x-money :value="$showcasePrice" /></span>
+                        </p>
+                        <span class="action-link mt-3 text-brand-700">Lihat detail produk <x-icon name="arrow-right" class="h-4 w-4" /></span>
+                    </div>
+                </a>
+            @endif
         </div>
+    </div>
+</section>
 
-        @php
-            $showcaseProducts = collect($featuredProducts ?? [])
-                ->concat($latest)
-                ->unique(fn ($product) => data_get($product, 'id') ?? data_get($product, 'slug'))
-                ->take(3)
-                ->map(function ($product) {
-                $image = data_get($product, 'thumbnail_url')
-                    ?? data_get($product, 'thumbnail')
-                    ?? data_get($product, 'front_mockup')
-                    ?? data_get($product, 'back_mockup')
-                    ?? data_get($product, 'image_url')
-                    ?? data_get($product, 'image');
-
-                return [
-                    'name' => data_get($product, 'name', 'Produk Kilat Print'),
-                    'image' => \App\Support\MediaPath::url($image),
-                    'url' => route('products.show', $product),
-                ];
-            })->values();
-        @endphp
-
-        @if ($showcaseProducts->isNotEmpty())
-            <div
-                class="relative mt-8"
-                x-data='{
-                    active: 0,
-                    products: @json($showcaseProducts, JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_TAG | JSON_HEX_AMP),
-                    slideStyle(index) {
-                        const offset = (index - this.active + this.products.length) % this.products.length;
-                        const base = { left: "50%", top: 0, pointerEvents: "auto" };
-
-                        if (offset === 0) return { ...base, transform: "translate(-50%, 0) scale(1)", opacity: 1, zIndex: 20 };
-                        if (offset === 1) return { ...base, transform: "translate(25%, 5%) scale(.82)", opacity: .62, zIndex: 10 };
-                        if (offset === this.products.length - 1) return { ...base, transform: "translate(-125%, 5%) scale(.82)", opacity: .62, zIndex: 10 };
-
-                        return { ...base, transform: "translate(50%, 5%) scale(.72)", opacity: 0, zIndex: 0, pointerEvents: "none" };
-                    }
-                }'
-                x-init="setInterval(() => { active = (active + 1) % products.length; }, 6000)"
-            >
-                <div class="relative mx-auto h-[420px] w-full max-w-6xl overflow-hidden sm:h-[460px]">
-                    <template x-for="(product, index) in products" :key="index">
-                        <div
-                            :style="slideStyle(index)"
-                            class="absolute inset-y-0 flex w-[84%] flex-col overflow-hidden rounded-[1.8rem] border border-[#f4a5a5] bg-[#f7f1ea] p-3 shadow-lg transition-all duration-[6000ms] ease-in-out md:w-[62%]"
-                        >
-                            <div class="min-h-0 flex-1 overflow-hidden rounded-[1.5rem] bg-[#efe2d6] p-3 sm:p-5">
-                                <img :src="product.image || '/images/mockups/product-front.svg'" :alt="product.name" class="h-full w-full object-contain" />
-                            </div>
-
-                            <div
-                                :class="active === index ? 'h-28 opacity-100' : 'pointer-events-none h-0 opacity-0'"
-                                class="flex shrink-0 flex-col items-center justify-center overflow-hidden text-center transition-all duration-300"
-                            >
-                                <p class="text-[10px] font-black uppercase tracking-[0.22em] text-brand-600">Featured</p>
-                                <h3 x-text="product.name" class="mt-2 line-clamp-1 text-xl font-black tracking-tight text-ink-900"></h3>
-                                <a :href="product.url" class="mt-3 inline-flex items-center justify-center rounded-full bg-ink-950 px-4 py-2 text-xs font-bold uppercase tracking-[0.16em] text-white transition hover:bg-brand-600">
-                                    Lihat produk
-                                </a>
-                            </div>
-                        </div>
-                    </template>
-                </div>
-
-                <div class="mt-4 flex items-center justify-center gap-2">
-                    <template x-for="(product, index) in products" :key="index">
-                        <button
-                            type="button"
-                            @click="active = index"
-                            :class="active === index ? 'w-8 bg-brand-600' : 'w-3 bg-ink-300'"
-                            class="h-3 rounded-full transition-all duration-300"
-                            :aria-label="'Show product ' + (index + 1)"
-                        ></button>
-                    </template>
-                </div>
+{{-- ========================== CARA PESAN ========================== --}}
+<section class="page-shell mt-6" aria-labelledby="how-to-order-title">
+    <div class="panel p-5 sm:p-6">
+        <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+                <p class="section-kicker">Alur pesan</p>
+                <h2 id="how-to-order-title" class="mt-1 text-xl font-extrabold text-ink-950">Tiga langkah sebelum produksi</h2>
             </div>
-        @endif
+            <a href="{{ route('products.index') }}" class="action-link">Mulai dari katalog <x-icon name="arrow-right" class="h-4 w-4" /></a>
+        </div>
+        <ol class="mt-5 grid gap-4 sm:grid-cols-3">
+            @foreach ([
+                ['title' => 'Pilih dan atur', 'text' => 'Tentukan produk, ukuran, jumlah, dan metode produksi.'],
+                ['title' => 'Periksa estimasi', 'text' => 'Lihat harga per item dan total sebelum menambahkan ke keranjang.'],
+                ['title' => 'Bayar dan pantau', 'text' => 'Selesaikan pembayaran, lalu ikuti status produksi sampai selesai.'],
+            ] as $step)
+                <li class="rounded-xl border border-ink-200 bg-ink-50 p-4">
+                    <span class="grid h-8 w-8 place-items-center rounded-lg bg-brand-600 text-sm font-black text-white">{{ $loop->iteration }}</span>
+                    <p class="mt-3 font-bold text-ink-950">{{ $step['title'] }}</p>
+                    <p class="mt-1 text-sm leading-6 text-ink-500">{{ $step['text'] }}</p>
+                </li>
+            @endforeach
+        </ol>
     </div>
 </section>
 
 {{-- ========================= TRUST STRIP ========================== --}}
-<section class="border-b border-ink-200 bg-white">
-    <div class="page-shell grid gap-4 py-6 sm:grid-cols-3">
+<section class="border-y border-ink-200 bg-white mt-8">
+    <div class="page-shell grid gap-5 py-6 sm:grid-cols-3">
         @foreach ([
-            ['icon' => 'truck', 'title' => 'Kirim tepat waktu', 'text' => 'Status produksi transparan sampai barang dikirim.'],
-            ['icon' => 'shield', 'title' => 'QC berlapis', 'text' => 'Setiap unit diperiksa sebelum packing.'],
-            ['icon' => 'palette', 'title' => 'Bebas desain', 'text' => 'Upload file atau rancang langsung di editor kami.'],
+            ['icon' => 'calculator', 'title' => 'Harga terlihat di awal', 'text' => 'Estimasi dihitung dari aturan harga produk, bukan tebakan.'],
+            ['icon' => 'clock', 'title' => 'Status pesanan jelas', 'text' => 'Pembayaran, produksi, dan pengiriman tercatat berurutan.'],
+            ['icon' => 'palette', 'title' => 'Dua cara menyiapkan desain', 'text' => 'Unggah file sendiri atau rancang langsung di editor.'],
         ] as $feature)
             <div class="flex items-start gap-3">
-                <span class="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-brand-50 text-brand-600"><x-icon :name="$feature['icon']" class="h-5 w-5" /></span>
+                <span class="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-brand-50 text-brand-700"><x-icon :name="$feature['icon']" class="h-5 w-5" /></span>
                 <div>
                     <p class="text-sm font-bold text-ink-950">{{ $feature['title'] }}</p>
                     <p class="mt-0.5 text-sm leading-6 text-ink-500">{{ $feature['text'] }}</p>
@@ -136,26 +139,20 @@
 </section>
 
 {{-- ============================ CATEGORIES ========================= --}}
-<section class="page-shell py-14 sm:py-16" x-data="{ categoriesOpen: false }">
-    @php
-        $categoryList = collect($categories ?? []);
-        $previewCategories = $categoryList->take(2);
-        $remainingCategories = $categoryList->skip(2);
-    @endphp
-
+<section class="page-shell py-12 sm:py-16" x-data="{ categoriesOpen: false }">
     <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
             <p class="section-kicker">Kategori</p>
             <h2 class="mt-2 text-2xl font-extrabold tracking-tight text-ink-950 sm:text-3xl">Mulai dari kebutuhan Anda</h2>
         </div>
         <div class="flex flex-wrap items-center gap-4">
-            @if ($remainingCategories->isNotEmpty())
+            @if ($categoryList->count() > $previewCategories->count())
                 <button
                     type="button"
                     @click="categoriesOpen = !categoriesOpen"
                     :aria-expanded="categoriesOpen.toString()"
                     aria-controls="home-categories"
-                    class="inline-flex min-h-10 items-center gap-2 rounded-lg px-3 text-sm font-bold text-ink-700 transition hover:bg-ink-100 hover:text-brand-700"
+                    class="inline-flex min-h-11 items-center gap-2 rounded-lg px-3 text-sm font-bold text-ink-700 transition hover:bg-ink-100 hover:text-brand-700"
                 >
                     <span x-text="categoriesOpen ? 'Sembunyikan kategori' : 'Tampilkan semua kategori'"></span>
                     <x-icon name="chevron-down" class="h-4 w-4 transition-transform duration-300" x-bind:class="categoriesOpen ? 'rotate-180' : ''" />
@@ -168,7 +165,7 @@
     @if ($categoryList->isNotEmpty())
         <div class="mt-2">
             @foreach ($previewCategories as $category)
-                <a href="{{ route('products.index', ['category' => data_get($category, 'slug', data_get($category, 'id'))]) }}" class="group mt-7 flex items-center justify-between gap-5 border-b border-ink-200 py-5 transition hover:border-brand-300">
+                <a href="{{ route('products.index', ['category' => data_get($category, 'slug', data_get($category, 'id'))]) }}" class="group mt-6 flex min-h-11 items-center justify-between gap-5 border-b border-ink-200 py-4 transition hover:border-brand-300">
                     <div class="flex min-w-0 items-center gap-4">
                         <span class="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-ink-100 text-ink-700 transition group-hover:bg-brand-600 group-hover:text-white">
                             <x-icon :name="data_get($category, 'icon', 'category')" class="h-5 w-5" />
@@ -189,21 +186,15 @@
                 </a>
             @endforeach
 
-            @if ($remainingCategories->isNotEmpty())
+            @if ($categoryList->count() > $previewCategories->count())
                 <div
                     id="home-categories"
                     x-show="categoriesOpen"
                     x-cloak
-                    x-transition:enter="transition ease-out duration-300"
-                    x-transition:enter-start="-translate-y-3 opacity-0"
-                    x-transition:enter-end="translate-y-0 opacity-100"
-                    x-transition:leave="transition ease-in duration-200"
-                    x-transition:leave-start="translate-y-0 opacity-100"
-                    x-transition:leave-end="-translate-y-3 opacity-0"
                     class="mt-2"
                 >
-                    @foreach ($remainingCategories as $category)
-                        <a href="{{ route('products.index', ['category' => data_get($category, 'slug', data_get($category, 'id'))]) }}" class="group mt-7 flex items-center justify-between gap-5 border-b border-ink-200 py-5 transition hover:border-brand-300">
+                    @foreach ($categoryList->skip($previewCategories->count()) as $category)
+                        <a href="{{ route('products.index', ['category' => data_get($category, 'slug', data_get($category, 'id'))]) }}" class="group mt-6 flex min-h-11 items-center justify-between gap-5 border-b border-ink-200 py-4 transition hover:border-brand-300">
                             <div class="flex min-w-0 items-center gap-4">
                                 <span class="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-ink-100 text-ink-700 transition group-hover:bg-brand-600 group-hover:text-white">
                                     <x-icon :name="data_get($category, 'icon', 'category')" class="h-5 w-5" />
@@ -233,26 +224,27 @@
     @endif
 </section>
 
-{{-- ======================= POPULAR PRODUCTS ====================== --}}
-<section class="border-y border-ink-200 bg-ink-50 py-14 sm:py-16">
+{{-- ======================= PRODUCT HIGHLIGHTS ==================== --}}
+<section class="border-y border-ink-200 bg-ink-50 py-12 sm:py-16">
     <div class="page-shell">
         <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
-                <p class="section-kicker">Pilihan pelanggan</p>
-                <h2 class="mt-2 text-2xl font-extrabold tracking-tight text-ink-950 sm:text-3xl">Produk populer</h2>
+                <p class="section-kicker">Katalog</p>
+                <h2 class="mt-2 text-2xl font-extrabold tracking-tight text-ink-950 sm:text-3xl">Produk pilihan</h2>
+                <p class="mt-2 text-sm text-ink-500">Produk populer dan terbaru, ditampilkan tanpa duplikasi.</p>
             </div>
             <a href="{{ route('products.index', ['sort' => 'popular']) }}" class="action-link">Katalog lengkap <x-icon name="arrow-right" class="h-4 w-4" /></a>
         </div>
 
-        @if ($popular->isNotEmpty())
+        @if ($catalogHighlights->isNotEmpty())
             <div class="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                @foreach ($popular->take(4) as $product)
-                    <x-product-card :product="$product" :badge="$loop->first ? 'Best Seller' : null" />
+                @foreach ($catalogHighlights as $product)
+                    <x-product-card :product="$product" />
                 @endforeach
             </div>
         @else
             <div class="panel mt-8">
-                <x-empty-state title="Belum ada produk populer" description="Produk yang sudah tersedia akan tampil di sini." icon="star">
+                <x-empty-state title="Belum ada produk" description="Produk yang sudah aktif akan tampil di sini." icon="box">
                     <x-button :href="route('products.index')" variant="outline" size="sm">Lihat katalog</x-button>
                 </x-empty-state>
             </div>
@@ -260,42 +252,19 @@
     </div>
 </section>
 
-{{-- ============================ LATEST ============================ --}}
-<section class="page-shell py-14 sm:py-16">
-    <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-            <p class="section-kicker">Koleksi terbaru</p>
-            <h2 class="mt-2 text-2xl font-extrabold tracking-tight text-ink-950 sm:text-3xl">Baru hadir</h2>
-        </div>
-        <a href="{{ route('products.index', ['sort' => 'latest']) }}" class="action-link">Lihat semua <x-icon name="arrow-right" class="h-4 w-4" /></a>
-    </div>
-
-    @if ($latest->isNotEmpty())
-        <div class="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            @foreach ($latest->take(8) as $product)
-                <x-product-card :product="$product" />
-            @endforeach
-        </div>
-    @else
-        <div class="panel mt-8">
-            <x-empty-state title="Belum ada produk terbaru" description="Katalog akan diperbarui saat produk baru tersedia." icon="box" />
-        </div>
-    @endif
-</section>
-
 {{-- ============================== CTA ============================= --}}
-<section class="page-shell pb-16 sm:pb-24">
-    <div class="brand-surface brand-stripes overflow-hidden rounded-2xl px-6 py-12 sm:px-12 sm:py-16">
+<section class="page-shell py-14 sm:py-20">
+    <div class="brand-surface brand-stripes overflow-hidden rounded-2xl px-6 py-10 sm:px-12 sm:py-14">
         <div class="pointer-events-none absolute inset-y-0 right-0 hidden w-1/3 bg-linear-to-l from-accent-400/15 to-transparent lg:block"></div>
         <div class="relative max-w-2xl">
             <p class="inline-flex items-center gap-2 rounded-full bg-accent-400 px-3 py-1 text-2xs font-black tracking-[0.16em] text-ink-950 uppercase">
-                <x-icon name="zap" class="h-3 w-3" /> Siap cetak hari ini
+                <x-icon name="zap" class="h-3 w-3" /> Mulai dari satu produk
             </p>
-            <h2 class="mt-5 text-3xl font-black tracking-tight text-white sm:text-4xl">Siapkan desain Anda, kami tangani sisanya.</h2>
-            <p class="mt-4 text-base leading-7 text-brand-100">Mulai dari katalog, gunakan editor desain Kilat Print, lalu selesaikan pembayaran dalam beberapa langkah.</p>
+            <h2 class="mt-5 text-3xl font-black tracking-tight text-white sm:text-4xl">Siapkan desain, kami bantu sampai pesanan selesai.</h2>
+            <p class="mt-4 text-base leading-7 text-brand-100">Pilih produk di katalog, gunakan editor desain bila perlu, lalu selesaikan pembayaran dan pantau produksinya.</p>
             <div class="mt-8 flex flex-col gap-3 sm:flex-row">
-                <x-button :href="route('products.index')" variant="accent" size="lg">Mulai Pesan <x-icon name="arrow-right" class="h-5 w-5" /></x-button>
-                <a href="{{ route('cart.index') }}" class="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg border border-white/40 bg-white/10 px-6 py-3 text-base font-bold text-white transition hover:bg-white/20">Lihat keranjang</a>
+                <x-button :href="route('products.index')" variant="accent" size="lg">Lihat katalog <x-icon name="arrow-right" class="h-5 w-5" /></x-button>
+                <x-button :href="route('tracking.index')" variant="outline" size="lg" class="!border-white/40 !bg-white/10 !text-white hover:!bg-white/20">Lacak pesanan</x-button>
             </div>
         </div>
     </div>

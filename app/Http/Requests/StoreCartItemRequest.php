@@ -19,6 +19,7 @@ class StoreCartItemRequest extends FormRequest
             'product_id' => ['required', 'integer', 'exists:products,id'],
             'quantity' => ['required', 'integer', 'min:1', 'max:100000'],
             'size' => ['nullable', 'string', 'max:80'],
+            'variant' => ['nullable', 'string', 'max:80'],
             'length_cm' => ['nullable', 'numeric', 'min:0.1', 'max:100000'],
             'width_cm' => ['nullable', 'numeric', 'min:0.1', 'max:100000'],
             'color' => ['nullable', 'string', 'max:100'],

@@ -15,6 +15,8 @@ class CartItem extends Model
         'product_id',
         'quantity',
         'size',
+        'variant',
+        'variant_label',
         'length_cm',
         'width_cm',
         'material_id',

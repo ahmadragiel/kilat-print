@@ -14,7 +14,7 @@
                 <p class="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-2xs font-black tracking-[0.16em] text-accent-300 uppercase ring-1 ring-inset ring-white/20">
                     Akun Kilat Print
                 </p>
-                <h1 class="mt-5 text-3xl font-black leading-tight tracking-tight">Kelola setiap pesanan dengan lebih ringkas.</h1>
+                <p class="mt-5 text-3xl font-black leading-tight tracking-tight">Kelola setiap pesanan dengan lebih ringkas.</p>
                 <ul class="mt-7 space-y-3 text-sm text-brand-100">
                     @foreach ([
                         'Simpan alamat pengiriman favorit',

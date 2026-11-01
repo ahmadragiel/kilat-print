@@ -15,13 +15,16 @@ class PriceRule extends Model
 
     protected $fillable = [
         'product_id',
+        'catalog_key',
         'name',
         'pricing_type',
         'type',
+        'variant_key',
         'price',
         'discount_percent',
         'min_quantity',
         'active',
+        'is_wholesale',
         'description',
     ];
 
@@ -33,6 +36,7 @@ class PriceRule extends Model
             'discount_percent' => 'decimal:2',
             'min_quantity' => 'integer',
             'active' => 'boolean',
+            'is_wholesale' => 'boolean',
         ];
     }
 
@@ -49,6 +53,11 @@ class PriceRule extends Model
     public function scopeForQuantity(Builder $query, int $quantity): Builder
     {
         return $query->where('min_quantity', '<=', max(1, $quantity));
+    }
+
+    public function scopeRetail(Builder $query): Builder
+    {
+        return $query->where('is_wholesale', false);
     }
 
     /** Compatibility alias for callers that refer to the rule unit as type. */

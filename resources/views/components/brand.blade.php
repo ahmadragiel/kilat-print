@@ -25,7 +25,7 @@
     $logoSrc = asset($inverse ? 'images/logo-white.png' : 'images/logo.png');
 @endphp
 
-<a href="/" {{ $attributes->class('inline-flex max-w-full items-center rounded-xl transition') }}>
+<a href="/" {{ $attributes->class('inline-flex min-h-11 max-w-full items-center rounded-xl transition') }}>
     <img
         src="{{ $logoSrc }}"
         alt="Kilat Print"

@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Pesanan #'.data_get($order, 'order_number', data_get($order, 'id')))
+@section('title', 'Pesanan #'.data_get($order, 'number', data_get($order, 'id')))
 @section('meta_description', 'Detail pesanan Kilat Print.')
 
 @section('content')
@@ -14,13 +14,28 @@
     $orderDesign = $design ?? $designFiles->sortByDesc('created_at')->first();
     $paymentProof = data_get($orderPayment, 'proof_url');
     $designFile = data_get($orderDesign, 'file_url') ?? data_get($orderDesign, 'download_url') ?? (\Illuminate\Support\Facades\Route::has('customer.orders.design-download') && data_get($orderDesign, 'path') ? route('customer.orders.design-download', ['order' => $order, 'design' => $orderDesign]) : null);
+    $shippingMethod = (string) data_get($order, 'shipping_method', '');
+    $shippingMethodLabel = data_get($order, 'shipping_method_label') ?? match ($shippingMethod) {
+        'pickup' => 'Ambil di lokasi (pesanan lama)',
+        'delivery' => 'Kirim ke alamat',
+        default => 'Belum ditentukan',
+    };
+    $addressRecipient = data_get($order, 'address.recipient', data_get($order, 'shipping_address.recipient_name', data_get($order, 'recipient_name')));
+    $addressPhone = data_get($order, 'address.phone', data_get($order, 'shipping_address.phone', data_get($order, 'phone')));
+    $addressStreet = data_get($order, 'address.address', data_get($order, 'shipping_address.address_line1', data_get($order, 'address_line1')));
+    $addressDistrict = data_get($order, 'address.district', data_get($order, 'shipping_address.address_line2', data_get($order, 'address_line2')));
+    $addressRegion = trim(collect([
+        data_get($order, 'address.city', data_get($order, 'shipping_address.city', data_get($order, 'city'))),
+        data_get($order, 'address.province', data_get($order, 'shipping_address.province', data_get($order, 'province'))),
+    ])->filter()->implode(', ').' '.data_get($order, 'address.postal_code', data_get($order, 'shipping_address.postal_code', data_get($order, 'postal_code'))));
+    $hasAddress = filled($addressRecipient) || filled($addressStreet) || filled($addressRegion);
 @endphp
 
 <div class="page-shell py-8 sm:py-10">
     <nav class="mb-6 flex items-center gap-2 text-sm text-ink-500" aria-label="Breadcrumb">
-        <a href="{{ route('customer.orders.index') }}" class="hover:text-brand-700">Pesanan</a>
+        <a href="{{ route('customer.orders.index') }}" class="breadcrumb-link">Pesanan</a>
         <x-icon name="chevron-right" class="h-3.5 w-3.5" />
-        <span class="font-medium text-ink-700">#{{ data_get($order, 'order_number', data_get($order, 'id')) }}</span>
+        <span class="font-medium text-ink-700">#{{ data_get($order, 'number', data_get($order, 'id')) }}</span>
     </nav>
 
     <div class="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
@@ -29,8 +44,8 @@
                 <p class="section-kicker">Detail pesanan</p>
                 <x-status-badge :status="data_get($order, 'status')" />
             </div>
-            <h1 class="mt-2 text-2xl font-extrabold tracking-tight text-ink-950 sm:text-3xl">#{{ data_get($order, 'order_number', data_get($order, 'code', data_get($order, 'id'))) }}</h1>
-            <p class="mt-1 text-sm text-ink-500">Dibuat {{ data_get($order, 'created_at')?->format('d F Y, H:i') ?? 'belum tersedia' }}</p>
+            <h1 class="mt-2 text-2xl font-extrabold tracking-tight text-ink-950 sm:text-3xl">#{{ data_get($order, 'number', data_get($order, 'code', data_get($order, 'id'))) }}</h1>
+            <p class="mt-1 text-sm text-ink-500">Dibuat {{ data_get($order, 'created_at')?->translatedFormat('d F Y, H:i') ?? 'belum tersedia' }}</p>
         </div>
         <form method="POST" action="{{ route('customer.orders.repeat', $order) }}" x-data="confirmAction('Ulangi pesanan ini dengan data saat ini?')" x-on:submit="confirm">
             @csrf
@@ -49,11 +64,18 @@
                         @foreach ($orderItems as $item)
                             <div class="flex items-center gap-4 p-4 sm:p-5">
                                 <div class="w-16 shrink-0 overflow-hidden rounded-lg border border-ink-200 sm:w-20">
-                                    <x-product-image :src="data_get($item, 'image_url') ?? data_get($item, 'product.thumbnail_url') ?? data_get($item, 'product.image_url') ?? data_get($item, 'product.thumbnail') ?? data_get($item, 'product.image')" :alt="''" class="aspect-square" />
+                                    <x-product-image :src="data_get($item, 'image_url') ?? data_get($item, 'product.thumbnail_url') ?? data_get($item, 'product.image_url') ?? data_get($item, 'product.thumbnail') ?? data_get($item, 'product.image')" :alt="data_get($item, 'product_name', 'Produk')" fit="contain" class="aspect-square" />
                                 </div>
                                 <div class="min-w-0 flex-1">
                                     <p class="font-bold text-ink-900">{{ data_get($item, 'product_name', data_get($item, 'product.name', 'Produk')) }}</p>
-                                    <p class="mt-1 text-xs text-ink-500">{{ data_get($item, 'quantity', 1) }}+ item</p>
+                                    @if (data_get($item, 'variant_label'))
+                                        <p class="mt-1 text-xs font-semibold text-ink-600">{{ data_get($item, 'variant_label') }}</p>
+                                    @endif
+                                    <p class="mt-1 text-xs text-ink-500">{{ data_get($item, 'quantity', 1) }} item
+                                        @if (data_get($item, 'unit_price') !== null)
+                                            · <x-money :value="data_get($item, 'unit_price')" /> per item
+                                        @endif
+                                    </p>
                                     @if (data_get($item, 'specification'))<p class="mt-1 text-xs text-ink-500">{{ data_get($item, 'specification') }}</p>@endif
                                     @if(data_get($item, 'customDesignDraft'))<span class="mt-1.5 inline-flex"><x-badge color="brand">Desain editor v{{ data_get($item, 'customDesignDraft.version') }}</x-badge></span>@endif
                                 </div>
@@ -68,8 +90,8 @@
                     <div class="flex justify-between text-ink-600"><span>Subtotal</span><span class="font-semibold text-ink-900"><x-money :value="data_get($order, 'subtotal')" /></span></div>
                     <div class="flex justify-between text-ink-600"><span>Ongkos kirim</span><span class="font-semibold text-ink-900"><x-money :value="data_get($order, 'shipping_fee', data_get($order, 'shipping_cost'))" /></span></div>
                     <div class="flex items-end justify-between gap-4 rounded-lg bg-white px-4 py-3 ring-1 ring-ink-200">
-                        <span class="text-xs font-extrabold tracking-[0.14em] text-brand-600 uppercase">Total</span>
-                        <span class="text-xl font-black text-brand-600"><x-money :value="data_get($order, 'grand_total', data_get($order, 'total'))" /></span>
+                        <span class="text-xs font-extrabold tracking-[0.14em] text-brand-700 uppercase">Total</span>
+                        <span class="text-xl font-black text-brand-700"><x-money :value="data_get($order, 'grand_total', data_get($order, 'total'))" /></span>
                     </div>
                 </div>
             </section>
@@ -98,7 +120,7 @@
                                 <div class="min-w-0">
                                     <p @class(['text-sm font-bold', $eventIsCurrent ? 'text-brand-700' : 'text-ink-800'])>{{ data_get($event, 'title', data_get($event, 'status_label', data_get($event, 'status', 'Pembaruan pesanan'))) }}</p>
                                     @if (data_get($event, 'description'))<p class="mt-1 text-sm leading-6 text-ink-500">{{ data_get($event, 'description') }}</p>@endif
-                                    @if (is_object($eventDate) && method_exists($eventDate, 'format'))<p class="mt-1 text-xs text-ink-500">{{ $eventDate->format('d M Y, H:i') }}</p>@endif
+                                    @if (is_object($eventDate) && method_exists($eventDate, 'format'))<p class="mt-1 text-xs text-ink-500">{{ method_exists($eventDate, 'translatedFormat') ? $eventDate->translatedFormat('d M Y, H:i') : $eventDate->format('d M Y, H:i') }}</p>@endif
                                 </div>
                             </li>
                         @endforeach
@@ -111,18 +133,28 @@
 
         <aside class="space-y-6">
             <section class="panel p-5" aria-labelledby="order-shipping-title">
-                <h2 id="order-shipping-title" class="font-extrabold text-ink-950">Alamat pengiriman</h2>
-                <address class="mt-4 text-sm not-italic leading-6 text-ink-600">
-                    <strong class="block text-ink-900">{{ data_get($order, 'address.recipient', data_get($order, 'shipping_address.recipient_name', data_get($order, 'recipient_name', 'Belum tersedia'))) }}</strong>
-                    {{ data_get($order, 'address.phone', data_get($order, 'shipping_address.phone', data_get($order, 'phone'))) }}<br>
-                    {{ data_get($order, 'address.address', data_get($order, 'shipping_address.address_line1', data_get($order, 'address_line1'))) }}<br>
-                    @if(data_get($order, 'address.district', data_get($order, 'shipping_address.address_line2', data_get($order, 'address_line2'))))<span>{{ data_get($order, 'address.district', data_get($order, 'shipping_address.address_line2', data_get($order, 'address_line2'))) }}</span><br>@endif
-                    {{ data_get($order, 'address.city', data_get($order, 'shipping_address.city', data_get($order, 'city'))) }}, {{ data_get($order, 'address.province', data_get($order, 'shipping_address.province', data_get($order, 'province'))) }} {{ data_get($order, 'address.postal_code', data_get($order, 'shipping_address.postal_code', data_get($order, 'postal_code'))) }}
-                </address>
-                <div class="mt-4 border-t border-ink-100 pt-4 text-sm">
-                    <p class="text-ink-500">Metode pengiriman</p>
-                    <p class="mt-1 font-semibold text-ink-800">{{ data_get($order, 'shipping_method_label', data_get($order, 'shipping_method', 'Belum tersedia')) }}</p>
+                <h2 id="order-shipping-title" class="font-extrabold text-ink-950">Alamat pesanan</h2>
+                <div class="mt-4 rounded-lg bg-ink-50 px-3 py-2.5 text-sm">
+                    <p class="text-xs text-ink-500">Metode pengiriman</p>
+                    <p class="mt-0.5 font-bold text-ink-900">{{ $shippingMethodLabel }}</p>
                 </div>
+                @if ($hasAddress)
+                    <address class="mt-4 text-sm not-italic leading-6 text-ink-600">
+                        @if ($addressRecipient)<strong class="block text-ink-900">{{ $addressRecipient }}</strong>@endif
+                        @if ($addressPhone){{ $addressPhone }}<br>@endif
+                        @if ($addressStreet){{ $addressStreet }}<br>@endif
+                        @if ($addressDistrict){{ $addressDistrict }}<br>@endif
+                        @if ($addressRegion){{ $addressRegion }}@endif
+                    </address>
+                @else
+                    <p class="mt-4 text-sm text-ink-500">Alamat belum tersedia.</p>
+                @endif
+                @if ($shippingMethod === 'pickup')
+                    <p class="mt-3 flex items-start gap-2 rounded-lg bg-accent-50 px-3 py-2 text-xs leading-5 text-accent-900 ring-1 ring-inset ring-accent-200">
+                        <x-icon name="info" class="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent-600" />
+                        Pesanan lama ini menggunakan metode ambil di lokasi. Metode tersebut tidak lagi tersedia untuk pesanan baru; alamat tetap disimpan sebagai data pesanan.
+                    </p>
+                @endif
             </section>
 
             <section class="panel p-5" aria-labelledby="order-payment-title">
@@ -145,7 +177,7 @@
                     </div>
                     <div>
                         <dt class="text-xs font-semibold text-ink-500">Waktu pembayaran</dt>
-                        <dd class="mt-0.5 text-ink-700">{{ data_get($orderPayment, 'paid_at')?->format('d F Y, H:i') ?? 'Belum dikonfirmasi' }}</dd>
+                        <dd class="mt-0.5 text-ink-700">{{ data_get($orderPayment, 'paid_at')?->translatedFormat('d F Y, H:i') ?? 'Belum dikonfirmasi' }}</dd>
                     </div>
                 </dl>
 
@@ -153,7 +185,7 @@
                     <p class="mt-4 flex items-center gap-2 rounded-lg bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-800 ring-1 ring-inset ring-emerald-200">
                         <x-icon name="check" class="h-4 w-4" /> Pembayaran Berhasil
                     </p>
-                @elseif ($order->status === \App\Enums\OrderStatus::PendingPayment)
+                @elseif ($order->status === \App\Enums\OrderStatus::PendingPayment && $orderPayment?->isAwaitingPayment())
                     <x-button :href="route('customer.orders.payment', $order)" class="mt-4 w-full">Bayar sekarang <x-icon name="arrow-right" class="h-4 w-4" /></x-button>
                 @endif
 
@@ -175,13 +207,14 @@
                 @endif
                 <form method="POST" action="{{ route('customer.orders.design', $order) }}" enctype="multipart/form-data" class="mt-5 space-y-3 border-t border-ink-100 pt-5" aria-label="Unggah desain">
                     @csrf
-                    <x-select name="order_item_id" label="Item pesanan" placeholder="Pilih item (opsional)">
+                    <p class="text-xs leading-5 text-ink-500">Unggah file JPG, PNG, atau PDF. Jika tidak memilih item, file dianggap berlaku untuk seluruh pesanan.</p>
+                    <x-select name="order_item_id" label="Item pesanan (opsional)" placeholder="Seluruh pesanan">
                         @foreach ($orderItems as $item)
                             <option value="{{ data_get($item, 'id') }}">{{ data_get($item, 'product_name', data_get($item, 'product.name', 'Produk')) }}</option>
                         @endforeach
                     </x-select>
-                    <x-input name="design" label="Unggah file desain" type="file" accept=".jpg,.jpeg,.png,.pdf" required />
-                    <x-textarea name="notes" label="Catatan desain" :rows="2" placeholder="Keterangan atau instruksi desain" />
+                    <x-input name="design" label="File desain" type="file" accept=".jpg,.jpeg,.png,.pdf" required help="Maksimal 10 MB." />
+                    <x-textarea name="notes" label="Catatan desain (opsional)" :rows="2" placeholder="Keterangan atau instruksi desain" />
                     <x-button type="submit" class="w-full" variant="secondary"><x-icon name="upload" class="h-4 w-4" /> Kirim desain</x-button>
                 </form>
             </section>

@@ -25,7 +25,7 @@
 - Blade, Alpine.js, Tailwind CSS 4, Vite
 - Chart.js 4
 - Fabric.js 7 (design editor, dimuat lazy hanya di halaman kustomisasi)
-- MySQL 8+ / MariaDB 10.4+ (SQLite untuk local fallback dan automated test)
+- MySQL 8+ / MariaDB 10.6+ (SQLite untuk local fallback dan automated test)
 - Laravel Storage, Notification, Authentication, Form Request, Middleware, dan Policy
 - PHPUnit 11
 
@@ -177,14 +177,14 @@ Tidak ada lagi tahap `PAYMENT_REVIEW`, `DESIGN_REVIEW`, `DESIGN_REVISION`, dan `
 
 ## Payment Gateway
 
-Kilat Print memakai **Midtrans Snap/Core API** (`payment_type: qris` dan `payment_type: bank_transfer`) sebagai penyedia pembayaran. Driver HTTP berada di `App\Services\Payment\Drivers\MidtransGateway` dan memakai `Http::asJson()->withBasicAuth($serverKey, '')`. SDK tidak ditambahkan sebagai dependency.
+Kilat Print memakai **Midtrans Core API** (`payment_type: qris` dan `payment_type: bank_transfer`) sebagai penyedia pembayaran. Driver HTTP berada di `App\Services\Payment\Drivers\MidtransGateway` dan memakai `Http::asJson()->withBasicAuth($serverKey, '')`. SDK tidak ditambahkan sebagai dependency.
 
 ### Konfigurasi
 
 ```dotenv
 PAYMENT_PROVIDER=midtrans        # midtrans | null
 PAYMENT_SERVER_KEY=              # server key Midtrans (JANGAN di commit)
-PAYMENT_CLIENT_KEY=              # hanya untuk integrasi frontend Snap.js
+PAYMENT_CLIENT_KEY=              # identifikasi akun; tidak dipakai Core API
 PAYMENT_MERCHANT_ID=             # identifikasi akun, tidak dipakai Core API
 PAYMENT_SANDBOX=true             # true = api.sandbox.midtrans.com
 PAYMENT_EXPIRY_HOURS=24
@@ -267,9 +267,7 @@ callback Midtrans; gunakan HTTPS tunnel atau staging.
 
 1. **Autentikasi** — Midtrans menaruh `signature_key` di **body** notifikasi,
    bernilai `sha512(order_id + status_code + gross_amount + server_key)`. Nilai itu
-   dibandingkan dengan `hash_equals`. Header `X-Konexity-Signature` diterima sebagai
-   fallback untuk reverse proxy yang memaparkannya. Signature salah atau payload
-   dimanipulasi → `403`.
+   dibandingkan dengan `hash_equals`. Signature salah atau payload dimanipulasi → `403`.
 2. **Lookup** — payment dicari berdasarkan `provider` + `provider_reference`.
    Tidak ditemukan → `404`.
 3. **Pemetaan status** — `capture`/`settlement` → `PAID`, `deny` → `FAILED`,
@@ -398,31 +396,35 @@ Contoh conversion area:
 panjang (cm) × lebar (cm) ÷ 10.000 = luas (m²)
 ```
 
-Harga dan aturan harga produk Kilat Print pada seeder adalah
-**data dummy demo** untuk kalkulator aplikasi, bukan klaim tarif resmi perusahaan.
+Harga Paper Bag, Mug, dan Topi pada seeder mengikuti keputusan bisnis 31 Oktober 2026.
+Harga Kertas Kado Rp15.000 masih estimasi. Seeder bukan pengganti konfigurasi tarif
+resmi untuk production.
 
 ## Katalog Produk
 
-Katalog seed mengikuti produk yang disebut pada laporan Kerja Praktek Kilat Print.
-Tidak ada produk generik percetakan (banner, spanduk, brosur, flyer, poster, stiker,
-kartu nama, undangan, nota, kop surat) di katalog aktif.
+Katalog aktif berisi empat produk asli yang benar-benar dijual. Tidak ada produk
+generik percetakan (banner, spanduk, brosur, flyer, poster, stiker, kartu nama,
+undangan, nota, kop surat) di katalog aktif.
 
 | Produk | Slug | Kategori |
 | --- | --- | --- |
-| Mug Custom | `mug-custom` | Produk Custom |
-| Bando Tuning Custom | `bando-tuning-custom` | Produk Custom |
+| Kertas Kado Custom | `kertas-kado-custom` | Printing Custom |
 | Paper Bag Custom | `paper-bag-custom` | Printing Custom |
-| Kertas Kado | `kertas-kado` | Printing Custom |
-| Apotek Mini | `apotek-mini` | Printing Custom |
-| Topper Cake | `topper-cake` | Produk Custom |
-| Topeng Muka | `topeng-muka` | Produk Custom |
+| Gelas Mug Custom | `gelas-mug-custom` | Produk Custom |
+| Topi Ultah Custom | `topi-ultah-custom` | Produk Custom |
 
-Semua produk memakai satuan `per_item`, minimum pesan 1, dan deskripsi singkat yang
-mengikuti istilah laporan. `Paper Bag Custom` mewakili produk paper bag, jadi tidak
-ada duplikasi `Paper Bag`.
+Variasi wajib: Kertas Kado memilih bahan HVS B atau ArtPaper; Paper Bag memilih
+Small, Medium, Large, atau Large X2; Topi memilih model Love, Polkadot, Muka Polos,
+atau Bintang. Harga Paper Bag final: Small Rp19.500, Medium Rp24.500, Large Rp32.000,
+Large X2 Rp39.500. Mug Rp29.500 per unit dan Topi Rp12.900 per unit. Harga grosir Topi
+Rp10.900 tetap nonaktif sampai ambang jumlah minimum ditentukan.
 
-Visual katalog memakai ilustrasi SVG generik per produk di `public/images/products`.
-Ilustrasi tersebut bukan foto produk asli Kilat Print.
+Tujuh produk demo lama (`mug-custom`, `bando-tuning-custom`, `paper-bag-custom`,
+`kertas-kado`, `apotek-mini`, `topper-cake`, `topeng-muka`) tidak dihapus, tetapi
+dinonaktifkan agar riwayat transaksi tetap terbaca. `paper-bag-custom` demo diubah
+menjadi `demo-paper-bag-custom`; slug `paper-bag-custom` dipakai produk asli.
+
+Visual katalog memakai empat foto JPEG produk asli di `public/images/products`. Foto tersebut adalah foto produk asli, bukan ilustrasi SVG generik.
 
 ## Product Design Editor
 
@@ -476,7 +478,7 @@ Desain disimpan sebagai konfigurasi terstruktur, bukan hanya screenshot:
 | POST | `/custom-designs/{draft}/assets` | `custom-designs.assets.store` |
 | GET | `/custom-designs/assets/{asset}` | `custom-designs.show` |
 
-Save menerima `product_id`, `specification`, dan `design`.both `POST` dan `PUT` berada di
+Save menerima `product_id`, `specification`, dan `design`. Both `POST` dan `PUT` berada di
 middleware `auth` + `role:customer` dengan CSRF, dan service memverifikasi kepemilikan
 draft serta asal setiap `asset_id`.
 
@@ -506,12 +508,12 @@ draft serta asal setiap `asset_id`.
 - `storage/app/private/production-photos`: foto progres produksi
 - `storage/app/public`: thumbnail produk/kategori
 - `public/images/mockups`: mockup produk bawaan (front/back)
-- `public/images/products`: ilustrasi katalog Kilat Print (SVG, satu file per produk)
+- `public/images/products`: foto produk JPEG untuk empat produk aktif, plus ilustrasi SVG lama yang tidak lagi dipakai katalog aktif
 - `public/images/logo.png`: logo Kilat Print merah tua + kilat kuning (latar terang, dipakai `<x-brand>` + favicon)
 - `public/images/logo-white.png`: versi knockout putih + kilat kuning untuk panel merah / footer gelap
 - `public/images/stickers`: sticker SVG lokal untuk design editor
 
-Seluruh file customer tidak disimpan langsung di `public`. Download design selalu melalui controller dan policy. Jangan depress disk `local` atau mengubah file menjadi public.
+Seluruh file customer tidak disimpan langsung di `public`. Download design selalu melalui controller dan policy. Jangan hapus disk `local` atau mengubah file menjadi public.
 
 ## Project Structure
 
@@ -560,7 +562,7 @@ Test otomatis memakai in-memory SQLite:
 php artisan test
 ```
 
-Suite saat ini berisi **138 test / 1030+ assertions** dan mencakup authentication, authorization/ownership, katalog Kilat Print, price calculation, cart, checkout tanpa bahan/finishing, payment gateway (webhook, signature, idempotensi, nominal, mata uang, fraud, status final), design upload tanpa review admin, design editor persistence, status transition, master-data CRUD, repeat order, production, QC, dashboard, reporting, dan rendering markup.
+Suite saat ini berisi **267 test / 1621 assertions** dan mencakup authentication, authorization/ownership, katalog Kilat Print, price calculation, cart, checkout tanpa bahan/finishing, payment gateway (webhook, signature, idempotensi, nominal, mata uang, fraud, status final), design upload tanpa review admin, design editor persistence, status transition, master-data CRUD, repeat order, production, QC, dashboard, reporting, dan rendering markup.
 
 Test payment memakai **HTTP stub** (`Tests\Fakes\FakeMidtransApi`) terhadap endpoint Midtrans, sehingga driver, controller, service, dan webhook berjalan sungguhan tanpa jaringan. Stub ini bukan akun sandbox Midtrans: test ini **tidak** membuktikan pembayaran live berhasil.
 
@@ -588,4 +590,10 @@ npm run build
 
 ## License
 
-Project ini dibuat untuk kebutuhan coursework/portfolio/internal business. Hak penggunaan mengikuti repository owner.
+KilatPrint adalah **proprietary software**. Hak cipta atas source code dan aset orisinal KilatPrint dimiliki oleh pemilik atau badan usaha yang sah.
+
+Penggunaan, penyalinan, modifikasi, dan distribusi tidak diberikan secara otomatis kepada pihak lain. Melihat repository ini tidak memberikan lisensi apa pun. Penggunaan oleh pihak ketiga memerlukan izin tertulis dari pemilik.
+
+Dependency dan library pihak ketiga, termasuk Laravel, Tailwind CSS, Fabric.js, serta paket Composer dan npm lainnya, tetap tunduk pada lisensi masing-masing. Lisensi pihak ketiga tidak berubah oleh status proprietary KilatPrint.
+
+Nama pemegang hak cipta pada file `LICENSE` masih berupa placeholder sampai pemilik menetapkannya. Repository ini sebaiknya disimpan dengan visibility **Private**; pemilik mengatur visibility melalui GitHub Settings secara manual.

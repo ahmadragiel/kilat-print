@@ -40,7 +40,7 @@
             <dl class="mt-4 grid gap-4 sm:grid-cols-3">
                 <div><dt class="text-xs font-semibold text-ink-500">Produk</dt><dd class="mt-1 font-semibold text-ink-800">{{ $order->items->first()?->product_name ?? '-' }}</dd></div>
                 <div><dt class="text-xs font-semibold text-ink-500">Jumlah</dt><dd class="mt-1 font-semibold text-ink-800">{{ $order->items->first()?->quantity ?? '-' }}</dd></div>
-                <div><dt class="text-xs font-semibold text-ink-500">Tanggal</dt><dd class="mt-1 font-semibold text-ink-800">{{ $order->created_at?->format('d M Y') }}</dd></div>
+                <div><dt class="text-xs font-semibold text-ink-500">Tanggal</dt><dd class="mt-1 font-semibold text-ink-800">{{ $order->created_at?->translatedFormat('d M Y') }}</dd></div>
             </dl>
             <ol class="mt-6 space-y-3">
                 @foreach ($steps as $i => $step)

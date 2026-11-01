@@ -137,6 +137,20 @@ class PaymentsSandboxTransactionCommand extends Command
         $product = Product::where('status', 'active')->firstOrFail();
 
         return DB::transaction(function () use ($customer, $product, $quantity) {
+            $address = $customer->addresses()->orderByDesc('is_primary')->first()
+                ?? $customer->addresses()->create([
+                    'label' => 'Alamat sandbox',
+                    'recipient' => $customer->user->name,
+                    'phone' => $customer->user->phone ?? '081200000000',
+                    'address' => 'Jalan Sandbox Test No. 1',
+                    'district' => 'Nginden',
+                    'city' => 'Surabaya',
+                    'province' => 'Jawa Timur',
+                    'postal_code' => '60111',
+                    'country' => 'Indonesia',
+                    'is_primary' => true,
+                ]);
+
             $cart = Cart::firstOrCreate(['customer_id' => $customer->id]);
             $cart->items()->delete();
             $cart->items()->create([
@@ -150,15 +164,9 @@ class PaymentsSandboxTransactionCommand extends Command
                 'name' => $customer->user->name,
                 'phone' => $customer->user->phone ?? '081200000000',
                 'email' => $customer->user->email,
-                'shipping_method' => 'pickup',
+                'shipping_method' => 'delivery',
+                'address_id' => $address->id,
                 'payment_method' => PaymentMethod::Qris->value,
-                'recipient' => $customer->user->name,
-                'address_phone' => $customer->user->phone ?? '081200000000',
-                'address' => 'Jalan Sandbox Test No. 1',
-                'district' => 'Nginden',
-                'city' => 'Surabaya',
-                'province' => 'Jawa Timur',
-                'postal_code' => '60111',
             ]);
         });
     }

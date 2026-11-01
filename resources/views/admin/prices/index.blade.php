@@ -24,7 +24,7 @@
         @if (collect($priceItems)->isNotEmpty())
             <div class="overflow-x-auto">
                 <table class="data-table">
-                    <thead><tr><th>Produk</th><th>Nama aturan</th><th>Jenis harga</th><th>Minimum</th><th>Harga</th><th>Diskon</th><th>Status</th><th><span class="sr-only">Aksi</span></th></tr></thead>
+                    <thead><tr><th>Produk</th><th>Nama aturan</th><th>Varian</th><th>Jenis harga</th><th>Minimum</th><th>Harga</th><th>Diskon</th><th>Status</th><th><span class="sr-only">Aksi</span></th></tr></thead>
                     <tbody>
                         @foreach($priceItems as $priceRule)
                             @php
@@ -36,9 +36,15 @@
                             <tr>
                                 <td class="font-semibold text-ink-950">{{ data_get($priceRule, 'product.name', data_get($priceRule, 'product_name', 'Produk')) }}</td>
                                 <td>{{ data_get($priceRule, 'name', 'Aturan harga') }}</td>
+                                <td>
+                                    {{ data_get($priceRule, 'variant_key', 'Semua varian') }}
+                                    @if (data_get($priceRule, 'is_wholesale'))
+                                        <span class="mt-1 block"><x-badge color="accent">Grosir</x-badge></span>
+                                    @endif
+                                </td>
                                 <td>{{ $pricingLabel }}</td>
                                 <td>{{ data_get($priceRule, 'min_quantity', 'Tidak ada') }}</td>
-                                <td class="font-extrabold text-brand-600"><x-money :value="data_get($priceRule, 'price', data_get($priceRule, 'amount'))" /></td>
+                                <td class="font-extrabold text-brand-700"><x-money :value="data_get($priceRule, 'price', data_get($priceRule, 'amount'))" /></td>
                                 <td>{{ number_format((float) data_get($priceRule, 'discount_percent', 0), 2, ',', '.') }}%</td>
                                 <td><x-status-badge :status="data_get($priceRule, 'active') === false ? 'inactive' : 'active'" /></td>
                                 <td class="text-right">
@@ -47,7 +53,7 @@
                                         <form method="POST" action="{{ $deleteRoute($priceRule) }}" x-data="confirmAction('Hapus aturan harga ini?')" x-on:submit="confirm">
                                             @csrf
                                             @method('DELETE')
-                                            <button type="submit" class="grid h-9 w-9 place-items-center rounded-lg text-ink-500 transition hover:bg-danger-50 hover:text-danger-600" aria-label="Hapus aturan harga"><x-icon name="trash" class="h-4 w-4" /></button>
+                                            <button type="submit" class="grid h-11 w-11 place-items-center rounded-lg text-ink-500 transition hover:bg-danger-50 hover:text-danger-600" aria-label="Hapus aturan harga"><x-icon name="trash" class="h-4 w-4" /></button>
                                         </form>
                                     </div>
                                 </td>

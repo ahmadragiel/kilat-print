@@ -42,6 +42,7 @@
             'type' => 'line',
             'data' => ['labels' => $chartLabels, 'datasets' => $chartDatasets],
         ] : null);
+        $hasChartValues = collect($chartDatasets)->contains(fn ($dataset) => collect($dataset['data'] ?? [])->contains(fn ($value) => (float) $value > 0));
     @endphp
     <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label="Statistik operasional">
         @forelse ($dashboardStats as $statKey => $stat)
@@ -60,7 +61,7 @@
     </section>
 
     <section class="grid gap-6 xl:grid-cols-[1.35fr_.65fr]">
-        <div class="panel p-5 sm:p-6">
+        <div class="panel min-w-0 p-5 sm:p-6">
             <div class="flex flex-wrap items-start justify-between gap-3">
                 <div>
                     <p class="section-kicker">Grafik</p>
@@ -68,13 +69,12 @@
                 </div>
                 @if(isset($chartTitle))<span class="text-sm font-semibold text-ink-500">{{ $chartTitle }}</span>@endif
             </div>
-            @if (!empty($chartData))
-                <div class="mt-6 h-72" x-data='kilatChart(@json($chartData, JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_TAG | JSON_HEX_AMP))' x-init="init()" x-destroy="destroy()">
-                    <canvas x-ref="canvas" x-show="hasData()" x-cloak aria-label="Grafik operasional"></canvas>
-                    <x-empty-state x-show="!hasData()" compact title="Data grafik belum tersedia" description="Dataset database belum memiliki nilai untuk ditampilkan." icon="chart" />
+            @if (!empty($chartData) && $hasChartValues)
+                <div class="mt-6 h-64 min-w-0" x-data='kilatChart(@json($chartData, JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_TAG | JSON_HEX_AMP))'>
+                    <canvas x-ref="canvas" aria-label="Grafik operasional 12 bulan terakhir" role="img"></canvas>
                 </div>
             @else
-                <x-empty-state class="mt-4" title="Grafik belum tersedia" description="Dataset database belum dikirim ke dashboard." icon="chart" />
+                <x-empty-state class="mt-4" compact title="Belum ada data grafik" description="Grafik akan muncul setelah ada pesanan atau pelanggan pada 12 bulan terakhir." icon="chart" />
             @endif
         </div>
 
@@ -105,7 +105,7 @@
         </div>
     </section>
 
-    <section class="grid gap-6 xl:grid-cols-3" aria-label="Queue operasional">
+    <section class="grid gap-6 xl:grid-cols-3" aria-label="Antrean operasional">
         <div class="panel overflow-hidden">
             <div class="panel-head">
                 <div>
@@ -171,7 +171,7 @@
                         <span class="mt-1 block text-xs text-ink-500">Operator: {{ $order->production?->operator?->user?->name ?? 'Belum ditugaskan' }}</span>
                     </a>
                 @empty
-                    <x-empty-state compact title="Belum ada produksi aktif" description="Job produksi akan muncul setelah design disetujui." icon="factory" />
+                    <x-empty-state compact title="Belum ada produksi aktif" description="Pekerjaan produksi muncul setelah pembayaran dikonfirmasi dan operator ditugaskan." icon="factory" />
                 @endforelse
             </div>
         </div>

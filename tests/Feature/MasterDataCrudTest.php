@@ -8,6 +8,8 @@ use App\Models\Material;
 use App\Models\PriceRule;
 use App\Models\Product;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class MasterDataCrudTest extends TestCase
@@ -126,6 +128,154 @@ class MasterDataCrudTest extends TestCase
         $this->assertFalse($rule->fresh()->active);
     }
 
+    public function test_product_edit_keeps_every_specification_key(): void
+    {
+        $admin = $this->makeAdmin();
+        $product = $this->makeProduct(attributes: [
+            'specifications' => [
+                'ukuran' => 'A3',
+                'bahan' => 'Art Paper',
+                'catatan' => 'Catatan internal',
+            ],
+        ]);
+
+        $this->actingAs($admin)->get(route('admin.products.edit', $product))
+            ->assertOk()
+            ->assertSee('ukuran|A3');
+
+        $this->actingAs($admin)->put(route('admin.products.update', $product), [
+            'name' => $product->name,
+            'slug' => $product->slug,
+            'category_id' => $product->category_id,
+            'status' => 'active',
+            'minimum_order' => 1,
+            'production_days' => 2,
+            'specifications' => "ukuran|A3\nbahan|Art Paper 260gsm\ncatatan|Catatan internal",
+        ])->assertRedirect(route('admin.products.index'));
+
+        $this->assertSame([
+            'ukuran' => 'A3',
+            'bahan' => 'Art Paper 260gsm',
+            'catatan' => 'Catatan internal',
+        ], $product->fresh()->specifications);
+    }
+
+    public function test_admin_can_mark_a_product_variation_as_optional(): void
+    {
+        $admin = $this->makeAdmin();
+        $product = $this->makeProduct(attributes: [
+            'variations' => [
+                'key' => 'size',
+                'label' => 'Ukuran',
+                'required' => true,
+                'options' => [['value' => 'small', 'label' => 'Small']],
+            ],
+        ]);
+
+        $this->actingAs($admin)->put(route('admin.products.update', $product), [
+            'name' => $product->name,
+            'slug' => $product->slug,
+            'category_id' => $product->category_id,
+            'status' => 'active',
+            'minimum_order' => 1,
+            'production_days' => 2,
+            'variations' => [
+                'key' => 'size',
+                'label' => 'Ukuran',
+                'required' => '0',
+                'options' => "small|Small\nlarge|Large",
+            ],
+        ])->assertRedirect(route('admin.products.index'));
+
+        $variations = $product->fresh()->variations;
+        $this->assertFalse($variations['required']);
+        $this->assertCount(2, $variations['options']);
+
+        $page = $this->get(route('products.show', $product->fresh()))->assertOk()->getContent();
+
+        $document = new \DOMDocument;
+        $previous = libxml_use_internal_errors(true);
+        $document->loadHTML($page);
+        libxml_clear_errors();
+        libxml_use_internal_errors($previous);
+
+        $xpath = new \DOMXPath($document);
+        $select = $xpath->query('//select[@name="variant"]')->item(0);
+
+        $this->assertNotNull($select);
+        $this->assertFalse($select->hasAttribute('required'));
+        $this->assertNotNull($xpath->query('.//option[@value=""]', $select)->item(0));
+    }
+
+    public function test_replacing_a_product_thumbnail_deletes_the_old_file_after_save(): void
+    {
+        Storage::fake('public');
+        $admin = $this->makeAdmin();
+        $product = $this->makeProduct(attributes: ['thumbnail' => 'thumbnails/old.png']);
+        Storage::disk('public')->put('thumbnails/old.png', 'old image');
+
+        $this->actingAs($admin)->put(route('admin.products.update', $product), [
+            'name' => $product->name,
+            'slug' => $product->slug,
+            'category_id' => $product->category_id,
+            'status' => 'active',
+            'minimum_order' => 1,
+            'production_days' => 2,
+            'thumbnail' => $this->fakePng('new-thumbnail.png'),
+        ])->assertRedirect(route('admin.products.index'));
+
+        $product->refresh();
+        $this->assertNotSame('thumbnails/old.png', $product->thumbnail);
+        Storage::disk('public')->assertMissing('thumbnails/old.png');
+        Storage::disk('public')->assertExists($product->thumbnail);
+    }
+
+    public function test_a_failed_product_update_keeps_the_existing_thumbnail(): void
+    {
+        Storage::fake('public');
+        $admin = $this->makeAdmin();
+        $product = $this->makeProduct(attributes: ['thumbnail' => 'thumbnails/old.png']);
+        Storage::disk('public')->put('thumbnails/old.png', 'old image');
+
+        $this->actingAs($admin)
+            ->from(route('admin.products.edit', $product))
+            ->put(route('admin.products.update', $product), [
+                'name' => '',
+                'slug' => $product->slug,
+                'category_id' => $product->category_id,
+                'status' => 'active',
+                'minimum_order' => 1,
+                'production_days' => 2,
+                'thumbnail' => $this->fakePng('new-thumbnail.png'),
+            ])
+            ->assertSessionHasErrors('name');
+
+        Storage::disk('public')->assertExists('thumbnails/old.png');
+        $this->assertSame('thumbnails/old.png', $product->fresh()->thumbnail);
+    }
+
+    public function test_deleting_a_product_deactivates_its_price_rules_without_deleting_them(): void
+    {
+        $admin = $this->makeAdmin();
+        $product = $this->makeProduct();
+        $rule = PriceRule::create([
+            'product_id' => $product->id,
+            'name' => 'Harga produk',
+            'pricing_type' => 'per_item',
+            'price' => 15000,
+            'min_quantity' => 1,
+            'active' => true,
+            'is_wholesale' => false,
+        ]);
+
+        $this->actingAs($admin)->delete(route('admin.products.destroy', $product))
+            ->assertSessionHas('success');
+
+        $this->assertSoftDeleted('products', ['id' => $product->id]);
+        $this->assertFalse($rule->fresh()->active);
+        $this->assertDatabaseHas('price_rules', ['id' => $rule->id]);
+    }
+
     public function test_non_admin_cannot_manage_master_data(): void
     {
         $customer = $this->makeCustomer();
@@ -134,5 +284,21 @@ class MasterDataCrudTest extends TestCase
         $this->actingAs($customer->user)->post(route('admin.categories.store'), [
             'name' => 'Forbidden', 'slug' => 'forbidden', 'status' => 'active',
         ])->assertForbidden();
+    }
+
+    /**
+     * A genuine 1x1 PNG so image validation works without the optional GD
+     * extension.
+     */
+    private function fakePng(string $name): UploadedFile
+    {
+        $png = base64_decode(
+            'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='
+        );
+
+        $path = tempnam(sys_get_temp_dir(), 'kilat-thumbnail-').'.png';
+        file_put_contents($path, $png);
+
+        return new UploadedFile($path, $name, 'image/png', null, true);
     }
 }

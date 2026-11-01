@@ -23,6 +23,7 @@ use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\Paginator;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\View;
@@ -47,6 +48,10 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        // Dates are shown in Indonesian regardless of the app locale, which is
+        // also used for validation messages and must stay configurable.
+        Carbon::setLocale('id');
+
         Gate::policy(Order::class, OrderPolicy::class);
         Gate::policy(Address::class, AddressPolicy::class);
         Gate::policy(DesignFile::class, DesignFilePolicy::class);

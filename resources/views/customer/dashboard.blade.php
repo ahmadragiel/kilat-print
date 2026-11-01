@@ -44,7 +44,7 @@
             <p class="flex items-center gap-2 font-bold"><x-icon name="wallet" class="h-4 w-4 text-accent-600" /> Anda punya {{ $pendingPayments }} pesanan yang menunggu pembayaran.</p>
             <a href="{{ route('customer.orders.index') }}" class="action-link !text-accent-900">Lihat pesanan <x-icon name="arrow-right" class="h-4 w-4" /></a>
         </div>
-    @endif>
+    @endif
 
     <section class="mt-8" aria-labelledby="recent-orders-title">
         <div class="mb-4 flex items-center justify-between gap-4">
@@ -57,7 +57,26 @@
 
         <div class="panel overflow-hidden">
             @if (collect($dashboardOrders)->isNotEmpty())
-                <div class="overflow-x-auto">
+                <div class="divide-y divide-ink-100 sm:hidden">
+                    @foreach ($dashboardOrders as $order)
+                        <article class="p-4">
+                            <div class="flex items-start justify-between gap-3">
+                                <div class="min-w-0">
+                                    <p class="font-bold text-ink-900">#{{ data_get($order, 'number', data_get($order, 'order_number', data_get($order, 'id'))) }}</p>
+                                    <p class="mt-1 text-xs text-ink-500">{{ data_get($order, 'created_at')?->translatedFormat('d M Y, H:i') ?? 'Belum tersedia' }}</p>
+                                </div>
+                                <x-status-badge :status="data_get($order, 'status')" class="shrink-0" />
+                            </div>
+                            <p class="mt-3 truncate text-sm font-medium text-ink-800">{{ data_get($order, 'items.0.product_name', data_get($order, 'product.name', data_get($order, 'product_name', 'Produk'))) }}</p>
+                            <div class="mt-3 flex items-end justify-between gap-3">
+                                <p class="font-bold text-brand-700"><x-money :value="data_get($order, 'grand_total', data_get($order, 'total'))" /></p>
+                                <a href="{{ route('customer.orders.show', $order) }}" class="action-link">Detail <x-icon name="chevron-right" class="h-4 w-4" /></a>
+                            </div>
+                        </article>
+                    @endforeach
+                </div>
+
+                <div class="hidden overflow-x-auto sm:block">
                     <table class="data-table">
                         <thead><tr><th>Nomor</th><th>Produk</th><th>Tanggal</th><th>Total</th><th>Status</th><th><span class="sr-only">Aksi</span></th></tr></thead>
                         <tbody>
@@ -68,8 +87,8 @@
                                         <p class="max-w-xs truncate font-medium text-ink-800">{{ data_get($order, 'items.0.product_name', data_get($order, 'product.name', data_get($order, 'product_name', 'Produk'))) }}</p>
                                         @if (data_get($order, 'items_count'))<p class="mt-0.5 text-xs text-ink-500">{{ data_get($order, 'items_count') }} item</p>@endif
                                     </td>
-                                    <td class="whitespace-nowrap">{{ data_get($order, 'created_at')?->format('d M Y, H:i') ?? 'Belum tersedia' }}</td>
-                                    <td class="font-semibold text-brand-600"><x-money :value="data_get($order, 'grand_total', data_get($order, 'total'))" /></td>
+                                    <td class="whitespace-nowrap">{{ data_get($order, 'created_at')?->translatedFormat('d M Y, H:i') ?? 'Belum tersedia' }}</td>
+                                    <td class="font-semibold text-brand-700"><x-money :value="data_get($order, 'grand_total', data_get($order, 'total'))" /></td>
                                     <td><x-status-badge :status="data_get($order, 'status')" /></td>
                                     <td class="text-right"><a href="{{ route('customer.orders.show', $order) }}" class="action-link"><span class="sr-only">Lihat</span><x-icon name="chevron-right" class="h-4 w-4" /></a></td>
                                 </tr>

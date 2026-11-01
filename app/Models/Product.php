@@ -18,12 +18,15 @@ class Product extends Model
         'category_id',
         'name',
         'slug',
+        'catalog_key',
         'description',
         'specifications',
+        'variations',
         'thumbnail',
         'front_mockup',
         'back_mockup',
         'base_price',
+        'price_display',
         'status',
         'is_featured',
         'minimum_order',
@@ -35,6 +38,7 @@ class Product extends Model
     {
         return [
             'specifications' => 'array',
+            'variations' => 'array',
             'base_price' => 'decimal:2',
             'minimum_order' => 'integer',
             'production_days' => 'integer',
@@ -82,9 +86,98 @@ class Product extends Model
         return $this->hasMany(OrderItem::class);
     }
 
+    /**
+     * Normalised single-dimension variation definition.
+     *
+     * The catalog currently needs one required choice per product (paper bag
+     * size, party hat model). Keeping the shape small avoids a second table for
+     * data that is always loaded with the product.
+     *
+     * @return array{key:string,label:string,required:bool,options:list<array{value:string,label:string}>}|null
+     */
+    public function variationDefinition(): ?array
+    {
+        $definition = $this->variations;
+
+        if (! is_array($definition) || ! is_array($definition['options'] ?? null)) {
+            return null;
+        }
+
+        $key = trim((string) ($definition['key'] ?? ''));
+        if ($key === '') {
+            return null;
+        }
+
+        $options = collect($definition['options'])
+            ->filter(fn ($option) => is_array($option) && filled($option['value'] ?? null))
+            ->map(fn (array $option) => [
+                'value' => (string) $option['value'],
+                'label' => (string) ($option['label'] ?? $option['value']),
+            ])
+            ->unique('value')
+            ->values()
+            ->all();
+
+        if ($options === []) {
+            return null;
+        }
+
+        return [
+            'key' => $key,
+            'label' => (string) ($definition['label'] ?? ucfirst($key)),
+            'required' => (bool) ($definition['required'] ?? true),
+            'options' => $options,
+        ];
+    }
+
+    /** @return list<array{value:string,label:string}> */
+    public function variationOptions(): array
+    {
+        return $this->variationDefinition()['options'] ?? [];
+    }
+
+    /** @return array{value:string,label:string}|null */
+    public function variationOption(?string $value): ?array
+    {
+        if (blank($value)) {
+            return null;
+        }
+
+        return collect($this->variationOptions())->firstWhere('value', $value);
+    }
+
+    public function defaultVariant(): ?string
+    {
+        return $this->variationOptions()[0]['value'] ?? null;
+    }
+
+    public function variantLabel(?string $value): ?string
+    {
+        return $this->variationOption($value)['label'] ?? null;
+    }
+
+    public function priceDisplayLabel(): string
+    {
+        return match ($this->price_display) {
+            'per_unit' => 'Harga per unit',
+            'exact' => 'Harga',
+            default => 'Mulai dari',
+        };
+    }
+
     public function scopeActive(Builder $query): Builder
     {
         return $query->where('status', 'active');
+    }
+
+    /**
+     * Products that can actually be ordered: active and backed by at least one
+     * active non-wholesale tariff.
+     */
+    public function scopeVisible(Builder $query): Builder
+    {
+        return $query->where('status', 'active')
+            ->whereHas('priceRules', fn (Builder $price) => $price->where('active', true)->where('is_wholesale', false));
     }
 
     public function scopeSearch(Builder $query, ?string $term): Builder

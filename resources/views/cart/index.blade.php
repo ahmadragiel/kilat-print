@@ -25,19 +25,27 @@
                             $itemProduct = data_get($item, 'product');
                             $productName = data_get($item, 'product_name', data_get($itemProduct, 'name', 'Produk'));
                             $image = data_get($item, 'image_url') ?? data_get($itemProduct, 'thumbnail_url') ?? data_get($itemProduct, 'image_url') ?? data_get($itemProduct, 'thumbnail') ?? data_get($itemProduct, 'image');
-                            $lineTotal = data_get($item, 'price_at_addition', data_get($item, 'line_total', data_get($item, 'subtotal', data_get($item, 'total'))));
+                            $lineTotal = (float) data_get($item, 'price_at_addition', data_get($item, 'line_total', data_get($item, 'subtotal', data_get($item, 'total'))));
+                            $itemQuantity = max(1, (int) data_get($item, 'quantity', 1));
+                            $unitPrice = $lineTotal / $itemQuantity;
                         @endphp
                         <div class="grid gap-4 p-4 sm:grid-cols-[1fr_120px_150px_44px] sm:items-center sm:p-5">
                             <div class="flex min-w-0 gap-4">
                                 <div class="w-20 shrink-0 overflow-hidden rounded-lg border border-ink-200 sm:w-24">
-                                    <x-product-image :src="$image" :alt="''" class="aspect-square" />
+                                    <x-product-image :src="$image" :alt="$productName" fit="contain" class="aspect-square" />
                                 </div>
                                 <div class="min-w-0 py-0.5">
                                     <h2 class="font-bold text-ink-950">{{ $productName }}</h2>
+                                    @if(data_get($item, 'variant_label'))
+                                        <p class="mt-1 text-xs font-semibold text-ink-600">{{ data_get($item, 'variant_label') }}</p>
+                                    @endif
                                     @if(data_get($item, 'custom_design_draft_id'))
                                         <span class="mt-1.5 inline-flex"><x-badge color="brand">Desain editor</x-badge></span>
                                     @endif
-                                    <p class="mt-2 text-sm text-ink-600">Harga konfigurasi: <x-money :value="$lineTotal" /></p>
+                                    <p class="mt-2 text-sm text-ink-600">
+                                        <x-money :value="$unitPrice" /> / item
+                                        <span class="text-ink-500">· {{ $itemQuantity }} item</span>
+                                    </p>
                                     @if(data_get($item, 'product.status') === 'active')
                                         <a href="{{ route('cart.customize', $item) }}" class="action-link mt-2 !text-xs"><x-icon name="edit" class="h-3.5 w-3.5" /> Edit konfigurasi & desain</a>
                                     @endif
@@ -48,25 +56,26 @@
                                 @csrf
                                 @method('PATCH')
                                 <label for="quantity-{{ data_get($item, 'id') }}" class="mb-1 block text-xs font-semibold text-ink-500 sm:hidden">Jumlah</label>
-                                <input id="quantity-{{ data_get($item, 'id') }}" name="quantity" type="number" min="1" value="{{ data_get($item, 'quantity', 1) }}" class="form-control min-h-10 py-2" aria-label="Jumlah {{ $productName }}">
+                                <input id="quantity-{{ data_get($item, 'id') }}" name="quantity" type="number" min="1" value="{{ $itemQuantity }}" class="form-control min-h-11 py-2" aria-label="Jumlah {{ $productName }}">
                                 <input type="hidden" name="size" value="{{ data_get($item, 'size') }}">
+                                <input type="hidden" name="variant" value="{{ data_get($item, 'variant') }}">
                                 <input type="hidden" name="length_cm" value="{{ data_get($item, 'length_cm') }}">
                                 <input type="hidden" name="width_cm" value="{{ data_get($item, 'width_cm') }}">
                                 <input type="hidden" name="color" value="{{ data_get($item, 'color') }}">
                                 <input type="hidden" name="production_method" value="{{ data_get($item, 'production_method') }}">
                                 <input type="hidden" name="notes" value="{{ data_get($item, 'notes') }}">
-                                <button type="submit" class="mt-1.5 text-xs font-bold text-brand-700 transition hover:text-brand-800">Perbarui</button>
+                                <button type="submit" class="mt-1.5 inline-flex min-h-11 items-center text-xs font-bold text-brand-700 transition hover:text-brand-800">Perbarui</button>
                             </form>
 
                             <div class="sm:text-right">
                                 <p class="text-xs text-ink-500 sm:hidden">Subtotal</p>
-                                <p class="font-extrabold text-brand-600"><x-money :value="$lineTotal" /></p>
+                                <p class="font-extrabold text-brand-700"><x-money :value="$lineTotal" /></p>
                             </div>
 
                             <form method="POST" action="{{ \Illuminate\Support\Facades\Route::has('customer.cart.remove') ? route('customer.cart.remove', $item) : route('cart.destroy', $item) }}" class="flex justify-end">
                                 @csrf
                                 @method('DELETE')
-                                <button type="submit" class="grid h-10 w-10 place-items-center rounded-lg text-ink-500 transition hover:bg-danger-50 hover:text-danger-600" aria-label="Hapus {{ $productName }}"><x-icon name="trash" class="h-4 w-4" /></button>
+                                <button type="submit" class="grid h-11 w-11 place-items-center rounded-lg text-ink-500 transition hover:bg-danger-50 hover:text-danger-600" aria-label="Hapus {{ $productName }}"><x-icon name="trash" class="h-4 w-4" /></button>
                             </form>
                         </div>
                     @endforeach
@@ -85,11 +94,11 @@
                     </div>
                     <div class="mt-4 rounded-lg border border-accent-200 bg-accent-50 px-4 py-3">
                         <p class="text-xs font-bold tracking-wide text-accent-800 uppercase">Total sementara</p>
-                        <p class="mt-1 text-2xl font-black text-brand-600"><x-money :value="$grandTotal" /></p>
+                        <p class="mt-1 text-2xl font-black text-brand-700"><x-money :value="$grandTotal" /></p>
                     </div>
                     <p class="mt-3 text-xs leading-5 text-ink-500">Ongkos kirim dan total akhir dihitung pada tahap checkout.</p>
                     <x-button :href="route('checkout.index')" size="lg" class="mt-5 w-full">Lanjut checkout <x-icon name="arrow-right" class="h-4 w-4" /></x-button>
-                    <a href="{{ route('products.index') }}" class="mt-3 block text-center text-sm font-semibold text-ink-600 transition hover:text-brand-700">Tambah produk lain</a>
+                    <a href="{{ route('products.index') }}" class="mt-3 flex min-h-11 items-center justify-center text-sm font-semibold text-ink-600 transition hover:text-brand-700">Tambah produk lain</a>
                 </div>
             </aside>
         </div>

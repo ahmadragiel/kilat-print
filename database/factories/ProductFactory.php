@@ -14,20 +14,17 @@ class ProductFactory extends Factory
 {
     protected $model = Product::class;
 
-    /** Nama produk mengikuti katalog Kilat Print pada laporan Kerja Praktek. */
-    public const REPORT_PRODUCTS = [
-        'Mug Custom',
-        'Bando Tuning Custom',
+    /** Nama produk mengikuti katalog nyata Kilat Print. */
+    public const CATALOG_PRODUCTS = [
+        'Kertas Kado Custom',
         'Paper Bag Custom',
-        'Kertas Kado',
-        'Apotek Mini',
-        'Topper Cake',
-        'Topeng Muka',
+        'Gelas Mug Custom',
+        'Topi Ultah Custom',
     ];
 
     public function definition(): array
     {
-        $name = fake()->randomElement(self::REPORT_PRODUCTS);
+        $name = fake()->randomElement(self::CATALOG_PRODUCTS);
 
         return [
             'category_id' => Category::factory(),
@@ -35,7 +32,6 @@ class ProductFactory extends Factory
             'slug' => Str::slug($name).'-'.fake()->unique()->numerify('###'),
             'description' => "Produk {$name} yang dapat disesuaikan dengan desain dan kebutuhan pelanggan. Data uji untuk pengujian fitur.",
             'specifications' => [
-                'demo' => true,
                 'size' => 'Sesuai kebutuhan pelanggan',
             ],
             'thumbnail' => null,

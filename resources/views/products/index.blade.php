@@ -19,7 +19,15 @@
 </div>
 
 <div class="page-shell py-8 sm:py-10">
-    @php $activeFilters = $filters ?? request()->query(); @endphp
+    @php
+        $activeFilters = $filters ?? request()->query();
+        $hasFilters = collect(['search', 'category', 'min_price', 'max_price', 'sort'])
+            ->contains(fn (string $key) => request()->filled($key));
+        $sortLabels = ['latest' => 'Terbaru', 'newest' => 'Terbaru', 'popular' => 'Populer', 'name' => 'Nama A-Z', 'price_low' => 'Harga terendah', 'price_high' => 'Harga tertinggi'];
+        $activeCategory = collect($categories ?? [])->firstWhere('slug', request('category'));
+        $activeCategoryName = data_get($activeCategory, 'name', request('category'));
+        $activeSortLabel = $sortLabels[request('sort')] ?? null;
+    @endphp
     <form method="GET" action="{{ route('products.index') }}" class="panel grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-12" aria-label="Filter produk">
         <div class="lg:col-span-4">
             <label for="search" class="form-label">Cari produk</label>
@@ -30,13 +38,15 @@
         </div>
         <div class="lg:col-span-2">
             <label for="min_price" class="form-label">Harga minimum</label>
-            <input id="min_price" name="min_price" type="number" min="0" step="0.01" value="{{ $activeFilters['min_price'] ?? '' }}" class="form-control" placeholder="Tanpa batas">
+            <input id="min_price" name="min_price" type="number" inputmode="numeric" min="0" step="1000" value="{{ $activeFilters['min_price'] ?? '' }}" class="form-control" placeholder="Tanpa batas">
+            <p class="mt-1 text-xs text-ink-500">Dalam rupiah.</p>
         </div>
         <div class="lg:col-span-2">
             <label for="max_price" class="form-label">Harga maksimum</label>
-            <input id="max_price" name="max_price" type="number" min="0" step="0.01" value="{{ $activeFilters['max_price'] ?? '' }}" class="form-control" placeholder="Tanpa batas">
+            <input id="max_price" name="max_price" type="number" inputmode="numeric" min="0" step="1000" value="{{ $activeFilters['max_price'] ?? '' }}" class="form-control" placeholder="Tanpa batas">
+            <p class="mt-1 text-xs text-ink-500">Dalam rupiah.</p>
         </div>
-        <div class="lg:col-span-3">
+        <div class="lg:col-span-2">
             <label for="category" class="form-label">Kategori</label>
             <select id="category" name="category" class="form-control">
                 <option value="">Semua kategori</option>
@@ -48,26 +58,47 @@
         <div class="lg:col-span-2">
             <label for="sort" class="form-label">Urutkan</label>
             <select id="sort" name="sort" class="form-control">
-                @foreach (['latest' => 'Terbaru', 'popular' => 'Populer', 'name' => 'Nama A-Z', 'price_low' => 'Harga terendah', 'price_high' => 'Harga tertinggi'] as $value => $label)
+                @foreach ($sortLabels as $value => $label)
+                    @continue($value === 'newest')
                     <option value="{{ $value }}" @selected(request('sort', 'latest') === $value)>{{ $label }}</option>
                 @endforeach
             </select>
         </div>
-        <div class="flex items-end gap-2 lg:col-span-3">
+        <div class="flex items-end gap-2 lg:col-span-2">
             <x-button type="submit" class="flex-1"><x-icon name="filter" class="h-4 w-4" /> Terapkan</x-button>
-            @if (request()->hasAny(['q', 'category', 'sort']))
+            @if ($hasFilters)
                 <x-button :href="route('products.index')" variant="secondary" size="icon" aria-label="Reset filter"><x-icon name="refresh" class="h-4 w-4" /></x-button>
             @endif
         </div>
     </form>
 
     <div class="mt-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <p class="text-sm text-ink-500">Menampilkan hasil sesuai filter yang dipilih.</p>
-        @if (request()->hasAny(['q', 'category', 'sort']))
-            <div class="flex flex-wrap gap-2">
-                @if(request('q'))<x-badge color="gray">Pencarian: {{ request('q') }}</x-badge>@endif
-                @if(request('category'))<x-badge color="gray">Kategori: {{ request('category') }}</x-badge>@endif
-                @if(request('sort'))<x-badge color="gray">Urut: {{ request('sort') }}</x-badge>@endif
+        <p class="text-sm text-ink-600" aria-live="polite">
+            @if (method_exists($products ?? null, 'total'))
+                {{ $products->total() }} produk ditemukan
+            @else
+                Hasil sesuai filter yang dipilih
+            @endif
+        </p>
+        @if ($hasFilters)
+            <div class="flex flex-wrap items-center gap-2">
+                <span class="text-xs font-semibold text-ink-500">Filter aktif:</span>
+                @if(request('search'))
+                    <x-badge color="gray">Pencarian: {{ request('search') }}</x-badge>
+                @endif
+                @if(request('category'))
+                    <x-badge color="gray">Kategori: {{ $activeCategoryName }}</x-badge>
+                @endif
+                @if(request()->filled('min_price'))
+                    <x-badge color="gray">Minimal Rp {{ number_format((float) request('min_price'), 0, ',', '.') }}</x-badge>
+                @endif
+                @if(request()->filled('max_price'))
+                    <x-badge color="gray">Maksimal Rp {{ number_format((float) request('max_price'), 0, ',', '.') }}</x-badge>
+                @endif
+                @if($activeSortLabel && request('sort') !== 'latest')
+                    <x-badge color="gray">Urutan: {{ $activeSortLabel }}</x-badge>
+                @endif
+                <a href="{{ route('products.index') }}" class="inline-flex min-h-11 items-center px-1 text-xs font-bold text-brand-700 underline underline-offset-4 hover:text-brand-800">Hapus semua</a>
             </div>
         @endif
     </div>

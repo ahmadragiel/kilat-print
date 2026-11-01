@@ -33,10 +33,22 @@ class PeopleController extends Controller
         return view('admin.operators', ['operators' => $query->latest()->paginate(20)->withQueryString()]);
     }
 
-    public function toggle(Request $request, string $type, int $user): RedirectResponse
+    public function toggleCustomer(Request $request, int|string $user): RedirectResponse
     {
-        abort_unless(in_array($type, ['customer', 'operator'], true), 404);
-        $model = $type === 'customer' ? Customer::findOrFail($user) : Operator::findOrFail($user);
+        return $this->toggleUser(Customer::class, (int) $user);
+    }
+
+    public function toggleOperator(Request $request, int|string $user): RedirectResponse
+    {
+        return $this->toggleUser(Operator::class, (int) $user);
+    }
+
+    /**
+     * @param  class-string<Customer|Operator>  $modelClass
+     */
+    private function toggleUser(string $modelClass, int $user): RedirectResponse
+    {
+        $model = $modelClass::findOrFail($user);
         $model->user->update(['is_active' => ! $model->user->is_active]);
 
         return back()->with('success', 'Status akun berhasil diperbarui.');

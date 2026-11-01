@@ -39,6 +39,16 @@ class PaymentSettingTest extends TestCase
             ->assertSee('Merchant ID');
     }
 
+    public function test_sandbox_endpoint_code_wraps_in_narrow_layouts(): void
+    {
+        config(['payments.sandbox' => true]);
+
+        $this->actingAs($this->makeAdmin())
+            ->get(route('admin.payment-settings.edit'))
+            ->assertOk()
+            ->assertSee('<code class="break-all">', false);
+    }
+
     public function test_non_admin_roles_cannot_reach_the_settings_page(): void
     {
         $customer = $this->makeCustomer();

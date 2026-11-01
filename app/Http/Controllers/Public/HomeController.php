@@ -13,16 +13,16 @@ class HomeController extends Controller
     {
         $featuredProducts = Product::query()
             ->with(['category', 'priceRules'])
-            ->where('status', 'active')
+            ->visible()
             ->where('is_featured', true)
             ->latest()
             ->limit(4)
             ->get();
 
         return view('home', [
-            'categories' => Category::query()->where('status', 'active')->withCount(['products' => fn ($query) => $query->where('status', 'active')->whereHas('priceRules', fn ($price) => $price->where('active', true))])->orderBy('name')->get(),
-            'popularProducts' => Product::query()->with(['category', 'priceRules'])->where('status', 'active')->whereHas('priceRules', fn ($query) => $query->where('active', true))->orderByDesc('popularity_count')->latest()->limit(4)->get(),
-            'latestProducts' => Product::query()->with(['category', 'priceRules'])->where('status', 'active')->whereHas('priceRules', fn ($query) => $query->where('active', true))->latest()->limit(4)->get(),
+            'categories' => Category::query()->where('status', 'active')->withCount(['products' => fn ($query) => $query->where('status', 'active')->whereHas('priceRules', fn ($price) => $price->where('active', true)->where('is_wholesale', false))])->orderBy('name')->get(),
+            'popularProducts' => Product::query()->with(['category', 'priceRules'])->visible()->orderByDesc('popularity_count')->latest()->limit(4)->get(),
+            'latestProducts' => Product::query()->with(['category', 'priceRules'])->visible()->latest()->limit(4)->get(),
             'featuredProducts' => $featuredProducts,
         ]);
     }

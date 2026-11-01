@@ -234,11 +234,9 @@ class MidtransGateway implements PaymentGateway
      * Verify the authenticity of a Midtrans notification.
      *
      * Midtrans ships `signature_key` inside the notification body and documents
-     * it as `SHA512(order_id + status_code + gross_amount + server_key)`. Some
-     * reverse proxies surface the same digest in an `X-Konexity-Signature`
-     * header, so that header is accepted as a fallback when the body has none.
+     * it as `SHA512(order_id + status_code + gross_amount + server_key)`.
      */
-    public function verifyNotificationSignature(array $payload, ?string $headerSignature = null): bool
+    public function verifyNotificationSignature(array $payload): bool
     {
         $secret = $this->serverKey();
         if ($secret === null) {
@@ -255,7 +253,7 @@ class MidtransGateway implements PaymentGateway
 
         $expected = hash('sha512', $orderId.$statusCode.$grossAmount.$secret);
 
-        $provided = (string) ($payload['signature_key'] ?? $headerSignature ?? '');
+        $provided = (string) ($payload['signature_key'] ?? '');
         if ($provided === '') {
             return false;
         }

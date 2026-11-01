@@ -18,7 +18,7 @@ Route::get('/products', [CatalogController::class, 'index'])->name('products.ind
 Route::get('/products/{slug}', [ProductController::class, 'show'])->name('products.show');
 Route::get('/products/{product}/price', [ProductController::class, 'price'])->middleware(['auth', 'role:customer', 'throttle:60,1'])->name('products.price');
 
-Route::get('/lacak', [TrackingController::class, 'index'])->name('tracking.index');
+Route::get('/lacak', [TrackingController::class, 'index'])->middleware('throttle:30,1')->name('tracking.index');
 
 Route::middleware('guest')->group(function () {
     Route::get('/register', [RegisteredUserController::class, 'create'])->name('register');
@@ -48,6 +48,7 @@ Route::middleware(['auth', 'role:customer'])->group(function () {
 
     Route::get('/orders/{order:number}/payment', [Customer\PaymentController::class, 'show'])->name('customer.orders.payment');
     Route::post('/orders/{order:number}/payment/refresh', [Customer\PaymentController::class, 'refresh'])->name('customer.orders.payment-refresh');
+    Route::post('/orders/{order:number}/payment/retry', [Customer\PaymentController::class, 'retry'])->name('customer.orders.payment-retry');
     Route::get('/orders/{order:number}/payment/status', [Customer\PaymentController::class, 'status'])->name('customer.orders.payment-status');
 
     Route::get('/orders', [Customer\OrderController::class, 'index'])->name('customer.orders.index');
@@ -71,8 +72,8 @@ Route::middleware(['auth', 'role:customer'])->group(function () {
 });
 
 // Midtrans posts the transaction notification here. The route is unauthenticated
-// by design and instead verifies the `X-Konexity-Signature` header against the
-// server key before the settlement service is allowed to read the payload.
+// by design; MidtransNotificationController verifies the body `signature_key`
+// against the server key before the settlement service reads the payload.
 Route::post('/payments/webhook/midtrans', MidtransNotificationController::class)
     ->withoutMiddleware([ValidateCsrfToken::class])
     ->name('payments.webhook.midtrans');
@@ -131,9 +132,9 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::post('/production/{production}/status', [Admin\ProductionController::class, 'status'])->name('production.status');
 
     Route::get('/customers', [Admin\PeopleController::class, 'customers'])->name('customers.index');
-    Route::post('/customers/{user}/toggle', [Admin\PeopleController::class, 'toggle'])->whereNumber('user')->name('customers.toggle');
+    Route::post('/customers/{user}/toggle', [Admin\PeopleController::class, 'toggleCustomer'])->whereNumber('user')->name('customers.toggle');
     Route::get('/operators', [Admin\PeopleController::class, 'operators'])->name('operators.index');
-    Route::post('/operators/{user}/toggle', [Admin\PeopleController::class, 'toggle'])->whereNumber('user')->name('operators.toggle');
+    Route::post('/operators/{user}/toggle', [Admin\PeopleController::class, 'toggleOperator'])->whereNumber('user')->name('operators.toggle');
 
     Route::get('/reports', [Admin\ReportController::class, 'index'])->name('reports.index');
     Route::get('/invoices', [Admin\InvoiceController::class, 'index'])->name('invoices.index');

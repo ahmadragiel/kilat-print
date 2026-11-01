@@ -14,6 +14,14 @@
     ];
     $endpoint = route('products.price', $product);
     $specification = $initialSpecification ?? [];
+    $variation = method_exists($product, 'variationDefinition') ? $product->variationDefinition() : null;
+    $defaultVariant = method_exists($product, 'defaultVariant') ? $product->defaultVariant() : null;
+    $needsDimensions = collect(data_get($product, 'priceRules', []))->contains(function ($rule) {
+        $type = data_get($rule, 'pricing_type');
+        $value = $type instanceof \BackedEnum ? $type->value : $type;
+
+        return in_array($value, ['per_sqm', 'per_meter'], true);
+    });
     // The `{id}` placeholder must survive verbatim so the editor can substitute a real
     // UUID at runtime. The route generator is therefore bypassed on purpose here.
     $customDesignBase = rtrim(url('/custom-designs'), '/');
@@ -37,9 +45,9 @@
 
 <div class="page-shell py-6 sm:py-8">
     <nav class="mb-5 flex flex-wrap items-center gap-2 text-sm text-ink-500" aria-label="Breadcrumb">
-        <a href="{{ route('products.index') }}" class="transition hover:text-brand-700">Katalog</a>
+        <a href="{{ route('products.index') }}" class="breadcrumb-link">Katalog</a>
         <x-icon name="chevron-right" class="h-3.5 w-3.5" />
-        <a href="{{ route('products.show', $product) }}" class="transition hover:text-brand-700">{{ $product->name }}</a>
+        <a href="{{ route('products.show', $product) }}" class="breadcrumb-link">{{ $product->name }}</a>
         <x-icon name="chevron-right" class="h-3.5 w-3.5" />
         <span class="font-medium text-brand-700">Editor desain</span>
     </nav>
@@ -48,7 +56,7 @@
     <x-page-header
         :title="$cartItem ? 'Edit konfigurasi & desain' : 'Rancang produk Anda'"
         :description="'Rancang ' . $product->name . ' dengan preview depan' . ($hasBackMockup ? ' dan belakang' : '') . '.' "
-        eyebrow="Design editor"
+        eyebrow="Editor desain"
     >
         <x-slot:actions>
             <div x-cloak x-show="hasUnsavedChanges" class="inline-flex items-center gap-2 rounded-full bg-accent-100 px-3 py-1.5 text-xs font-bold text-accent-800 ring-1 ring-inset ring-accent-300">
@@ -105,7 +113,7 @@
                     <button type="button" class="editor-icon-button" x-on:click="zoomOut()" aria-label="Perkecil viewport"><span class="text-lg">−</span></button>
                     <span class="min-w-14 text-center text-xs font-bold text-ink-600" x-text="zoomPercent + '%'">100%</span>
                     <button type="button" class="editor-icon-button" x-on:click="zoomIn()" aria-label="Perbesar viewport"><span class="text-lg">+</span></button>
-                    <button type="button" class="editor-toolbar-button" x-on:click="resetZoom()"><x-icon name="refresh" class="h-4 w-4" /> Reset</button>
+                    <button type="button" class="editor-toolbar-button" x-on:click="resetZoom()"><x-icon name="refresh" class="h-4 w-4" /> Atur ulang</button>
                 </div>
             </div>
 
@@ -128,9 +136,9 @@
                         <div class="pointer-events-none absolute bottom-3 right-3 rounded-full bg-accent-400 px-2.5 py-1 text-[10px] font-black text-ink-950 shadow-sm" x-show="!previewMode" x-text="selected ? selectedLabel : 'Pilih elemen'"></div>
                     </div>
 
-                    <div class="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-ink-500">
-                        <p>Drag untuk memindahkan • handles untuk resize/rotate • tetap berada di area mockup</p>
-                        <p class="inline-flex items-center gap-1.5"><span class="h-2 w-2 rounded-full bg-emerald-500"></span> Preview tersimpan lokal di browser sampai Anda menyimpan</p>
+                    <div class="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-ink-600">
+                        <p>Tarik elemen untuk memindahkan. Gunakan handle untuk mengubah ukuran atau memutar.</p>
+                        <p class="inline-flex items-center gap-1.5"><span class="h-2 w-2 rounded-full bg-emerald-500"></span> Pratinjau tersimpan di browser sampai Anda menyimpan desain</p>
                     </div>
                 </div>
 
@@ -146,20 +154,20 @@
                             <p class="editor-control-label">Tambah elemen</p>
                             <div class="mt-3 grid grid-cols-3 gap-2">
                                 <button type="button" class="editor-action-card" x-on:click="openImagePicker()">
-                                    <x-icon name="upload" class="h-5 w-5" /><span>Upload gambar</span>
+                                    <x-icon name="upload" class="h-5 w-5" /><span>Unggah gambar</span>
                                 </button>
                                 <button type="button" class="editor-action-card" x-on:click="addText()">
                                     <span class="text-lg font-black">T</span><span>Tambah teks</span>
                                 </button>
                                 <button type="button" class="editor-action-card" x-on:click="toggleStickerPicker()">
-                                    <x-icon name="sparkles" class="h-5 w-5" /><span>Sticker</span>
+                                    <x-icon name="sparkles" class="h-5 w-5" /><span>Stiker</span>
                                 </button>
                             </div>
                         </section>
 
                         <section x-show="stickerPickerOpen" x-transition x-cloak>
                             <div class="flex items-center justify-between gap-3">
-                                <p class="editor-control-label">Pilih sticker</p>
+                                <p class="editor-control-label">Pilih stiker</p>
                                 <button type="button" class="text-xs font-bold text-ink-500 transition hover:text-ink-900" x-on:click="stickerPickerOpen = false">Tutup</button>                            </div>
                             <div class="mt-3 grid grid-cols-4 gap-2">
                                 <template x-for="sticker in stickers" :key="sticker.key">
@@ -176,7 +184,7 @@
                                     <p class="editor-control-label">Elemen dipilih</p>
                                     <p class="mt-1 text-xs text-ink-500" x-text="selectedLabel"></p>
                                 </div>
-                                <button type="button" class="grid h-9 w-9 place-items-center rounded-lg bg-danger-50 text-danger-600 transition hover:bg-danger-100" x-on:click="deleteSelected()" aria-label="Hapus elemen"><x-icon name="trash" class="h-4 w-4" /></button>
+                                <button type="button" class="grid h-11 w-11 place-items-center rounded-lg bg-danger-50 text-danger-600 transition hover:bg-danger-100" x-on:click="deleteSelected()" aria-label="Hapus elemen"><x-icon name="trash" class="h-4 w-4" /></button>
                             </div>
 
                             <div x-show="selectedType === 'text'" class="mt-4 space-y-3">
@@ -189,7 +197,7 @@
                                     <button type="button" class="editor-mini-button" x-on:click="toggleBold()" x-bind:class="(selected?.fontWeight || 'normal') === 'bold' && 'editor-mini-button-active'"><strong>B</strong></button>
                                     <button type="button" class="editor-mini-button" x-on:click="toggleItalic()" x-bind:class="selected?.fontStyle === 'italic' && 'editor-mini-button-active'"><em>I</em></button>
                                     <div class="ml-1 flex rounded-lg border border-ink-200 p-0.5">
-                                        <template x-for="alignment in ['left','center','right']" :key="alignment"><button type="button" class="editor-mini-button border-0" x-on:click="updateSelectedAlign(alignment)" x-bind:class="(selected?.textAlign || 'left') === alignment && 'editor-mini-button-active'" :aria-label="'Rata ' + alignment"><span x-text="alignment === 'left' ? '≡' : (alignment === 'center' ? '☷' : '≡')"></span></button></template>
+                                        <template x-for="alignment in ['left','center','right']" :key="alignment"><button type="button" class="editor-mini-button border-0" x-on:click="updateSelectedAlign(alignment)" x-bind:class="(selected?.textAlign || 'left') === alignment && 'editor-mini-button-active'" :aria-label="alignment === 'left' ? 'Rata kiri' : (alignment === 'center' ? 'Rata tengah' : 'Rata kanan')"><span x-text="alignment === 'left' ? '≡' : (alignment === 'center' ? '☷' : '≡')"></span></button></template>
                                     </div>
                                     <label class="ml-auto flex items-center gap-2 text-xs font-semibold text-ink-600">Warna<input type="color" class="h-9 w-10 cursor-pointer rounded border border-ink-200 bg-white p-1" :value="selected?.fill || '#10151c'" x-on:input="updateSelectedColor($event.target.value)"></label>
                                 </div>
@@ -201,21 +209,21 @@
                                     <button type="button" class="editor-secondary-button" x-on:click="replaceSelectedImage()"><x-icon name="refresh" class="h-4 w-4" /> Ganti</button>
                                     <button type="button" class="editor-secondary-button" x-on:click="selectedZoomOut()">Perkecil</button>
                                     <button type="button" class="editor-secondary-button" x-on:click="selectedZoomIn()">Perbesar</button>
-                                    <button type="button" class="editor-secondary-button" x-on:click="rotateSelected(90)">Rotate 90°</button>
-                                    <button type="button" class="editor-secondary-button" x-on:click="flipSelectedHorizontal()">Flip Horizontal</button>
-                                    <button type="button" class="editor-secondary-button" x-on:click="flipSelectedVertical()">Flip Vertikal</button>
+                                    <button type="button" class="editor-secondary-button" x-on:click="rotateSelected(90)">Putar 90°</button>
+                                    <button type="button" class="editor-secondary-button" x-on:click="flipSelectedHorizontal()">Cermin horizontal</button>
+                                    <button type="button" class="editor-secondary-button" x-on:click="flipSelectedVertical()">Cermin vertikal</button>
                                 </div>
-                                <p class="mt-2 text-[11px] leading-4 text-ink-500">Crop tidak diaktifkan pada versi awal demi menjaga kestabilan editor.</p>
+                                <p class="mt-2 text-[11px] leading-4 text-ink-500">Pemotongan gambar belum tersedia. Sesuaikan ukuran lewat handle di kanvas.</p>
                             </div>
 
                             <div class="mt-4 space-y-3 border-t border-ink-100 pt-4">
                                 <label class="grid grid-cols-[74px_1fr_48px] items-center gap-2 text-xs font-semibold text-ink-600"><span>Rotasi</span><input type="range" min="-180" max="180" step="1" class="accent-brand-600" :value="selected?.angle || selected?.rotation || 0" x-on:input="updateSelectedRotation(Number($event.target.value))"><output x-text="Math.round(selected?.angle || selected?.rotation || 0) + '°'">0°</output></label>
                                 <label class="grid grid-cols-[74px_1fr_48px] items-center gap-2 text-xs font-semibold text-ink-600"><span>Opasitas</span><input type="range" min="0.1" max="1" step="0.05" class="accent-brand-600" :value="selected?.opacity ?? 1" x-on:input="updateSelectedOpacity(Number($event.target.value))"><output x-text="Math.round((selected?.opacity ?? 1) * 100) + '%'">100%</output></label>
                                 <div class="grid grid-cols-4 gap-1.5">
-                                    <button type="button" class="editor-layer-button" x-on:click="bringToFront()" title="Bring to front"><x-icon name="arrow-right" class="h-4 w-4 rotate-[-45deg]" /></button>
-                                    <button type="button" class="editor-layer-button" x-on:click="bringForward()" title="Bring forward"><x-icon name="chevron-right" class="h-4 w-4" /></button>
-                                    <button type="button" class="editor-layer-button" x-on:click="sendBackward()" title="Send backward"><x-icon name="chevron-right" class="h-4 w-4 rotate-180" /></button>
-                                    <button type="button" class="editor-layer-button" x-on:click="sendToBack()" title="Send to back"><x-icon name="arrow-right" class="h-4 w-4 rotate-[135deg]" /></button>
+                                    <button type="button" class="editor-layer-button" x-on:click="bringToFront()" title="Paling depan" aria-label="Pindahkan ke lapisan paling depan"><x-icon name="arrow-right" class="h-4 w-4 rotate-[-45deg]" /></button>
+                                    <button type="button" class="editor-layer-button" x-on:click="bringForward()" title="Maju satu lapisan" aria-label="Majukan satu lapisan"><x-icon name="chevron-right" class="h-4 w-4" /></button>
+                                    <button type="button" class="editor-layer-button" x-on:click="sendBackward()" title="Mundur satu lapisan" aria-label="Mundurkan satu lapisan"><x-icon name="chevron-right" class="h-4 w-4 rotate-180" /></button>
+                                    <button type="button" class="editor-layer-button" x-on:click="sendToBack()" title="Paling belakang" aria-label="Pindahkan ke lapisan paling belakang"><x-icon name="arrow-right" class="h-4 w-4 rotate-[135deg]" /></button>
                                 </div>
                             </div>
                         </section>
@@ -229,7 +237,7 @@
                                 <template x-for="layer in layers" :key="layer.id">
                                     <div class="flex items-center gap-2 rounded-lg border border-ink-200 bg-white px-2.5 py-2" role="listitem">
                                         <button type="button" class="min-w-0 flex-1 truncate text-left text-xs font-semibold text-ink-700 transition hover:text-brand-700" x-on:click="selectLayer(layer.id)" x-text="layer.label"></button>
-                                        <button type="button" class="text-ink-500 transition hover:text-ink-800" x-on:click="toggleLayerVisibility(layer.id)" :aria-label="layer.visible ? 'Sembunyikan layer' : 'Tampilkan layer'"><span x-text="layer.visible ? '◉' : '○'"></span></button>
+                                        <button type="button" class="grid h-11 w-11 shrink-0 place-items-center rounded-lg text-ink-500 transition hover:bg-ink-100 hover:text-ink-900" x-on:click="toggleLayerVisibility(layer.id)" :aria-label="layer.visible ? 'Sembunyikan layer' : 'Tampilkan layer'"><span x-text="layer.visible ? '◉' : '○'"></span></button>
                                     </div>
                                 </template>
                                 <p x-show="layers.length === 0" class="rounded-lg border border-dashed border-ink-300 px-3 py-5 text-center text-xs text-ink-500">Belum ada elemen desain.</p>
@@ -244,12 +252,30 @@
                         <button type="button" class="mt-5 text-sm font-bold text-brand-700 transition hover:text-brand-800" x-on:click="toggleMode()">Kembali ke edit</button>
                     </div>
 
-                    <div class="border-t border-ink-200 p-5" x-data='priceEstimator({ endpoint: @json($endpoint, JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_TAG | JSON_HEX_AMP), estimate: @json($initialAmount, JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_TAG | JSON_HEX_AMP), response: @json($initialResponse, JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_TAG | JSON_HEX_AMP) })'>
-                        <p class="section-kicker">Harga server</p>
+                    <div class="border-t border-ink-200 p-5" x-data='priceEstimator({ endpoint: @json($endpoint, JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_TAG | JSON_HEX_AMP), estimate: @json($initialAmount, JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_TAG | JSON_HEX_AMP), response: @json($initialResponse, JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_TAG | JSON_HEX_AMP) })' x-init="fetchEstimate()">
+                        <p class="section-kicker">Estimasi harga</p>
                         <div class="mt-2 flex items-end justify-between gap-4">
-                            <div><p class="text-xs text-ink-500">Estimasi total</p><p class="mt-1 text-2xl font-black text-brand-600" x-text="formatAmount(estimate)"></p></div>
+                            <div>
+                                <p class="text-xs text-ink-500">Total estimasi</p>
+                                <p class="mt-1 text-2xl font-black text-brand-700" x-text="formatAmount(estimate)">Belum dihitung</p>
+                            </div>
                             <x-icon name="calculator" class="h-7 w-7 text-accent-500" />
                         </div>
+                        <dl class="mt-3 space-y-1.5 border-t border-ink-100 pt-3 text-sm" x-show="response" x-cloak>
+                            <div class="flex items-center justify-between gap-3 text-ink-600">
+                                <dt>Jumlah</dt>
+                                <dd class="font-semibold text-ink-900" x-text="(response?.quantity ?? 0) + ' item'"></dd>
+                            </div>
+                            <div class="flex items-center justify-between gap-3 text-ink-600">
+                                <dt>Harga per item</dt>
+                                <dd class="font-semibold text-ink-900" x-text="formatAmount(response?.unit_price)"></dd>
+                            </div>
+                            <div class="flex items-center justify-between gap-3 text-ink-600">
+                                <dt>Subtotal</dt>
+                                <dd class="font-semibold text-ink-900" x-text="formatAmount(response?.total)"></dd>
+                            </div>
+                        </dl>
+                        <p class="mt-3 text-xs leading-5 text-ink-500">Estimasi belum termasuk ongkos kirim. Harga akhir dihitung ulang oleh server saat masuk keranjang dan checkout.</p>
                         <div x-show="error" x-cloak x-transition class="mt-3"><x-alert type="error" x-text="error"></x-alert></div>
                         <button type="button" class="editor-secondary-button mt-4 w-full justify-center" x-on:click="fetchEstimate()" x-bind:disabled="loading"><span x-text="loading ? 'Menghitung…' : 'Hitung ulang harga'"></span></button>
                     </div>
@@ -263,10 +289,27 @@
                 <p class="text-xs text-ink-500">Harga tetap dihitung ulang oleh server saat cart/checkout.</p>
             </div>
             <div class="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                <x-input name="quantity" label="Jumlah" type="number" :value="data_get($specification, 'quantity', $product->minimum_order)" min="1" required />
-                <x-input name="size" label="Ukuran / orientasi" :value="data_get($specification, 'size')" placeholder="Contoh: A4" />
-                <x-input name="length_cm" label="Panjang (cm)" type="number" step="0.01" min="0" :value="data_get($specification, 'length_cm')" placeholder="Masukkan panjang" />
-                <x-input name="width_cm" label="Lebar (cm)" type="number" step="0.01" min="0" :value="data_get($specification, 'width_cm')" placeholder="Masukkan lebar" />
+                <x-input name="quantity" label="Jumlah" type="number" :value="data_get($specification, 'quantity', $product->minimum_order)" :min="max(1, (int) $product->minimum_order)" required :help="'Minimal '.max(1, (int) $product->minimum_order).' item.'" />
+                @if ($variation)
+                    <x-select
+                        name="variant"
+                        :label="$variation['label']"
+                        :value="data_get($specification, 'variant', $variation['required'] ? $defaultVariant : null)"
+                        :placeholder="$variation['required'] ? null : 'Tidak memilih'"
+                        :required="$variation['required']"
+                        :help="'Pilih '.strtolower($variation['label']).($variation['required'] ? ' yang diinginkan.' : ' bila diperlukan.')"
+                    >
+                        @foreach ($variation['options'] as $option)
+                            <option value="{{ $option['value'] }}">{{ $option['label'] }}</option>
+                        @endforeach
+                    </x-select>
+                @else
+                    <x-input name="size" label="Ukuran / orientasi" :value="data_get($specification, 'size')" placeholder="Contoh: A4" />
+                @endif
+                @if ($needsDimensions)
+                    <x-input name="length_cm" label="Panjang (cm)" type="number" step="0.01" min="0" :value="data_get($specification, 'length_cm')" placeholder="Masukkan panjang" />
+                    <x-input name="width_cm" label="Lebar (cm)" type="number" step="0.01" min="0" :value="data_get($specification, 'width_cm')" placeholder="Masukkan lebar" />
+                @endif
                 <x-select name="production_method" label="Metode produksi" :value="data_get($specification, 'production_method', 'digital')" required>
                     @foreach ($productionMethods as $method)<option value="{{ $method['value'] }}">{{ $method['label'] }}</option>@endforeach
                 </x-select>
@@ -282,7 +325,7 @@
         <div class="sticky bottom-3 z-30 flex flex-col gap-3 rounded-2xl border border-ink-200 bg-white/95 p-3 shadow-panel-lg backdrop-blur sm:flex-row sm:items-center sm:justify-between sm:p-4">
             <div class="min-w-0">
                 <p class="text-sm font-extrabold text-ink-950">{{ $cartItem ? 'Perbarui konfigurasi' : 'Lanjutkan dengan desain ini' }}</p>
-                <p class="mt-0.5 truncate text-xs text-ink-500">Design JSON, aset privat, spesifikasi, dan reference desain akan tersimpan.</p>
+                <p class="mt-0.5 truncate text-xs text-ink-500">Desain, spesifikasi, dan catatan akan disimpan ke pesanan Anda.</p>
             </div>
             <x-button type="submit" variant="accent" data-design-editor-action="continue" class="w-full sm:w-auto" x-bind:disabled="continuing">
                 <span x-text="continuing ? 'Menyimpan…' : continueLabel"></span>

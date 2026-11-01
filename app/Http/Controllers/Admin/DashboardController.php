@@ -45,22 +45,26 @@ class DashboardController extends Controller
             ->limit(5)
             ->get();
 
+        $pendingPayments = Payment::where('status', PaymentStatus::Pending)->count();
+        $processingOrders = $orders->filter(fn (Order $order) => in_array($statusValue($order), [
+            OrderStatus::PaymentConfirmed->value,
+            OrderStatus::InProduction->value,
+        ], true))->count();
+
         return view('admin.dashboard', [
             'dashboardStats' => [
-                ['label' => 'Total Orders', 'value' => $orders->count(), 'icon' => 'shopping-bag'],
-                ['label' => 'Orders Today', 'value' => $orders->whereBetween('created_at', [today(), now()])->count(), 'icon' => 'clock'],
-                ['label' => 'Customers', 'value' => Customer::count(), 'icon' => 'users'],
-                ['label' => 'Active Orders', 'value' => $orders->filter(fn (Order $order) => in_array($statusValue($order), $activeStatusValues, true))->count(), 'icon' => 'chart'],
-                ['label' => 'Completed Orders', 'value' => $orders->filter(fn (Order $order) => $statusValue($order) === OrderStatus::Completed->value)->count(), 'icon' => 'check-circle'],
-                ['label' => 'Cancelled Orders', 'value' => $cancelledCount, 'icon' => 'x-circle'],
-                ['label' => 'Revenue', 'value' => 'Rp '.number_format((int) $paid->sum('grand_total'), 0, ',', '.'), 'icon' => 'wallet'],
-                ['label' => 'Pending Payments', 'value' => Payment::where('status', PaymentStatus::Pending)->count(), 'icon' => 'credit-card'],
-                ['label' => 'Active Customers', 'value' => $activeCustomers, 'icon' => 'user'],
+                ['label' => 'Pesanan masuk', 'value' => $orders->count(), 'hint' => 'Seluruh pesanan yang tercatat.', 'icon' => 'shopping-bag', 'href' => route('admin.orders.index')],
+                ['label' => 'Perlu diproses', 'value' => $processingOrders, 'hint' => 'Sudah dibayar, belum selesai.', 'icon' => 'factory', 'href' => route('admin.production.index')],
+                ['label' => 'Menunggu pembayaran', 'value' => $pendingPayments, 'hint' => 'Transaksi yang belum lunas.', 'icon' => 'credit-card', 'href' => route('admin.payments.index')],
+                ['label' => 'Pendapatan terkonfirmasi', 'value' => 'Rp '.number_format((int) $paid->sum('grand_total'), 0, ',', '.'), 'hint' => 'Dari pesanan yang sudah dibayar.', 'icon' => 'wallet'],
+                ['label' => 'Pelanggan', 'value' => Customer::count(), 'hint' => 'Akun pelanggan terdaftar.', 'icon' => 'users', 'href' => route('admin.customers.index')],
+                ['label' => 'Pesanan selesai', 'value' => $orders->filter(fn (Order $order) => $statusValue($order) === OrderStatus::Completed->value)->count(), 'hint' => 'Produksi dan pengiriman tuntas.', 'icon' => 'check-circle'],
             ],
             'totalOrders' => $orders->count(),
             'ordersToday' => $orders->whereBetween('created_at', [today(), now()])->count(),
             'customers' => Customer::count(),
             'activeOrders' => $orders->filter(fn (Order $order) => in_array($statusValue($order), $activeStatusValues, true))->count(),
+            'processingOrders' => $processingOrders,
             'completedOrders' => $orders->filter(fn (Order $order) => $statusValue($order) === OrderStatus::Completed->value)->count(),
             'cancelledOrders' => $cancelledCount,
             'revenue' => (int) $paid->sum('grand_total'),
@@ -69,7 +73,7 @@ class DashboardController extends Controller
             'activeCustomers' => $activeCustomers,
             'cancellationRate' => $orders->count() ? round($cancelledCount / $orders->count() * 100, 1) : 0,
             'bestSellingProduct' => $popularProducts->first()?->product_name,
-            'pendingPayments' => Payment::where('status', PaymentStatus::Pending)->count(),
+            'pendingPayments' => $pendingPayments,
             'latestOrders' => Order::with(['customer.user', 'items'])->latest()->limit(8)->get(),
             'pendingPaymentOrders' => Order::with(['customer.user', 'payment'])->whereHas('payment', fn ($query) => $query->where('status', PaymentStatus::Pending))->latest()->limit(8)->get(),
             // Paid orders that are queued for production but not yet assigned.

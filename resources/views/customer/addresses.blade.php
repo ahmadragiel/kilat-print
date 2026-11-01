@@ -9,6 +9,7 @@
     <div class="mt-8 grid items-start gap-8 lg:grid-cols-[1fr_380px]">
         <section class="space-y-4" aria-label="Daftar alamat">
             @forelse (($addresses ?? []) as $address)
+                @php($addressKey = 'address-'.data_get($address, 'id'))
                 <article class="panel p-5">
                     <div class="flex items-start justify-between gap-4">
                         <div class="min-w-0">
@@ -29,29 +30,29 @@
                             <form method="POST" action="{{ \Illuminate\Support\Facades\Route::has('customer.addresses.setPrimary') ? route('customer.addresses.setPrimary', $address) : route('customer.addresses.primary', $address) }}">
                                 @csrf
                                 @if(\Illuminate\Support\Facades\Route::has('customer.addresses.setPrimary')) @method('PATCH') @endif
-                                <button type="submit" class="shrink-0 text-xs font-bold text-brand-700 hover:text-brand-800">Jadikan utama</button>
+                                <button type="submit" class="inline-flex min-h-11 items-center text-xs font-bold text-brand-700 hover:text-brand-800">Jadikan utama</button>
                             </form>
                         @endif
                     </div>
 
                     <details class="mt-5 border-t border-ink-100 pt-4">
-                        <summary class="cursor-pointer text-sm font-bold text-ink-700">Edit alamat</summary>
+                        <summary class="flex min-h-11 cursor-pointer items-center text-sm font-bold text-ink-700">Edit alamat</summary>
                         <form method="POST" action="{{ route('customer.addresses.update', $address) }}" class="mt-5 grid gap-4 sm:grid-cols-2">
                             @csrf
-                            @method('PATCH')
+                            @method('PUT')
                             <input type="hidden" name="address_id" value="{{ data_get($address, 'id') }}">
-                            <x-input name="label" label="Label alamat" :value="data_get($address, 'label', data_get($address, 'name'))" placeholder="Rumah, kantor" required />
-                            <x-input name="recipient" label="Nama penerima" :value="data_get($address, 'recipient', data_get($address, 'recipient_name', data_get($address, 'name')))" required />
+                            <x-input :id="$addressKey.'-label'" name="label" label="Label alamat" :value="data_get($address, 'label', data_get($address, 'name'))" placeholder="Rumah, kantor" required />
+                            <x-input :id="$addressKey.'-recipient'" name="recipient" label="Nama penerima" :value="data_get($address, 'recipient', data_get($address, 'recipient_name', data_get($address, 'name')))" required />
                             <input type="hidden" name="recipient_name" value="{{ data_get($address, 'recipient', data_get($address, 'recipient_name')) }}">
-                            <x-input name="phone" label="Nomor telepon" :value="data_get($address, 'phone')" required />
-                            <x-input name="postal_code" label="Kode pos" :value="data_get($address, 'postal_code', data_get($address, 'zip_code'))" required />
-                            <div class="sm:col-span-2"><x-input name="address" label="Alamat" :value="data_get($address, 'address', data_get($address, 'address_line1', data_get($address, 'street')))" required /></div>
+                            <x-input :id="$addressKey.'-phone'" name="phone" label="Nomor telepon" :value="data_get($address, 'phone')" required />
+                            <x-input :id="$addressKey.'-postal-code'" name="postal_code" label="Kode pos" :value="data_get($address, 'postal_code', data_get($address, 'zip_code'))" required />
+                            <div class="sm:col-span-2"><x-input :id="$addressKey.'-address'" name="address" label="Alamat" :value="data_get($address, 'address', data_get($address, 'address_line1', data_get($address, 'street')))" required /></div>
                             <input type="hidden" name="address_line1" value="{{ data_get($address, 'address', data_get($address, 'address_line1')) }}">
-                            <div class="sm:col-span-2"><x-input name="address_line2" label="Detail alamat" :value="data_get($address, 'address_line2')" /></div>
-                            <x-input name="district" label="Kecamatan" :value="data_get($address, 'district')" required />
-                            <x-input name="city" label="Kota/kabupaten" :value="data_get($address, 'city')" required />
-                            <x-input name="province" label="Provinsi" :value="data_get($address, 'province')" required />
-                            <label class="flex items-center gap-2.5 text-sm font-medium text-ink-700 sm:col-span-2">
+                            <div class="sm:col-span-2"><x-input :id="$addressKey.'-address-line2'" name="address_line2" label="Detail alamat" :value="data_get($address, 'address_line2')" /></div>
+                            <x-input :id="$addressKey.'-district'" name="district" label="Kecamatan" :value="data_get($address, 'district')" required />
+                            <x-input :id="$addressKey.'-city'" name="city" label="Kota/kabupaten" :value="data_get($address, 'city')" required />
+                            <x-input :id="$addressKey.'-province'" name="province" label="Provinsi" :value="data_get($address, 'province')" required />
+                            <label class="flex min-h-11 items-center gap-2.5 text-sm font-medium text-ink-700 sm:col-span-2">
                                 <input type="checkbox" name="is_primary" value="1" class="form-check rounded" @checked(data_get($address, 'is_primary'))>
                                 Jadikan alamat utama
                             </label>
@@ -64,7 +65,7 @@
                     <form method="POST" action="{{ route('customer.addresses.destroy', $address) }}" class="mt-4 flex justify-end border-t border-ink-100 pt-4" x-data="confirmAction('Hapus alamat ini?')" x-on:submit="confirm">
                         @csrf
                         @method('DELETE')
-                        <button type="submit" class="inline-flex items-center gap-1.5 text-xs font-bold text-danger-600 transition hover:text-danger-700"><x-icon name="trash" class="h-4 w-4" /> Hapus alamat</button>
+                        <button type="submit" class="inline-flex min-h-11 items-center gap-1.5 text-xs font-bold text-danger-600 transition hover:text-danger-700"><x-icon name="trash" class="h-4 w-4" /> Hapus alamat</button>
                     </form>
                 </article>
             @empty
@@ -89,7 +90,7 @@
                     <x-input name="province" label="Provinsi" required />
                 </div>
                 <x-input name="postal_code" label="Kode pos" required />
-                <label class="flex items-center gap-2.5 text-sm font-medium text-ink-700">
+                <label class="flex min-h-11 items-center gap-2.5 text-sm font-medium text-ink-700">
                     <input type="checkbox" name="is_primary" value="1" class="form-check rounded" @checked(collect($addresses ?? [])->isEmpty())>
                     Jadikan alamat utama
                 </label>

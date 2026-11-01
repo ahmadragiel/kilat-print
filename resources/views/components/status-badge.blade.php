@@ -12,20 +12,20 @@
         'waiting' => ['Menunggu', 'accent'],
         'waiting_payment' => ['Menunggu pembayaran', 'accent'],
         'unpaid' => ['Belum dibayar', 'accent'],
-        'pending' => ['Menunggu pembayaran', 'accent'],
+        'pending_payment' => ['Menunggu pembayaran', 'accent'],
         'expired' => ['Kedaluwarsa', 'accent'],
         'payment_confirmed' => ['Pembayaran dikonfirmasi', 'green'],
         'revision_required' => ['Revisi diminta', 'accent'],
         'paid' => ['Pembayaran berhasil', 'green'],
         'verified' => ['Terverifikasi', 'green'],
         'processing' => ['Diproses', 'blue'],
-        'in_production' => ['Dalam produksi', 'brand'],
-        'in_design' => ['In-Design', 'brand'],
-        'printing' => ['Printing', 'brand'],
+        'in_production' => ['Sedang diproduksi', 'brand'],
+        'in_design' => ['Tahap desain', 'brand'],
+        'printing' => ['Tahap cetak', 'brand'],
+        'finishing' => ['Finishing', 'brand'],
         'packing' => ['Packing', 'brand'],
-        'quality_control' => ['Quality Control', 'purple'],
-        'awaiting_customer_approval' => ['Menunggu persetujuan customer', 'purple'],
-        'pending_payment' => ['Menunggu pembayaran', 'accent'],
+        'quality_control' => ['Kontrol kualitas', 'purple'],
+        'awaiting_customer_approval' => ['Menunggu persetujuan pelanggan', 'purple'],
         'rework' => ['Perbaikan', 'accent'],
         'pass' => ['Lulus', 'green'],
         'fail' => ['Gagal', 'red'],
@@ -47,6 +47,5 @@
 @endphp
 
 <x-badge :color="$color" {{ $attributes }}>
-    <span class="mr-1 inline-block h-1.5 w-1.5 rounded-full bg-current opacity-80"></span>
     {{ $label }}
 </x-badge>

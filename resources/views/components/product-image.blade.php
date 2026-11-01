@@ -2,15 +2,17 @@
     'src' => null,
     'alt' => 'Gambar produk',
     'class' => 'aspect-[4/3]',
+    'fit' => 'cover',
 ])
 
 @php
     $placeholderId = 'sheet-' . \Illuminate\Support\Str::random(8);
     $imageUrl = \App\Support\MediaPath::url($src);
+    $fitClass = $fit === 'contain' ? 'object-contain' : 'object-cover';
 @endphp
 <div {{ $attributes->except('class')->class(['relative overflow-hidden bg-ink-100', $class]) }}>
     @if (filled($imageUrl))
-        <img src="{{ $imageUrl }}" alt="{{ $alt }}" class="h-full w-full object-cover" loading="lazy">
+        <img src="{{ $imageUrl }}" alt="{{ $alt }}" class="h-full w-full {{ $fitClass }}" loading="lazy">
     @else
         <div class="subtle-grid absolute inset-0 bg-linear-to-br from-white via-ink-50 to-brand-50">
             <svg viewBox="0 0 400 300" class="h-full w-full" role="img" aria-label="Placeholder gambar produk Kilat Print">

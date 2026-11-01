@@ -25,7 +25,7 @@ class OrderFactory extends Factory
             'subtotal' => $subtotal,
             'shipping_fee' => 0,
             'grand_total' => $subtotal,
-            'shipping_method' => fake()->randomElement(['pickup', 'delivery']),
+            'shipping_method' => 'delivery',
             'internal_notes' => null,
             'deadline' => now()->addDays(7),
             'paid_at' => null,

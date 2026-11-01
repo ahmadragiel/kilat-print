@@ -32,6 +32,16 @@ class CheckoutTest extends TestCase
         config(['printing.delivery_fee' => 15000]);
         $customer = $this->makeCustomer();
         $product = $this->makeProduct(PricingType::PER_ITEM, 12500);
+        $address = $this->makeAddress($customer, [
+            'label' => 'Kantor',
+            'recipient' => 'Budi Snapshot',
+            'phone' => '081299999999',
+            'address' => 'Jalan Snapshot No. 9',
+            'district' => 'Gubeng',
+            'city' => 'Jakarta Timur',
+            'province' => 'DKI Jakarta',
+            'postal_code' => '14210',
+        ]);
         $cart = $this->makeCart($customer);
         $this->makeCartItem($cart, $product, 2, [
             'size' => 'Large',
@@ -45,14 +55,8 @@ class CheckoutTest extends TestCase
             'phone' => '081200000001',
             'email' => $customer->user->email,
             'shipping_method' => 'delivery',
+            'address_id' => $address->id,
             'payment_method' => PaymentMethod::Qris->value,
-            'recipient' => 'Budi Snapshot',
-            'address_phone' => '081299999999',
-            'address' => 'Jalan Snapshot No. 9',
-            'district' => 'Gubeng',
-            'city' => 'Jakarta Timur',
-            'province' => 'DKI Jakarta',
-            'postal_code' => '14210',
         ]);
 
         $order = $customer->orders()->latest('id')->firstOrFail();
@@ -84,7 +88,9 @@ class CheckoutTest extends TestCase
 
         $this->assertDatabaseHas('order_addresses', [
             'order_id' => $order->id,
+            'label' => 'Kantor',
             'recipient' => 'Budi Snapshot',
+            'phone' => '081299999999',
             'address' => 'Jalan Snapshot No. 9',
             'city' => 'Jakarta Timur',
             'postal_code' => '14210',
@@ -115,6 +121,7 @@ class CheckoutTest extends TestCase
 
     public function test_checkout_sends_the_documented_qris_request_to_the_provider(): void
     {
+        config(['printing.delivery_fee' => 15000]);
         $customer = $this->makeCustomer();
         $cart = $this->makeCart($customer);
         $this->makeCartItem($cart, $this->makeProduct(PricingType::PER_ITEM, 20000), 3);
@@ -129,7 +136,7 @@ class CheckoutTest extends TestCase
         $this->assertNotNull($payload, 'The driver did not send a charge request to the provider.');
         $this->assertSame('qris', $payload['payment_type']);
         $this->assertSame($order->number, $payload['transaction_details']['order_id']);
-        $this->assertSame(60000, $payload['transaction_details']['gross_amount']);
+        $this->assertSame(75000, $payload['transaction_details']['gross_amount']);
         $this->assertSame('hour', $payload['custom_expiry']['unit']);
         // Midtrans names this field `expiry_duration`; sending `duration` is
         // rejected with "custom_expiry.expiry_duration is required".
@@ -274,6 +281,7 @@ class CheckoutTest extends TestCase
     {
         $customer = $this->makeCustomer();
         $product = $this->makeProduct(PricingType::PER_ITEM, 10000);
+        $address = $this->makeAddress($customer);
         $cart = $this->makeCart($customer);
         $item = $this->makeCartItem($cart, $product);
         $product->update(['status' => 'inactive']);
@@ -281,15 +289,12 @@ class CheckoutTest extends TestCase
         $this->expectException(HttpException::class);
         try {
             app(OrderService::class)->checkout($customer, [
-                'shipping_method' => 'pickup',
+                'name' => $customer->user->name,
+                'phone' => '081200000001',
+                'email' => $customer->user->email,
+                'shipping_method' => 'delivery',
+                'address_id' => $address->id,
                 'payment_method' => PaymentMethod::Qris->value,
-                'recipient' => 'Recipient',
-                'address_phone' => '081200000001',
-                'address' => 'Address',
-                'district' => 'District',
-                'city' => 'City',
-                'province' => 'Province',
-                'postal_code' => '12345',
             ]);
         } finally {
             $this->assertDatabaseCount('orders', 0);
@@ -301,19 +306,16 @@ class CheckoutTest extends TestCase
     /** @return array<string, mixed> */
     private function checkoutPayload(Customer $customer, ?string $paymentMethod = PaymentMethod::Qris->value): array
     {
+        $address = $customer->addresses()->orderByDesc('is_primary')->first()
+            ?? $this->makeAddress($customer);
+
         return array_filter([
             'name' => $customer->user->name,
             'phone' => '081200000001',
             'email' => $customer->user->email,
-            'shipping_method' => 'pickup',
+            'shipping_method' => 'delivery',
+            'address_id' => $address->id,
             'payment_method' => $paymentMethod,
-            'recipient' => 'Recipient',
-            'address_phone' => '081200000001',
-            'address' => 'Jalan Test No. 1',
-            'district' => 'Nginden',
-            'city' => 'Surabaya',
-            'province' => 'Jawa Timur',
-            'postal_code' => '60111',
         ], fn ($value) => $value !== null);
     }
 }

@@ -19,7 +19,7 @@
                 @foreach (($statuses ?? [
                     'PENDING_PAYMENT' => 'Menunggu pembayaran',
                     'PAYMENT_CONFIRMED' => 'Pembayaran dikonfirmasi',
-                    'IN_PRODUCTION' => 'Dalam produksi',
+                    'IN_PRODUCTION' => 'Sedang diproduksi',
                     'COMPLETED' => 'Selesai',
                     'CANCELLED' => 'Dibatalkan',
                 ]) as $statusValue => $statusLabel)
@@ -28,26 +28,52 @@
             </select>
         </div>
         <x-button type="submit"><x-icon name="filter" class="h-4 w-4" /> Filter</x-button>
+        @if (request()->filled('search') || request()->filled('status'))
+            <x-button :href="route('customer.orders.index')" variant="secondary">Reset</x-button>
+        @endif
     </form>
 
     <div class="panel mt-6 overflow-hidden">
         @if (collect($orders ?? [])->isNotEmpty())
-            <div class="overflow-x-auto">
+            {{-- Mobile: cards keep every field readable without horizontal scrolling. --}}
+            <div class="divide-y divide-ink-100 sm:hidden">
+                @foreach ($orders as $order)
+                    <article class="p-4">
+                        <div class="flex items-start justify-between gap-3">
+                            <div class="min-w-0">
+                                <a href="{{ route('customer.orders.show', $order) }}" class="inline-flex min-h-11 items-center font-bold text-ink-950 transition hover:text-brand-700">#{{ data_get($order, 'number', data_get($order, 'order_number', data_get($order, 'id'))) }}</a>
+                                <p class="mt-1 text-xs text-ink-500">{{ data_get($order, 'created_at')?->translatedFormat('d M Y, H:i') ?? 'Belum tersedia' }}</p>
+                            </div>
+                            <x-status-badge :status="data_get($order, 'status')" class="shrink-0" />
+                        </div>
+                        <p class="mt-3 text-sm font-medium text-ink-800">{{ data_get($order, 'items.0.product_name', data_get($order, 'product.name', data_get($order, 'product_name', 'Produk'))) }}</p>
+                        <div class="mt-3 flex items-end justify-between gap-3">
+                            <div>
+                                <p class="text-xs text-ink-500">Total</p>
+                                <p class="font-extrabold text-brand-700"><x-money :value="data_get($order, 'grand_total', data_get($order, 'total'))" /></p>
+                            </div>
+                            <a href="{{ route('customer.orders.show', $order) }}" class="action-link">Detail <x-icon name="chevron-right" class="h-4 w-4" /></a>
+                        </div>
+                    </article>
+                @endforeach
+            </div>
+
+            <div class="hidden overflow-x-auto sm:block">
                 <table class="data-table">
                     <thead><tr><th>Nomor pesanan</th><th>Tanggal</th><th>Item</th><th>Total</th><th>Status</th><th><span class="sr-only">Aksi</span></th></tr></thead>
                     <tbody>
                         @foreach ($orders as $order)
                             <tr>
                                 <td>
-                                    <a href="{{ route('customer.orders.show', $order) }}" class="font-bold text-ink-950 transition hover:text-brand-700">#{{ data_get($order, 'number', data_get($order, 'order_number', data_get($order, 'id'))) }}</a>
+                                    <a href="{{ route('customer.orders.show', $order) }}" class="inline-flex min-h-11 items-center font-bold text-ink-950 transition hover:text-brand-700">#{{ data_get($order, 'number', data_get($order, 'order_number', data_get($order, 'id'))) }}</a>
                                     @if (data_get($order, 'payment_status'))<p class="mt-1 text-xs text-ink-500">Pembayaran: <x-status-badge :status="data_get($order, 'payment_status')" /></p>@endif
                                 </td>
-                                <td class="whitespace-nowrap">{{ data_get($order, 'created_at')?->format('d M Y, H:i') ?? 'Belum tersedia' }}</td>
+                                <td class="whitespace-nowrap">{{ data_get($order, 'created_at')?->translatedFormat('d M Y, H:i') ?? 'Belum tersedia' }}</td>
                                 <td>
                                     <p class="max-w-xs truncate font-medium text-ink-800">{{ data_get($order, 'items.0.product_name', data_get($order, 'product.name', data_get($order, 'product_name', 'Produk'))) }}</p>
                                     @if (data_get($order, 'items_count'))<p class="mt-0.5 text-xs text-ink-500">{{ data_get($order, 'items_count') }} item</p>@endif
                                 </td>
-                                <td class="font-extrabold text-brand-600"><x-money :value="data_get($order, 'grand_total', data_get($order, 'total'))" /></td>
+                                <td class="font-extrabold text-brand-700"><x-money :value="data_get($order, 'grand_total', data_get($order, 'total'))" /></td>
                                 <td><x-status-badge :status="data_get($order, 'status')" /></td>
                                 <td class="text-right"><a href="{{ route('customer.orders.show', $order) }}" class="action-link">Detail <x-icon name="chevron-right" class="h-4 w-4" /></a></td>
                             </tr>

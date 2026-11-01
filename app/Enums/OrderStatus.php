@@ -32,9 +32,9 @@ enum OrderStatus: string
     public function label(): string
     {
         return match ($this) {
-            self::PendingPayment => 'Menunggu Pembayaran',
-            self::PaymentConfirmed => 'Pembayaran Dikonfirmasi',
-            self::InProduction => 'Sedang Diproduksi',
+            self::PendingPayment => 'Menunggu pembayaran',
+            self::PaymentConfirmed => 'Pembayaran dikonfirmasi',
+            self::InProduction => 'Sedang diproduksi',
             self::Completed => 'Selesai',
             self::Cancelled => 'Dibatalkan',
         };

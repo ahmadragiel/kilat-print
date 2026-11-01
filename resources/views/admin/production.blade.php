@@ -13,7 +13,7 @@
         @if (collect($productionItems)->isNotEmpty())
             <div class="overflow-x-auto">
                 <table class="data-table">
-                    <thead><tr><th>Pesanan</th><th>Pelanggan</th><th>Operator</th><th>Tahap</th><th>Deadline</th><th>Aksi</th></tr></thead>
+                    <thead><tr><th>Pesanan</th><th>Pelanggan</th><th>Operator</th><th>Tahap</th><th>Batas waktu</th><th>Aksi</th></tr></thead>
                     <tbody>
                         @foreach($productionItems as $production)
                             @php
@@ -25,17 +25,17 @@
                                 <td>{{ data_get($production, 'order.customer.user.name', data_get($production, 'customer_name', 'Pelanggan')) }}</td>
                                 <td>{{ data_get($production, 'operator.user.name', data_get($production, 'operator_name', 'Belum ditugaskan')) }}</td>
                                 <td><x-status-badge :status="data_get($production, 'status')" /></td>
-                                <td>@if(data_get($production, 'deadline'))<span class="inline-flex items-center gap-1.5 rounded-full bg-accent-100 px-2.5 py-1 text-xs font-bold text-accent-800 ring-1 ring-inset ring-accent-300"><x-icon name="clock" class="h-3.5 w-3.5" /> {{ data_get($production, 'deadline')->format('d M Y') }}</span>@else<span class="text-ink-500">Belum ditentukan</span>@endif</td>
+                                <td>@if(data_get($production, 'deadline'))<span class="inline-flex items-center gap-1.5 rounded-full bg-accent-100 px-2.5 py-1 text-xs font-bold text-accent-800 ring-1 ring-inset ring-accent-300"><x-icon name="clock" class="h-3.5 w-3.5" /> {{ data_get($production, 'deadline')->translatedFormat('d M Y') }}</span>@else<span class="text-ink-500">Belum ditentukan</span>@endif</td>
                                 <td>
                                     <form method="POST" action="{{ $assignUrl }}" class="flex flex-wrap items-center gap-2">
                                         @csrf
-                                        <select name="operator_id" class="form-control min-h-9 min-w-36 py-1.5 text-xs" required aria-label="Operator untuk pesanan #{{ data_get($production, 'order.number', data_get($production, 'id')) }}">
+                                        <select name="operator_id" class="form-control min-h-11 min-w-36 py-1.5 text-xs" required aria-label="Operator untuk pesanan #{{ data_get($production, 'order.number', data_get($production, 'id')) }}">
                                             <option value="">Pilih operator</option>
                                             @foreach(($operators ?? []) as $operator)
                                                 <option value="{{ data_get($operator, 'id') }}" @selected((string) $operatorId === (string) data_get($operator, 'id'))>{{ data_get($operator, 'user.name', data_get($operator, 'name', 'Operator')) }}</option>
                                             @endforeach
                                         </select>
-                                        <input name="deadline" type="date" value="{{ data_get($production, 'deadline')?->format('Y-m-d') }}" class="form-control min-h-9 w-36 py-1.5 text-xs" aria-label="Deadline">
+                                        <input name="deadline" type="date" value="{{ data_get($production, 'deadline')?->format('Y-m-d') }}" class="form-control min-h-11 w-36 py-1.5 text-xs" aria-label="Batas waktu">
                                         <x-button type="submit" size="sm" variant="secondary">Simpan</x-button>
                                     </form>
                                 </td>

@@ -14,7 +14,7 @@
                 <p class="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-2xs font-black tracking-[0.16em] text-accent-300 uppercase ring-1 ring-inset ring-white/20">
                     Selamat datang kembali
                 </p>
-                <h1 class="mt-5 text-3xl font-black leading-tight tracking-tight">Lanjutkan pesanan Anda di Kilat Print.</h1>
+                <p class="mt-5 text-3xl font-black leading-tight tracking-tight">Lanjutkan pesanan Anda di Kilat Print.</p>
                 <ul class="mt-7 space-y-3 text-sm text-brand-100">
                     @foreach ([
                         'Katalog dan harga selalu terupdate',
