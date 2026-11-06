@@ -23,7 +23,6 @@ class CartTest extends TestCase
             'length_cm' => 10,
             'width_cm' => 20,
             'color' => 'Blue',
-            'production_method' => 'digital',
             'notes' => 'Please print carefully.',
             'design_file' => $design,
             // A client-supplied price must never win over the server calculation.
@@ -38,9 +37,27 @@ class CartTest extends TestCase
         $this->assertNull($item->material_id);
         $this->assertNull($item->finishing_id);
         $this->assertSame('Blue', $item->color);
+        $this->assertNull($item->production_method);
+        $this->assertArrayNotHasKey('production_method', $item->custom_parameters);
         $this->assertNotNull($item->design_reference);
         Storage::disk('local')->assertExists($item->design_reference);
         $this->assertSame('Please print carefully.', $item->notes);
+    }
+
+    public function test_a_stale_client_cannot_set_a_new_production_method(): void
+    {
+        $customer = $this->makeCustomer();
+        $product = $this->makeProduct();
+
+        $this->actingAs($customer->user)->post(route('cart.store'), [
+            'product_id' => $product->id,
+            'quantity' => 1,
+            'production_method' => 'sublimation',
+        ])->assertRedirect(route('cart.index'));
+
+        $item = $customer->cart->items()->sole();
+        $this->assertNull($item->production_method);
+        $this->assertArrayNotHasKey('production_method', $item->custom_parameters);
     }
 
     public function test_customer_can_update_item_configuration_and_price_is_recalculated(): void
@@ -52,13 +69,13 @@ class CartTest extends TestCase
             'length_cm' => 100,
             'width_cm' => 100,
             'price_at_addition' => 1,
+            'production_method' => 'large_format',
         ]);
 
         $response = $this->actingAs($customer->user)->patch(route('cart.update', $item), [
             'quantity' => 2,
             'length_cm' => 100,
             'width_cm' => 50,
-            'production_method' => 'large_format',
             'color' => 'Red',
         ]);
 
@@ -66,8 +83,28 @@ class CartTest extends TestCase
         $item->refresh();
         $this->assertSame(2, $item->quantity);
         $this->assertSame(20000, (int) $item->price_at_addition);
+        // The form no longer sends a method, so the historical value must survive.
         $this->assertSame('large_format', $item->production_method);
         $this->assertSame('Red', $item->color);
+    }
+
+    public function test_editing_a_cart_item_keeps_its_historical_production_method(): void
+    {
+        $customer = $this->makeCustomer();
+        $product = $this->makeProduct();
+        $cart = $this->makeCart($customer);
+        $item = $this->makeCartItem($cart, $product, 1, [
+            'production_method' => 'offset',
+        ]);
+
+        $this->actingAs($customer->user)->post(route('cart.store'), [
+            'product_id' => $product->id,
+            'quantity' => 3,
+            'editing_cart_item_id' => $item->id,
+        ])->assertRedirect(route('cart.index'));
+
+        $this->assertSame(3, $item->fresh()->quantity);
+        $this->assertSame('offset', $item->fresh()->production_method);
     }
 
     public function test_customer_can_remove_an_item_and_its_private_reference_file(): void
@@ -98,7 +135,6 @@ class CartTest extends TestCase
         $this->actingAs($other->user)
             ->patch(route('cart.update', $item), [
                 'quantity' => 4,
-                'production_method' => 'digital',
             ])
             ->assertForbidden();
         $this->actingAs($other->user)

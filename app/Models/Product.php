@@ -165,6 +165,32 @@ class Product extends Model
         };
     }
 
+    /**
+     * Background used by the design editor, deliberately separate from the
+     * catalog photo. Legacy rows still point `front_mockup` at the catalog
+     * photo; those are mapped to the cleaned editor asset at read time.
+     */
+    public function getEditorBackgroundImageAttribute(): ?string
+    {
+        $catalogKey = (string) $this->catalog_key;
+        $assets = $catalogKey === '' ? null : (config('printing.product_assets', [])[$catalogKey] ?? null);
+
+        if (! is_array($assets)) {
+            return $this->front_mockup;
+        }
+
+        $legacyPaths = array_filter([
+            $this->thumbnail,
+            $assets['catalog'] ?? null,
+        ]);
+
+        if (blank($this->front_mockup) || in_array($this->front_mockup, $legacyPaths, true)) {
+            return $assets['editor'] ?? $this->front_mockup;
+        }
+
+        return $this->front_mockup;
+    }
+
     public function scopeActive(Builder $query): Builder
     {
         return $query->where('status', 'active');

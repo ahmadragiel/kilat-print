@@ -6,12 +6,6 @@
 @php
     $initialResponse = $estimate ?? $priceEstimate ?? null;
     $initialAmount = data_get($initialResponse, 'total', data_get($initialResponse, 'estimate', data_get($initialResponse, 'price')));
-    $productionMethods = $productionMethods ?? [
-        ['value' => 'digital', 'label' => 'Digital'],
-        ['value' => 'offset', 'label' => 'Offset'],
-        ['value' => 'large_format', 'label' => 'Large format'],
-        ['value' => 'sublimation', 'label' => 'Sublimasi'],
-    ];
     $endpoint = route('products.price', $product);
     $specification = $initialSpecification ?? [];
     $variation = method_exists($product, 'variationDefinition') ? $product->variationDefinition() : null;
@@ -310,9 +304,6 @@
                     <x-input name="length_cm" label="Panjang (cm)" type="number" step="0.01" min="0" :value="data_get($specification, 'length_cm')" placeholder="Masukkan panjang" />
                     <x-input name="width_cm" label="Lebar (cm)" type="number" step="0.01" min="0" :value="data_get($specification, 'width_cm')" placeholder="Masukkan lebar" />
                 @endif
-                <x-select name="production_method" label="Metode produksi" :value="data_get($specification, 'production_method', 'digital')" required>
-                    @foreach ($productionMethods as $method)<option value="{{ $method['value'] }}">{{ $method['label'] }}</option>@endforeach
-                </x-select>
                 <x-input name="color" label="Warna" :value="data_get($specification, 'color')" placeholder="Contoh: Merah" />
                 <div class="sm:col-span-2 lg:col-span-3"><x-textarea name="notes" label="Catatan produksi" :value="data_get($specification, 'notes')" :rows="3" placeholder="Instruksi tambahan untuk tim produksi" /></div>
             </div>

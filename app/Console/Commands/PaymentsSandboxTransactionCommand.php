@@ -156,7 +156,6 @@ class PaymentsSandboxTransactionCommand extends Command
             $cart->items()->create([
                 'product_id' => $product->id,
                 'quantity' => max(1, $quantity),
-                'production_method' => 'digital',
                 'price_at_addition' => 0,
             ]);
 

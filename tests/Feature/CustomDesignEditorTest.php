@@ -100,7 +100,6 @@ class CustomDesignEditorTest extends TestCase
                 'size' => 'A4',
                 'length_cm' => 30.0,
                 'width_cm' => 21.0,
-                'production_method' => 'digital',
             ],
             'design' => $this->designPayload([
                 'front' => ['elements' => [$this->textElement()]],
@@ -138,6 +137,29 @@ class CustomDesignEditorTest extends TestCase
         $response->assertOk();
         $this->assertSame(2, $response->json('version'));
         $this->assertSame('Versi baru', $draft->fresh()->elements('front')[0]['text']);
+    }
+
+    public function test_legacy_specification_with_a_production_method_is_still_accepted(): void
+    {
+        $customer = $this->makeCustomer();
+        $product = $this->makeProduct();
+
+        $this->actingAs($customer->user)->postJson(route('custom-designs.store'), [
+            'product_id' => $product->id,
+            'specification' => ['quantity' => 1, 'production_method' => 'offset'],
+            'design' => $this->designPayload(),
+        ])->assertOk();
+
+        $draft = CustomDesignDraft::firstOrFail();
+        $this->assertSame('offset', $draft->specification['production_method']);
+
+        $this->actingAs($customer->user)->putJson(route('custom-designs.update', $draft), [
+            'product_id' => $product->id,
+            'specification' => ['quantity' => 2, 'production_method' => 'offset'],
+            'design' => $this->designPayload(),
+        ])->assertOk();
+
+        $this->assertSame('offset', $draft->fresh()->specification['production_method']);
     }
 
     public function test_guest_and_non_customer_cannot_create_a_draft(): void
@@ -327,11 +349,11 @@ class CustomDesignEditorTest extends TestCase
         $this->actingAs($customer->user)->post(route('cart.store'), [
             'product_id' => $product->id,
             'quantity' => 2,
-            'production_method' => 'digital',
             'design_draft_id' => $draft->id,
         ])->assertRedirect(route('cart.index'));
 
         $item = Cart::firstOrFail()->items()->firstOrFail();
+        $this->assertNull($item->production_method);
         $this->assertSame($draft->id, $item->custom_design_draft_id);
         $this->assertSame($draft->id, $item->custom_parameters['design_draft_id']);
         $this->assertNotEmpty($item->custom_parameters['design_configuration']);
@@ -349,7 +371,6 @@ class CustomDesignEditorTest extends TestCase
         $this->actingAs($intruder->user)->post(route('cart.store'), [
             'product_id' => $product->id,
             'quantity' => 1,
-            'production_method' => 'digital',
             'design_draft_id' => $draft->id,
         ])->assertNotFound();
     }
@@ -364,7 +385,6 @@ class CustomDesignEditorTest extends TestCase
         $this->actingAs($customer->user)->post(route('cart.store'), [
             'product_id' => $product->id,
             'quantity' => 3,
-            'production_method' => 'digital',
             'design_draft_id' => $draft->id,
             'price_at_addition' => 1,
             'total' => 1,
@@ -389,7 +409,6 @@ class CustomDesignEditorTest extends TestCase
         $this->actingAs($customer->user)->post(route('cart.store'), [
             'product_id' => $product->id,
             'quantity' => 2,
-            'production_method' => 'digital',
             'design_draft_id' => $draft->id,
         ])->assertRedirect(route('cart.index'));
 
@@ -428,7 +447,6 @@ class CustomDesignEditorTest extends TestCase
         $this->actingAs($customer->user)->post(route('cart.store'), [
             'product_id' => $product->id,
             'quantity' => 9,
-            'production_method' => 'digital',
             'design_draft_id' => $draft->id,
             'editing_cart_item_id' => $existing->id,
         ])->assertRedirect(route('cart.index'));
@@ -486,7 +504,7 @@ class CustomDesignEditorTest extends TestCase
     {
         $this->actingAs($customer->user)->postJson(route('custom-designs.store'), [
             'product_id' => $product->id,
-            'specification' => ['quantity' => 1, 'production_method' => 'digital'],
+            'specification' => ['quantity' => 1],
             'design' => $design ?? $this->designPayload(),
         ])->assertOk();
 

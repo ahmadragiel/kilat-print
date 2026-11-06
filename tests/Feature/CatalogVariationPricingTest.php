@@ -153,13 +153,13 @@ class CatalogVariationPricingTest extends TestCase
             'product_id' => $product->id,
             'quantity' => 2,
             'variant' => 'large',
-            'production_method' => 'digital',
         ])->assertRedirect(route('cart.index'));
 
         $cartItem = $customer->cart->items()->sole();
 
         $this->assertSame('large', $cartItem->variant);
         $this->assertSame('Large', $cartItem->variant_label);
+        $this->assertNull($cartItem->production_method);
         $this->assertSame(64000, (int) $cartItem->price_at_addition);
 
         $address = $this->makeAddress($customer);
@@ -195,7 +195,6 @@ class CatalogVariationPricingTest extends TestCase
             ->post(route('cart.store'), [
                 'product_id' => $product->id,
                 'quantity' => 1,
-                'production_method' => 'digital',
             ]);
 
         $response->assertRedirect(route('products.show', $product));

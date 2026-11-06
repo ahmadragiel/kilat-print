@@ -62,7 +62,6 @@
                                 <input type="hidden" name="length_cm" value="{{ data_get($item, 'length_cm') }}">
                                 <input type="hidden" name="width_cm" value="{{ data_get($item, 'width_cm') }}">
                                 <input type="hidden" name="color" value="{{ data_get($item, 'color') }}">
-                                <input type="hidden" name="production_method" value="{{ data_get($item, 'production_method') }}">
                                 <input type="hidden" name="notes" value="{{ data_get($item, 'notes') }}">
                                 <button type="submit" class="mt-1.5 inline-flex min-h-11 items-center text-xs font-bold text-brand-700 transition hover:text-brand-800">Perbarui</button>
                             </form>

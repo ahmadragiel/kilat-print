@@ -31,6 +31,30 @@ class RenderedMarkupTest extends TestCase
         $this->assertNoRawComponents($response->getContent(), 'product show');
     }
 
+    public function test_customer_forms_do_not_offer_a_production_method(): void
+    {
+        $product = $this->makeProduct();
+        $customer = $this->makeCustomer();
+
+        $this->get(route('products.show', $product))
+            ->assertOk()
+            ->assertDontSee('Metode produksi')
+            ->assertDontSee('name="production_method"', false);
+
+        $this->actingAs($customer->user)
+            ->get(route('products.customize', $product))
+            ->assertOk()
+            ->assertDontSee('Metode produksi')
+            ->assertDontSee('name="production_method"', false);
+
+        $this->makeCartItem($this->makeCart($customer), $product);
+
+        $this->actingAs($customer->user)
+            ->get(route('cart.index'))
+            ->assertOk()
+            ->assertDontSee('name="production_method"', false);
+    }
+
     public function test_customer_pages_render_without_leaked_components(): void
     {
         $customer = $this->makeCustomer();

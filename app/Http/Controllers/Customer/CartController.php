@@ -14,7 +14,6 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Validation\Rule;
 
 class CartController extends Controller
 {
@@ -54,7 +53,7 @@ class CartController extends Controller
 
         $path = null;
         $customParameters = $request->except([
-            'design_file', '_token', 'design_draft_id', 'editing_cart_item_id',
+            'design_file', '_token', 'design_draft_id', 'editing_cart_item_id', 'production_method',
         ]);
         if ($editing && ! $draft) {
             $customParameters = array_merge($editing->custom_parameters ?? [], $customParameters);
@@ -64,7 +63,7 @@ class CartController extends Controller
             $customParameters['design_version'] = $draft->version;
             $customParameters['design_configuration'] = $draft->design;
             $customParameters['design_mockups'] = [
-                'front' => $product->front_mockup,
+                'front' => $product->editor_background_image,
                 'back' => $product->back_mockup,
             ];
         }
@@ -87,7 +86,8 @@ class CartController extends Controller
                     'length_cm' => $data['length_cm'] ?? null,
                     'width_cm' => $data['width_cm'] ?? null,
                     'color' => $data['color'] ?? null,
-                    'production_method' => $data['production_method'],
+                    // New items have no production method; edits keep the historical value.
+                    'production_method' => $editing?->production_method,
                     'custom_parameters' => $customParameters,
                     'custom_design_draft_id' => $draft?->id,
                     'price_at_addition' => $calculation['total'],
@@ -140,7 +140,6 @@ class CartController extends Controller
             'length_cm' => ['nullable', 'numeric', 'min:0', 'max:100000'],
             'width_cm' => ['nullable', 'numeric', 'min:0', 'max:100000'],
             'color' => ['nullable', 'string', 'max:100'],
-            'production_method' => ['required', Rule::in(['digital', 'offset', 'large_format', 'sublimation'])],
             'notes' => ['nullable', 'string', 'max:2000'],
         ]);
         $calculation = $calculator->calculate($item->product, $data);

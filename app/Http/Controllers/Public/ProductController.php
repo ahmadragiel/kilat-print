@@ -65,7 +65,6 @@ class ProductController extends Controller
             'length_cm' => $cartItem->length_cm,
             'width_cm' => $cartItem->width_cm,
             'color' => $cartItem->color,
-            'production_method' => $cartItem->production_method,
             'notes' => $cartItem->notes,
         ] : [
             'quantity' => $product->minimum_order,
@@ -74,7 +73,6 @@ class ProductController extends Controller
             'length_cm' => null,
             'width_cm' => null,
             'color' => null,
-            'production_method' => 'digital',
             'notes' => null,
         ]);
         $design = $draft?->design ?? data_get($snapshot, 'design_configuration', [
@@ -90,7 +88,7 @@ class ProductController extends Controller
         ] : null;
 
         $mockups = [
-            'front' => $this->mockupUrl($product->front_mockup),
+            'front' => $this->mockupUrl($product->editor_background_image),
             'back' => $this->mockupUrl($product->back_mockup),
         ];
         $stickers = collect(glob(public_path('images/stickers/*.svg')) ?: [])

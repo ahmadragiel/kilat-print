@@ -44,8 +44,6 @@ class CustomDesignService
 
     public const STATUSES = [CustomDesignDraft::STATUS_DRAFT, CustomDesignDraft::STATUS_COMPLETED];
 
-    public const PRODUCTION_METHODS = ['digital', 'offset', 'large_format', 'sublimation'];
-
     /**
      * Bounded numeric element properties: field => [min, max].
      *
@@ -146,7 +144,8 @@ class CustomDesignService
             $prefix.'.size' => ['sometimes', 'nullable', 'string', 'max:100'],
             $prefix.'.length_cm' => ['sometimes', 'nullable', 'numeric', 'min:0', 'max:100000'],
             $prefix.'.width_cm' => ['sometimes', 'nullable', 'numeric', 'min:0', 'max:100000'],
-            $prefix.'.production_method' => ['sometimes', 'nullable', Rule::in(self::PRODUCTION_METHODS)],
+            // Kept for drafts saved before the production-method input was removed.
+            $prefix.'.production_method' => ['sometimes', 'nullable', 'string', 'max:80'],
             $prefix.'.color' => ['sometimes', 'nullable', 'string', 'max:100'],
             $prefix.'.notes' => ['sometimes', 'nullable', 'string', 'max:2000'],
         ];

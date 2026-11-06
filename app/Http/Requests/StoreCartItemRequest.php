@@ -4,7 +4,6 @@ namespace App\Http\Requests;
 
 use App\Enums\UserRole;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 class StoreCartItemRequest extends FormRequest
 {
@@ -23,7 +22,6 @@ class StoreCartItemRequest extends FormRequest
             'length_cm' => ['nullable', 'numeric', 'min:0.1', 'max:100000'],
             'width_cm' => ['nullable', 'numeric', 'min:0.1', 'max:100000'],
             'color' => ['nullable', 'string', 'max:100'],
-            'production_method' => ['required', Rule::in(['digital', 'offset', 'large_format', 'sublimation'])],
             'notes' => ['nullable', 'string', 'max:2000'],
             'design_draft_id' => ['nullable', 'uuid', 'exists:custom_design_drafts,id'],
             'editing_cart_item_id' => ['nullable', 'integer', 'exists:cart_items,id'],

@@ -105,7 +105,7 @@
         </div>
         <ol class="mt-5 grid gap-4 sm:grid-cols-3">
             @foreach ([
-                ['title' => 'Pilih dan atur', 'text' => 'Tentukan produk, ukuran, jumlah, dan metode produksi.'],
+                ['title' => 'Pilih dan atur', 'text' => 'Tentukan produk, ukuran, dan jumlah.'],
                 ['title' => 'Periksa estimasi', 'text' => 'Lihat harga per item dan total sebelum menambahkan ke keranjang.'],
                 ['title' => 'Bayar dan pantau', 'text' => 'Selesaikan pembayaran, lalu ikuti status produksi sampai selesai.'],
             ] as $step)

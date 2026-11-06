@@ -80,20 +80,87 @@ class KilatPrintCatalogTest extends TestCase
         }
     }
 
-    public function test_each_product_uses_its_supplied_photo(): void
+    public function test_each_product_uses_its_supplied_photo_and_a_separate_editor_background(): void
     {
         foreach (self::PRODUCTS as $slug => $expected) {
             $product = Product::where('slug', $slug)->firstOrFail();
+            $catalog = 'images/products/'.$slug.'.jpeg';
+            $editor = 'images/products/editor/'.$slug.'-editor.jpeg';
 
-            $this->assertSame('images/products/'.$slug.'.jpeg', $product->thumbnail);
-            $this->assertSame('images/products/'.$slug.'.jpeg', $product->front_mockup);
-            $this->assertFileExists(public_path($product->thumbnail), "Foto {$expected['name']} tidak ada.");
+            $this->assertSame($catalog, $product->thumbnail);
+            $this->assertSame($editor, $product->front_mockup);
+            $this->assertSame($editor, $product->editor_background_image);
+            $this->assertNotSame($product->thumbnail, $product->editor_background_image);
+            $this->assertFileExists(public_path($catalog), "Foto {$expected['name']} tidak ada.");
+            $this->assertFileExists(public_path($editor), "Background editor {$expected['name']} tidak ada.");
         }
 
         $this->assertCount(
             4,
             collect(self::PRODUCTS)->keys()->map(fn (string $slug) => Product::where('slug', $slug)->value('thumbnail'))->unique(),
         );
+        $this->assertCount(
+            4,
+            collect(self::PRODUCTS)->keys()->map(fn (string $slug) => Product::where('slug', $slug)->value('front_mockup'))->unique(),
+        );
+    }
+
+    public function test_legacy_shared_mockup_maps_to_the_editor_background_without_changing_the_catalog_photo(): void
+    {
+        $product = Product::where('slug', 'kertas-kado-custom')->firstOrFail();
+        $product->forceFill([
+            'thumbnail' => 'images/products/kertas-kado-custom.jpeg',
+            'front_mockup' => 'images/products/kertas-kado-custom.jpeg',
+        ]);
+
+        $this->assertSame('images/products/kertas-kado-custom.jpeg', $product->thumbnail);
+        $this->assertSame(
+            'images/products/editor/kertas-kado-custom-editor.jpeg',
+            $product->editor_background_image,
+        );
+
+        $product->forceFill(['front_mockup' => 'product-mockups/admin-uploaded.jpg']);
+        $this->assertSame('product-mockups/admin-uploaded.jpg', $product->editor_background_image);
+    }
+
+    public function test_catalog_pages_use_the_original_photos_not_the_editor_backgrounds(): void
+    {
+        foreach (self::PRODUCTS as $slug => $expected) {
+            $this->get(route('home'))
+                ->assertOk()
+                ->assertSee($slug.'.jpeg')
+                ->assertDontSee($slug.'-editor.jpeg');
+        }
+
+        $this->get(route('products.index'))
+            ->assertOk()
+            ->assertSee('kertas-kado-custom.jpeg')
+            ->assertSee('topi-ultah-custom.jpeg')
+            ->assertDontSee('kertas-kado-custom-editor.jpeg');
+
+        foreach (self::PRODUCTS as $slug => $expected) {
+            $product = Product::where('slug', $slug)->firstOrFail();
+
+            $this->get(route('products.show', $product))
+                ->assertOk()
+                ->assertSee($slug.'.jpeg')
+                ->assertDontSee($slug.'-editor.jpeg');
+        }
+    }
+
+    public function test_editor_uses_the_cleaned_backgrounds_not_the_catalog_photos(): void
+    {
+        $customer = $this->makeCustomer();
+
+        foreach (self::PRODUCTS as $slug => $expected) {
+            $product = Product::where('slug', $slug)->firstOrFail();
+
+            $this->actingAs($customer->user)
+                ->get(route('products.customize', $product))
+                ->assertOk()
+                ->assertSee($slug.'-editor.jpeg')
+                ->assertDontSee($slug.'.jpeg');
+        }
     }
 
     public function test_paper_bag_and_topi_variations_are_complete_and_required(): void

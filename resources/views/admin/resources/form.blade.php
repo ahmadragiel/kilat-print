@@ -89,9 +89,9 @@
                         Wajib dipilih saat memesan
                     </label>
                 </div>
-                <div class="sm:col-span-2"><x-input name="thumbnail" label="Thumbnail produk" type="file" accept=".jpg,.jpeg,.png,.webp" /></div>
+                <div class="sm:col-span-2"><x-input name="thumbnail" label="Gambar katalog" type="file" accept=".jpg,.jpeg,.png,.webp" /></div>
                 <div class="sm:col-span-2 grid gap-4 sm:grid-cols-2">
-                    @foreach(['front_mockup' => 'Mockup depan', 'back_mockup' => 'Mockup belakang'] as $field => $label)
+                    @foreach(['front_mockup' => 'Background editor depan', 'back_mockup' => 'Background editor belakang'] as $field => $label)
                         <div class="rounded-lg border border-ink-200 bg-ink-50 p-3">
                             <x-input :name="$field" :label="$label" type="file" accept=".jpg,.jpeg,.png,.webp" />
                             @if(data_get($record, $field))

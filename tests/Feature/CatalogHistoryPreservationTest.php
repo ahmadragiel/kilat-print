@@ -44,6 +44,7 @@ class CatalogHistoryPreservationTest extends TestCase
             'variant' => 'large',
             'variant_label' => 'Large',
             'color' => 'Navy',
+            'production_method' => 'offset',
             'unit_price' => 25000,
             'line_total' => 50000,
         ]);
@@ -54,7 +55,11 @@ class CatalogHistoryPreservationTest extends TestCase
             'amount' => 50000,
             'paid_at' => now()->subDay(),
         ]);
-        $this->makeProduction($order, ['status' => ProductionStatus::IN_DESIGN]);
+        $operator = $this->makeOperator();
+        $production = $this->makeProduction($order, [
+            'status' => ProductionStatus::IN_DESIGN,
+            'operator_id' => $operator->id,
+        ]);
         $this->makeDesign($order, ['order_item_id' => $item->id]);
 
         $this->seed(RealCatalogSeeder::class);
@@ -71,6 +76,7 @@ class CatalogHistoryPreservationTest extends TestCase
         $this->assertSame('Mug Custom', $item->product_name);
         $this->assertSame('mug-custom', $item->product_slug);
         $this->assertSame('Large', $item->variant_label);
+        $this->assertSame('offset', $item->production_method);
         $this->assertSame(25000, (int) $item->unit_price);
         $this->assertSame(50000, (int) $item->line_total);
 
@@ -85,6 +91,7 @@ class CatalogHistoryPreservationTest extends TestCase
             'id' => $item->id,
             'product_name' => 'Mug Custom',
             'product_slug' => 'mug-custom',
+            'production_method' => 'offset',
             'line_total' => 50000,
         ]);
         $this->assertDatabaseHas('payments', [
@@ -111,7 +118,14 @@ class CatalogHistoryPreservationTest extends TestCase
             ->assertOk()
             ->assertSee('Mug Custom')
             ->assertSee('Large')
+            ->assertSee('offset')
             ->assertSee('50.000');
+
+        $this->actingAs($operator->user)
+            ->get(route('operator.jobs.show', $production))
+            ->assertOk()
+            ->assertSee('Mug Custom')
+            ->assertSee('offset');
     }
 
     public function test_old_pickup_order_remains_readable_even_though_new_checkout_requires_delivery(): void

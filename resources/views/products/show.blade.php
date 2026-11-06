@@ -12,12 +12,6 @@
     if ($price === null && $priceRules->isNotEmpty()) {
         $price = $priceRules->min(fn ($rule) => data_get($rule, 'discounted_price', data_get($rule, 'price')));
     }
-    $productionMethods = $productionMethods ?? [
-        ['value' => 'digital', 'label' => 'Digital'],
-        ['value' => 'offset', 'label' => 'Offset'],
-        ['value' => 'large_format', 'label' => 'Large format'],
-        ['value' => 'sublimation', 'label' => 'Sublimasi'],
-    ];
     $canEstimate = auth()->check() && auth()->user()->isRole(\App\Enums\UserRole::Customer);
     $minimumOrder = max(1, (int) data_get($product, 'minimum_order', 1));
     $variation = method_exists($product, 'variationDefinition') ? $product->variationDefinition() : null;
@@ -117,11 +111,6 @@
                         @endif
                     </div>
 
-                    <x-select name="production_method" label="Metode produksi" :value="data_get($product, 'default_production_method')" required help="Pilih proses yang paling sesuai dengan bahan dan hasil akhir.">
-                        @foreach ($productionMethods as $method)
-                            <option value="{{ data_get($method, 'value', data_get($method, 'code')) }}">{{ data_get($method, 'label', data_get($method, 'name', data_get($method, 'value'))) }}</option>
-                        @endforeach
-                    </x-select>
                     <x-input name="quantity" label="Jumlah" type="number" :value="$minimumOrder" :min="$minimumOrder" required :help="'Minimal '.$minimumOrder.' item.'" />
                     <x-textarea name="notes" label="Catatan produk (opsional)" :rows="2" placeholder="Instruksi tambahan untuk produksi" />
                     <x-input name="design_file" label="Referensi desain (opsional)" type="file" accept=".jpg,.jpeg,.png,.pdf" help="Format JPG, PNG, atau PDF." />
