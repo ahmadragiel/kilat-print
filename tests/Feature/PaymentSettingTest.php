@@ -224,4 +224,43 @@ class PaymentSettingTest extends TestCase
         $this->actingAs($admin)->get(route('admin.payment-settings.edit'))->assertOk();
         $this->actingAs($admin)->get(route('admin.payments.index'))->assertOk()->assertSee($order->number);
     }
+
+    /**
+     * A rotated APP_KEY makes existing encrypted credentials undecryptable.
+     * The page must stay reachable and the gateway must fall back to the
+     * environment values instead of throwing a 500 for every request.
+     */
+    public function test_credentials_encrypted_with_an_old_app_key_fall_back_to_environment(): void
+    {
+        config([
+            'payments.server_key' => 'env-server-key',
+            'payments.client_key' => 'env-client-key',
+            'payments.merchant_id' => 'env-merchant-id',
+            'payments.sandbox' => true,
+        ]);
+
+        DB::table('payment_settings')->insert([
+            'driver' => 'midtrans',
+            'server_key' => 'eyJpdiI6Im9sZC1rZXkiLCJ2YWx1ZSI6IiJ9',
+            'client_key' => 'not-a-valid-encrypted-payload',
+            'merchant_id' => 'still-encrypted-with-the-old-key',
+            'sandbox' => true,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $settings = app(PaymentSettings::class);
+
+        $this->assertNull($settings->record()?->server_key);
+        $this->assertSame('env-server-key', $settings->serverKey());
+        $this->assertSame('env-client-key', $settings->clientKey());
+        $this->assertSame('env-merchant-id', $settings->merchantId());
+        $this->assertSame('environment', $settings->sources()['server_key']);
+        $this->assertTrue(app(MidtransGateway::class)->isConfigured());
+
+        $this->actingAs($this->makeAdmin())
+            ->get(route('admin.payment-settings.edit'))
+            ->assertOk()
+            ->assertDontSee('still-encrypted-with-the-old-key', false);
+    }
 }

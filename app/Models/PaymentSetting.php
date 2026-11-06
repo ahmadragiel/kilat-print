@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Casts\ResilientEncrypted;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -29,9 +30,9 @@ class PaymentSetting extends Model
     protected function casts(): array
     {
         return [
-            'server_key' => 'encrypted',
-            'client_key' => 'encrypted',
-            'merchant_id' => 'encrypted',
+            'server_key' => ResilientEncrypted::class,
+            'client_key' => ResilientEncrypted::class,
+            'merchant_id' => ResilientEncrypted::class,
             'sandbox' => 'boolean',
         ];
     }
