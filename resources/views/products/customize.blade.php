@@ -29,10 +29,11 @@
         'initialDesign' => $initialDesign,
         'initialSpecification' => $specification,
         'mockups' => $mockups,
+        'photoTemplate' => $photoTemplate,
         'stickers' => $stickers->values()->all(),
         'hasBack' => (bool) $hasBackMockup,
         'continueLabel' => $cartItem ? 'Perbarui ke cart' : 'Lanjut ke cart',
-        'maxElements' => 50,
+        'maxElements' => 80,
         'maxImageBytes' => (int) config('printing.custom_design_max_kilobytes', 5120) * 1024,
     ];
 @endphp
@@ -79,11 +80,12 @@
         @endif
         <input name="design_file" x-ref="previewInput" type="file" accept="image/png" class="sr-only" tabindex="-1" aria-hidden="true">
         <input type="file" x-ref="imageInput" accept="image/jpeg,image/png" class="sr-only" tabindex="-1" aria-hidden="true">
+        <input type="file" x-ref="photoInput" accept="image/jpeg,image/png" class="sr-only" tabindex="-1" aria-hidden="true">
 
         <section class="overflow-hidden rounded-2xl border border-ink-200 bg-white shadow-panel" aria-label="Workspace desain">
             {{-- TOP TOOLBAR: white surface, brand red active states --}}
             <div class="design-toolbar flex items-center gap-2 overflow-x-auto border-b border-ink-200 bg-white px-3 py-3 sm:px-5">
-                <div class="flex shrink-0 items-center rounded-lg bg-ink-100 p-1" role="group" aria-label="Sisi produk">
+                <div x-show="!photoTemplate" class="flex shrink-0 items-center rounded-lg bg-ink-100 p-1" role="group" aria-label="Sisi produk">
                     <button type="button" class="editor-toolbar-tab" x-on:click="switchSide('front')" x-bind:class="currentSide === 'front' && 'editor-toolbar-tab-active'" :aria-pressed="currentSide === 'front'">
                         <x-icon name="image" class="h-4 w-4" /> Depan
                     </button>
@@ -92,7 +94,7 @@
                     </button>
                 </div>
 
-                <div class="h-7 w-px shrink-0 bg-ink-200"></div>
+                <div x-show="!photoTemplate" class="h-7 w-px shrink-0 bg-ink-200"></div>
 
                 <div class="flex shrink-0 items-center gap-1" role="group" aria-label="Mode tampilan">
                     <button type="button" class="editor-icon-button" x-on:click="previewMode = false" x-bind:class="!previewMode && 'editor-icon-button-active'" aria-label="Mode edit">
@@ -103,12 +105,13 @@
                     </button>
                 </div>
 
-                <div class="ml-auto flex shrink-0 items-center gap-1" role="group" aria-label="Zoom viewport">
+                <div x-show="!photoTemplate" class="ml-auto flex shrink-0 items-center gap-1" role="group" aria-label="Zoom viewport">
                     <button type="button" class="editor-icon-button" x-on:click="zoomOut()" aria-label="Perkecil viewport"><span class="text-lg">−</span></button>
                     <span class="min-w-14 text-center text-xs font-bold text-ink-600" x-text="zoomPercent + '%'">100%</span>
                     <button type="button" class="editor-icon-button" x-on:click="zoomIn()" aria-label="Perbesar viewport"><span class="text-lg">+</span></button>
                     <button type="button" class="editor-toolbar-button" x-on:click="resetZoom()"><x-icon name="refresh" class="h-4 w-4" /> Atur ulang</button>
                 </div>
+                <p x-show="photoTemplate" class="ml-auto text-xs font-semibold text-ink-500">Geser foto di dalam frame untuk mengatur potongan.</p>
             </div>
 
             <div class="grid items-start gap-0 xl:grid-cols-[minmax(0,1fr)_380px]">
@@ -116,7 +119,8 @@
                 <div class="min-w-0 border-b border-ink-200 bg-ink-100 p-3 sm:p-5 xl:border-b-0 xl:border-r">
                     <div
                         class="design-canvas-host relative mx-auto w-full max-w-5xl overflow-hidden rounded-xl border border-ink-300 bg-white shadow-panel"
-                        x-bind:style="mockups[currentSide] ? `background-image: url('${mockups[currentSide]}')` : ''"
+                        x-bind:class="photoTemplate && 'design-canvas-host-square'"
+                        x-bind:style="!photoTemplate && mockups[currentSide] ? `background-image: url('${mockups[currentSide]}')` : ''"
                     >
                         <div class="pointer-events-none absolute inset-0 grid place-items-center" x-show="!mockups[currentSide]">
                             <div class="max-w-xs text-center">
@@ -131,7 +135,8 @@
                     </div>
 
                     <div class="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-ink-600">
-                        <p>Tarik elemen untuk memindahkan. Gunakan handle untuk mengubah ukuran atau memutar.</p>
+                        <p x-show="!photoTemplate">Tarik elemen untuk memindahkan. Gunakan handle untuk mengubah ukuran atau memutar.</p>
+                        <p x-show="photoTemplate">Pilih salah satu frame di kanvas, lalu geser foto untuk mengatur potongan wajah.</p>
                         <p class="inline-flex items-center gap-1.5"><span class="h-2 w-2 rounded-full bg-emerald-500"></span> Pratinjau tersimpan di browser sampai Anda menyimpan desain</p>
                     </div>
                 </div>
@@ -144,6 +149,53 @@
                     </div>
 
                     <div class="space-y-6 p-5" x-show="!previewMode">
+                        <section x-show="photoTemplate" x-cloak class="rounded-xl border border-accent-200 bg-accent-50/70 p-4">
+                            <div class="flex items-start gap-3">
+                                <span class="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-accent-200 text-accent-900"><x-icon name="image" class="h-5 w-5" /></span>
+                                <div class="min-w-0">
+                                    <p class="editor-control-label">Foto otomatis</p>
+                                    <p class="mt-1 text-xs leading-5 text-ink-600">Satu foto dipakai untuk semua frame. Deteksi wajah berjalan di browser Anda.</p>
+                                </div>
+                            </div>
+
+                            <div x-show="!hasPhoto" class="mt-4">
+                                <button type="button" class="editor-secondary-button w-full justify-center" x-on:click="openPhotoPicker()" x-bind:disabled="photoDetecting || uploading || previewMode">
+                                    <x-icon name="upload" class="h-4 w-4" />
+                                    <span x-text="photoDetecting ? 'Mendeteksi wajah…' : (uploading ? 'Mengunggah…' : 'Unggah foto wajah')"></span>
+                                </button>
+                                <p class="mt-2 text-[11px] leading-4 text-ink-500">JPG atau PNG. Foto hanya diproses di perangkat ini dan tidak dikirim ke layanan wajah pihak ketiga.</p>
+                            </div>
+
+                            <div x-show="hasPhoto" x-cloak class="mt-4 space-y-3">
+                                <div class="flex items-center gap-3">
+                                    <img :src="photoSrc" alt="Pratinjau foto sumber" class="h-14 w-14 shrink-0 rounded-lg border border-ink-200 bg-white object-cover">
+                                    <div class="min-w-0">
+                                        <p class="text-sm font-bold text-ink-900" x-text="photoStatusLabel"></p>
+                                        <p class="mt-0.5 text-xs text-ink-500" x-text="photoFrameLabel"></p>
+                                    </div>
+                                </div>
+
+                                <p x-show="photoWarning" x-cloak class="rounded-lg border border-accent-300 bg-accent-100 px-3 py-2 text-xs font-semibold leading-5 text-accent-900" role="status" x-text="photoWarning"></p>
+
+                                <label class="block">
+                                    <span class="flex items-center justify-between gap-3 text-xs font-semibold text-ink-600"><span>Zoom foto</span><output class="font-bold text-ink-900" x-text="photoZoomPercent + '%'"></output></span>
+                                    <input type="range" min="100" max="300" step="5" class="mt-2 w-full accent-brand-600" :value="photoZoomPercent" x-on:input="setPhotoZoom(Number($event.target.value))" :disabled="!hasPhoto || previewMode" aria-label="Zoom foto pada frame terpilih">
+                                </label>
+
+                                <div class="grid grid-cols-2 gap-2">
+                                    <button type="button" class="editor-secondary-button justify-center" x-on:click="selectPhotoFrame(-1)" :disabled="photoFrameCount < 2">Frame sebelumnya</button>
+                                    <button type="button" class="editor-secondary-button justify-center" x-on:click="selectPhotoFrame(1)" :disabled="photoFrameCount < 2">Frame berikutnya</button>
+                                    <button type="button" class="editor-secondary-button justify-center" x-on:click="resetPhotoFrame()">Atur ulang frame</button>
+                                    <button type="button" class="editor-secondary-button justify-center" x-on:click="applyPhotoToAll()">Terapkan ke semua</button>
+                                </div>
+
+                                <button type="button" class="editor-secondary-button w-full justify-center" x-on:click="openPhotoPicker()" x-bind:disabled="photoDetecting || uploading || previewMode">
+                                    <x-icon name="refresh" class="h-4 w-4" /> <span x-text="uploading ? 'Mengunggah…' : 'Ganti foto'"></span>
+                                </button>
+                                <p x-show="photoDetecting" x-cloak class="text-xs font-semibold text-ink-600" role="status">Mendeteksi wajah di perangkat…</p>
+                            </div>
+                        </section>
+
                         <section>
                             <p class="editor-control-label">Tambah elemen</p>
                             <div class="mt-3 grid grid-cols-3 gap-2">
@@ -324,6 +376,35 @@
             </x-button>
         </div>
     </form>
+
+    <div
+        x-show="faceChooserOpen"
+        x-cloak
+        x-on:keydown.escape.window="cancelFaceChooser()"
+        class="fixed inset-0 z-[70] grid place-items-center overflow-y-auto bg-ink-950/60 p-4 backdrop-blur-sm"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="face-chooser-title"
+    >
+        <div class="w-full max-w-lg rounded-2xl border border-ink-200 bg-white p-5 shadow-panel-lg sm:p-6" x-on:click.outside="cancelFaceChooser()">
+            <p class="section-kicker">Deteksi wajah</p>
+            <h2 id="face-chooser-title" class="mt-1 text-lg font-extrabold text-ink-950">Pilih wajah yang dipakai</h2>
+            <p class="mt-2 text-sm leading-6 text-ink-600">Foto ini berisi lebih dari satu wajah. Pilih satu wajah untuk dipasang ke seluruh frame, atau gunakan potongan tengah.</p>
+
+            <div class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                <template x-for="(face, index) in faceCandidates" :key="face.id">
+                    <button type="button" class="group overflow-hidden rounded-xl border border-ink-200 bg-white p-1.5 text-left transition hover:border-brand-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600" x-on:click="chooseFace(face.id)">
+                        <img :src="face.thumbnail" alt="" class="aspect-square w-full rounded-lg bg-ink-100 object-cover">
+                        <span class="mt-2 block px-1 pb-1 text-xs font-bold text-ink-700 group-hover:text-brand-700">Wajah <span x-text="index + 1"></span></span>
+                    </button>
+                </template>
+            </div>
+
+            <div class="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <button type="button" class="editor-secondary-button justify-center" x-on:click="cancelFaceChooser()">Gunakan potongan tengah</button>
+            </div>
+        </div>
+    </div>
     </div>
 </div>
 

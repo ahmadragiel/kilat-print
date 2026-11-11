@@ -47,7 +47,7 @@
             <h1 class="mt-2 text-2xl font-extrabold tracking-tight text-ink-950 sm:text-3xl">#{{ data_get($order, 'number', data_get($order, 'code', data_get($order, 'id'))) }}</h1>
             <p class="mt-1 text-sm text-ink-500">Dibuat {{ data_get($order, 'created_at')?->translatedFormat('d F Y, H:i') ?? 'belum tersedia' }}</p>
         </div>
-        <form method="POST" action="{{ route('customer.orders.repeat', $order) }}" x-data="confirmAction('Ulangi pesanan ini dengan data saat ini?')" x-on:submit="confirm">
+        <form method="POST" action="{{ route('customer.orders.repeat', $order) }}" x-data="confirmAction('Pesan ulang akan mengganti seluruh isi keranjang saat ini dengan konfigurasi pesanan ini. Harga dihitung ulang sesuai tarif terbaru. Lanjutkan?')" x-on:submit="confirm">
             @csrf
             <x-button type="submit" variant="secondary"><x-icon name="refresh" class="h-4 w-4" /> Pesan ulang</x-button>
         </form>

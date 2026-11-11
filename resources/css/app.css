@@ -115,7 +115,10 @@
         text-rendering: optimizeLegibility;
     }
 
-    h1, h2, h3, h4 {
+    h1,
+    h2,
+    h3,
+    h4 {
         text-wrap: balance;
         letter-spacing: -0.02em;
     }
@@ -164,6 +167,7 @@
 }
 
 @layer components {
+
     /* ================================================================
        LAYOUT
        ================================================================ */
@@ -309,11 +313,9 @@
 
     /* Faint diagonal red lines layered on red panels — energetic, print-like. */
     .brand-stripes {
-        background-image: repeating-linear-gradient(
-            -45deg,
-            rgb(255 255 255 / 0.07) 0 2px,
-            transparent 2px 14px
-        );
+        background-image: repeating-linear-gradient(-45deg,
+                rgb(255 255 255 / 0.07) 0 2px,
+                transparent 2px 14px);
     }
 
     .design-toolbar {
@@ -382,6 +384,10 @@
         background-repeat: no-repeat;
         background-size: cover;
         isolation: isolate;
+    }
+
+    .design-canvas-host-square {
+        aspect-ratio: 1 / 1;
     }
 
     /* Fabric wraps the canvas and sets inline width/height, so the wrapper must be

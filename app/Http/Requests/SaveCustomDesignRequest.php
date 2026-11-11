@@ -39,10 +39,12 @@ class SaveCustomDesignRequest extends FormRequest
         return [
             'product_id.required' => 'Produk wajib dipilih.',
             'product_id.exists' => 'Produk tidak tersedia atau tidak aktif.',
-            'design.front.elements.max' => 'Maksimal 50 elemen pada sisi depan.',
-            'design.back.elements.max' => 'Maksimal 50 elemen pada sisi belakang.',
+            'design.front.elements.max' => 'Maksimal 80 elemen pada sisi depan.',
+            'design.back.elements.max' => 'Maksimal 80 elemen pada sisi belakang.',
             'design.front.elements.*.type.in' => 'Tipe elemen harus image, text, atau sticker.',
             'design.back.elements.*.type.in' => 'Tipe elemen harus image, text, atau sticker.',
+            'design.photo.asset_id.exists' => 'Foto harus merujuk pada aset yang sudah diunggah.',
+            'design.photo.slots.*.id' => 'Frame foto tidak dikenal untuk template ini.',
         ];
     }
 

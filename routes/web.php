@@ -36,6 +36,7 @@ Route::middleware(['auth', 'role:customer'])->group(function () {
     Route::get('/cart', [Customer\CartController::class, 'index'])->name('cart.index');
     Route::post('/cart', [Customer\CartController::class, 'store'])->name('cart.store');
     Route::get('/cart/{item}/customize', [Customer\CartController::class, 'customize'])->name('cart.customize');
+    Route::get('/cart/{item}/design-preview', [Customer\CartController::class, 'designPreview'])->name('cart.design-preview');
     Route::patch('/cart/{item}', [Customer\CartController::class, 'update'])->name('cart.update');
     Route::delete('/cart/{item}', [Customer\CartController::class, 'destroy'])->name('cart.destroy');
 

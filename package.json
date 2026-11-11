@@ -4,7 +4,8 @@
     "scripts": {
         "build": "vite build",
         "dev": "vite",
-        "check": "npm run build"
+        "check": "npm run build",
+        "test": "node --test \"tests/js/**/*.test.js\""
     },
     "devDependencies": {
         "@tailwindcss/vite": "^4.0.0",
@@ -14,8 +15,27 @@
         "vite": "^6.0.11"
     },
     "dependencies": {
+        "@mediapipe/tasks-vision": "^1.2.2",
         "alpinejs": "^3.17.4",
         "chart.js": "^4.5.1",
         "fabric": "^7.4.0"
-    }
+    },
+    "name": "kilat-print",
+    "version": "1.0.0",
+    "description": "**Kilat Print** adalah platform e-commerce custom printing dan production management berbasis Laravel untuk mengelola katalog, konfigurasi produk, harga, cart, checkout, pembayaran QRIS dan transfer bank, desain, produksi, quality control, notification, reporting, dan invoice.",
+    "main": "vite.config.js",
+    "directories": {
+        "test": "tests"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/ahmadragiel/kilat-print.git"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "bugs": {
+        "url": "https://github.com/ahmadragiel/kilat-print/issues"
+    },
+    "homepage": "https://github.com/ahmadragiel/kilat-print#readme"
 }

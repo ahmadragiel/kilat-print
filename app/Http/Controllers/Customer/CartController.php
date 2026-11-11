@@ -7,6 +7,7 @@ use App\Http\Requests\StoreCartItemRequest;
 use App\Models\Cart;
 use App\Models\CartItem;
 use App\Models\CustomDesignDraft;
+use App\Models\DesignFile;
 use App\Models\Product;
 use App\Services\PriceCalculationService;
 use Illuminate\Contracts\View\View;
@@ -14,6 +15,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class CartController extends Controller
 {
@@ -110,7 +112,7 @@ class CartController extends Controller
             throw $exception;
         }
 
-        if ($path && $oldReference && $oldReference !== $path) {
+        if ($path && $oldReference && $oldReference !== $path && ! $this->referenceIsInUse($oldReference, $editing)) {
             Storage::disk('local')->delete($oldReference);
         }
 
@@ -127,6 +129,45 @@ class CartController extends Controller
             'product' => $item->product,
             'draft' => $item->custom_design_draft_id,
             'cart_item' => $item->id,
+        ]);
+    }
+
+    /**
+     * Stream the final composite the editor produced for this cart item.
+     *
+     * The file lives on the private disk, so the cart renders an authorised route
+     * instead of a public storage URL. Only the cart owner can read it; another
+     * customer receives a 403 even if they know the item id.
+     */
+    public function designPreview(Request $request, CartItem $item): StreamedResponse
+    {
+        $this->authorizeItem($request, $item);
+
+        $path = $item->design_reference;
+
+        abort_unless(
+            is_string($path) && $path !== '' && Storage::disk('local')->exists($path),
+            404,
+            'Pratinjau desain tidak ditemukan.',
+        );
+
+        $disk = Storage::disk('local');
+        $extension = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+        $filename = 'design-preview'.($extension !== '' ? '.'.$extension : '');
+
+        return response()->stream(function () use ($disk, $path): void {
+            $stream = $disk->readStream($path);
+
+            if (is_resource($stream)) {
+                fpassthru($stream);
+                fclose($stream);
+            }
+        }, 200, [
+            'Content-Type' => $disk->mimeType($path) ?: 'application/octet-stream',
+            'Content-Length' => (string) $disk->size($path),
+            'Content-Disposition' => 'inline; filename="'.$filename.'"',
+            'Cache-Control' => 'private, max-age=3600',
+            'X-Content-Type-Options' => 'nosniff',
         ]);
     }
 
@@ -157,12 +198,28 @@ class CartController extends Controller
     public function destroy(Request $request, CartItem $item): RedirectResponse
     {
         $this->authorizeItem($request, $item);
-        if ($item->design_reference) {
+        if ($item->design_reference && ! $this->referenceIsInUse($item->design_reference, $item)) {
             Storage::disk('local')->delete($item->design_reference);
         }
         $item->delete();
 
         return back()->with('success', 'Item dihapus dari keranjang.');
+    }
+
+    /**
+     * A cart reference can be shared with a completed order or another cart
+     * item. Only remove the file when nothing else points at it.
+     */
+    private function referenceIsInUse(string $path, ?CartItem $except = null): bool
+    {
+        if (DesignFile::query()->where('path', $path)->exists()) {
+            return true;
+        }
+
+        return CartItem::query()
+            ->where('design_reference', $path)
+            ->when($except, fn ($query) => $query->where('id', '!=', $except->getKey()))
+            ->exists();
     }
 
     private function cart(Request $request): Cart

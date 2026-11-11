@@ -1,3 +1,14 @@
+import {
+    centerCrop,
+    clampCrop,
+    clampNumber,
+    cropAtZoom,
+    initialSlotCrop,
+    MAX_PHOTO_ZOOM,
+    MIN_PHOTO_ZOOM,
+} from './photo-crop';
+import { detectFaceCandidates, readImageDimensions } from './face-detection';
+
 /**
  * Fabric is loaded on demand.
  *
@@ -114,6 +125,21 @@ function toFiniteNumber(value) {
     const numericValue = typeof value === 'number' ? value : Number(value);
 
     return Number.isFinite(numericValue) ? numericValue : null;
+}
+
+/**
+ * Nullable numeric parser for fields where "absent" is meaningful.
+ *
+ * `Number(null)` and `Number('')` are both zero, which would turn a full photo
+ * frame's `clip_edge: null` into a cap at the top of the canvas when a draft is
+ * reopened. Keep those sentinels as null instead.
+ */
+function toOptionalNumber(value) {
+    if (value === null || value === undefined || value === '') {
+        return null;
+    }
+
+    return toFiniteNumber(value);
 }
 
 function toSafeString(value, maximumLength = 255) {
@@ -813,13 +839,30 @@ function metadataFor(object) {
     return elementMetadata.get(object) ?? null;
 }
 
+function canvasDesignBounds(canvas) {
+    if (isPlainObject(canvas?.designBounds)) {
+        const width = toFiniteNumber(canvas.designBounds.width);
+        const height = toFiniteNumber(canvas.designBounds.height);
+
+        if (width && height && width > 0 && height > 0) {
+            return { width, height };
+        }
+    }
+
+    return {
+        width: canvas?.getWidth?.() ?? 0,
+        height: canvas?.getHeight?.() ?? 0,
+    };
+}
+
 function clampObjectToCanvas(object, canvas) {
-    if (!object || !canvas) {
+    if (!object || !canvas || object.photoSlot === true || object.excludeFromClamp === true) {
         return;
     }
 
-    const canvasWidth = canvas.getWidth();
-    const canvasHeight = canvas.getHeight();
+    const bounds = canvasDesignBounds(canvas);
+    const canvasWidth = bounds.width;
+    const canvasHeight = bounds.height;
 
     if (!(canvasWidth > 0) || !(canvasHeight > 0)) {
         return;
@@ -1112,25 +1155,45 @@ async function requestJson({ url, method, body, csrfToken, signal }) {
     return payload;
 }
 
-async function exportPreviewBlob(canvas) {
+async function exportPreviewBlob(canvas, template = null) {
     if (!canvas || typeof canvas.toBlob !== 'function') {
         throw new EditorRequestError('Pratinjau desain tidak dapat dibuat.');
     }
 
-    const previousZoom = canvas.getZoom();
-
     try {
-        canvas.setZoom(1);
-        const blob = await canvas.toBlob({ format: 'png', quality: 1, multiplier: 1 });
+        if (template !== null && template.width > 0) {
+            const exportSize = 2048;
+            const multiplier = exportSize / Math.max(1, canvas.getWidth());
+            const blob = await canvas.toBlob({ format: 'png', quality: 1, multiplier });
 
-        if (!isBrowserInstance('Blob', blob) || blob.size === 0) {
-            throw new EditorRequestError('Pratinjau desain tidak dapat dibuat.');
+            if (!isBrowserInstance('Blob', blob) || blob.size === 0) {
+                throw new EditorRequestError('Pratinjau desain tidak dapat dibuat.');
+            }
+
+            return blob;
         }
 
-        return blob;
-    } finally {
-        canvas.setZoom(previousZoom);
-        canvas.requestRenderAll();
+        const previousZoom = canvas.getZoom();
+
+        try {
+            canvas.setZoom(1);
+            const blob = await canvas.toBlob({ format: 'png', quality: 1, multiplier: 1 });
+
+            if (!isBrowserInstance('Blob', blob) || blob.size === 0) {
+                throw new EditorRequestError('Pratinjau desain tidak dapat dibuat.');
+            }
+
+            return blob;
+        } finally {
+            canvas.setZoom(previousZoom);
+            canvas.requestRenderAll();
+        }
+    } catch (error) {
+        if (error instanceof EditorRequestError) {
+            throw error;
+        }
+
+        throw new EditorRequestError('Pratinjau desain tidak dapat dibuat.');
     }
 }
 
@@ -1174,6 +1237,357 @@ function editorObjectOptions(base) {
     };
 }
 
+/**
+ * Normalise the photo-template payload emitted by the server.
+ *
+ * The editor only ever loads same-origin template assets, so a tampered or stale
+ * config cannot turn the canvas into a proxy for third-party images.
+ */
+function normalizePhotoTemplate(value) {
+    if (!isPlainObject(value)) {
+        return null;
+    }
+
+    const key = toSafeIdentifier(value.key);
+    const width = toFiniteNumber(value.width);
+    const height = toFiniteNumber(value.height);
+
+    if (key === null || width === null || height === null || width < 1 || height < 1) {
+        return null;
+    }
+
+    const slots = [];
+
+    for (const rawSlot of Array.isArray(value.slots) ? value.slots : []) {
+        if (!isPlainObject(rawSlot)) {
+            continue;
+        }
+
+        const id = toSafeIdentifier(rawSlot.id);
+        const x = toFiniteNumber(rawSlot.x);
+        const y = toFiniteNumber(rawSlot.y);
+        const slotWidth = toFiniteNumber(rawSlot.width);
+        const slotHeight = toFiniteNumber(rawSlot.height);
+
+        if (id === null || x === null || y === null || !slotWidth || !slotHeight || slotWidth < 1 || slotHeight < 1) {
+            continue;
+        }
+
+        slots.push({
+            id,
+            x: roundNumber(x),
+            y: roundNumber(y),
+            width: roundNumber(slotWidth),
+            height: roundNumber(slotHeight),
+            clip: rawSlot.clip === 'rect' ? 'rect' : 'circle',
+            rotation: roundNumber(toFiniteNumber(rawSlot.rotation) ?? 0),
+            kind: toSafeString(rawSlot.kind, 32) ?? 'full',
+            clip_edge: toOptionalNumber(rawSlot.clip_edge),
+            layer: slots.length,
+        });
+    }
+
+    if (slots.length === 0) {
+        return null;
+    }
+
+    return {
+        key,
+        version: clamp(Math.floor(toFiniteNumber(value.version) ?? 1), 1, 1000),
+        width: Math.floor(width),
+        height: Math.floor(height),
+        background: toSameOriginUrl(value.background),
+        overlay: toSameOriginUrl(value.overlay),
+        facePadding: clamp(toFiniteNumber(value.face_padding) ?? 0.28, 0, 2),
+        overscan: clamp(toFiniteNumber(value.overscan) ?? 1.4, 1, 3),
+        minSourceDimension: Math.max(1, Math.floor(toFiniteNumber(value.min_source_dimension) ?? 800)),
+        wasmPath: toSameOriginUrl(value.wasm_path),
+        modelPath: toSameOriginUrl(value.model_path),
+        slots,
+    };
+}
+
+function photoCropFromValues(values, sourceWidth, sourceHeight) {
+    if (!isPlainObject(values)) {
+        return null;
+    }
+
+    const x = toFiniteNumber(values.x ?? values.crop_x);
+    const y = toFiniteNumber(values.y ?? values.crop_y);
+    const width = toFiniteNumber(values.width ?? values.crop_width);
+
+    if (x === null || y === null || width === null || width <= 0) {
+        return null;
+    }
+
+    return clampCrop({ x, y, width }, sourceWidth, sourceHeight);
+}
+
+function normalizePhotoState(raw, template) {
+    if (!isPlainObject(raw) || template === null) {
+        return null;
+    }
+
+    const assetId = toSafeString(raw.asset_id, 128);
+    const src = toSameOriginUrl(raw.src);
+
+    if (assetId === null || src === null) {
+        return null;
+    }
+
+    const sourceWidth = Math.max(1, Math.floor(toFiniteNumber(raw.source_width) ?? 1));
+    const sourceHeight = Math.max(1, Math.floor(toFiniteNumber(raw.source_height) ?? 1));
+    const baseCrop = photoCropFromValues(raw.base_crop, sourceWidth, sourceHeight)
+        ?? centerCrop(sourceWidth, sourceHeight);
+    const configuredSlots = new Map(template.slots.map((slot) => [slot.id, slot]));
+    const rawSlots = Array.isArray(raw.slots) ? raw.slots : [];
+    const slots = [];
+
+    for (const rawSlot of rawSlots) {
+        if (!isPlainObject(rawSlot)) {
+            continue;
+        }
+
+        const id = toSafeIdentifier(rawSlot.id);
+        const config = id === null ? undefined : configuredSlots.get(id);
+
+        if (id === null || config === undefined) {
+            continue;
+        }
+
+        const frame = {
+            x: toFiniteNumber(rawSlot.frame_x) ?? config.x,
+            y: toFiniteNumber(rawSlot.frame_y) ?? config.y,
+            width: toFiniteNumber(rawSlot.frame_width) ?? config.width,
+            height: toFiniteNumber(rawSlot.frame_height) ?? config.height,
+        };
+        const crop = photoCropFromValues(rawSlot, sourceWidth, sourceHeight)
+            ?? initialSlotCrop(baseCrop, template.overscan, sourceWidth, sourceHeight);
+        const clipEdge = toOptionalNumber(rawSlot.clip_edge) ?? toOptionalNumber(config.clip_edge);
+
+        slots.push({
+            id,
+            crop_x: roundNumber(crop.x),
+            crop_y: roundNumber(crop.y),
+            crop_width: roundNumber(crop.width),
+            crop_height: roundNumber(crop.height),
+            zoom: roundNumber(clamp(toFiniteNumber(rawSlot.zoom) ?? 1, MIN_PHOTO_ZOOM, MAX_PHOTO_ZOOM)),
+            offset_x: roundNumber(toFiniteNumber(rawSlot.offset_x) ?? 0),
+            offset_y: roundNumber(toFiniteNumber(rawSlot.offset_y) ?? 0),
+            rotation: roundNumber(toFiniteNumber(rawSlot.rotation) ?? config.rotation),
+            clip: rawSlot.clip === 'rect' || (rawSlot.clip === undefined && config.clip === 'rect') ? 'rect' : 'circle',
+            layer: Math.max(0, Math.floor(toFiniteNumber(rawSlot.layer) ?? config.layer)),
+            frame_x: roundNumber(frame.x),
+            frame_y: roundNumber(frame.y),
+            frame_width: roundNumber(frame.width),
+            frame_height: roundNumber(frame.height),
+            clip_edge: clipEdge === null ? null : roundNumber(clipEdge),
+        });
+    }
+
+    if (slots.length === 0) {
+        for (const config of template.slots) {
+            slots.push(photoSlotState(template, config, baseCrop, sourceWidth, sourceHeight));
+        }
+    }
+
+    slots.sort((first, second) => first.layer - second.layer);
+
+    return {
+        asset_id: assetId,
+        src,
+        source_width: sourceWidth,
+        source_height: sourceHeight,
+        template: template.key,
+        template_version: template.version,
+        face_detected: raw.face_detected === true,
+        face_count: Math.max(0, Math.floor(toFiniteNumber(raw.face_count) ?? 0)),
+        face_padding: clamp(toFiniteNumber(raw.face_padding) ?? template.facePadding, 0, 2),
+        base_crop: {
+            x: roundNumber(baseCrop.x),
+            y: roundNumber(baseCrop.y),
+            width: roundNumber(baseCrop.width),
+            height: roundNumber(baseCrop.height),
+        },
+        slots,
+    };
+}
+
+function photoSlotState(template, config, baseCrop, sourceWidth, sourceHeight) {
+    const crop = initialSlotCrop(baseCrop, template.overscan, sourceWidth, sourceHeight);
+
+    return {
+        id: config.id,
+        crop_x: roundNumber(crop.x),
+        crop_y: roundNumber(crop.y),
+        crop_width: roundNumber(crop.width),
+        crop_height: roundNumber(crop.height),
+        zoom: 1,
+        offset_x: 0,
+        offset_y: 0,
+        rotation: roundNumber(config.rotation),
+        clip: config.clip,
+        layer: config.layer,
+        frame_x: roundNumber(config.x),
+        frame_y: roundNumber(config.y),
+        frame_width: roundNumber(config.width),
+        frame_height: roundNumber(config.height),
+        clip_edge: toOptionalNumber(config.clip_edge) === null
+            ? null
+            : roundNumber(toOptionalNumber(config.clip_edge)),
+    };
+}
+
+function serializePhotoState(photo) {
+    if (!isPlainObject(photo) || typeof photo.asset_id !== 'string' || photo.asset_id === '') {
+        return null;
+    }
+
+    return {
+        asset_id: photo.asset_id,
+        source_width: photo.source_width,
+        source_height: photo.source_height,
+        template: photo.template,
+        template_version: photo.template_version,
+        face_detected: photo.face_detected === true,
+        face_count: photo.face_count,
+        face_padding: photo.face_padding,
+        base_crop: {
+            x: roundNumber(photo.base_crop.x),
+            y: roundNumber(photo.base_crop.y),
+            width: roundNumber(photo.base_crop.width),
+            height: roundNumber(photo.base_crop.height),
+        },
+        slots: photo.slots.map((slot) => ({
+            id: slot.id,
+            crop_x: roundNumber(slot.crop_x),
+            crop_y: roundNumber(slot.crop_y),
+            crop_width: roundNumber(slot.crop_width),
+            crop_height: roundNumber(slot.crop_height),
+            zoom: roundNumber(slot.zoom),
+            offset_x: roundNumber(slot.offset_x),
+            offset_y: roundNumber(slot.offset_y),
+            rotation: roundNumber(slot.rotation),
+            clip: slot.clip,
+            layer: slot.layer,
+            frame_x: roundNumber(slot.frame_x),
+            frame_y: roundNumber(slot.frame_y),
+            frame_width: roundNumber(slot.frame_width),
+            frame_height: roundNumber(slot.frame_height),
+            clip_edge: toOptionalNumber(slot.clip_edge) === null
+                ? null
+                : roundNumber(toOptionalNumber(slot.clip_edge)),
+        })),
+    };
+}
+
+function designPhotoRecord(design) {
+    const parsed = typeof design === 'string' ? parseJsonText(design) : design;
+
+    return isPlainObject(parsed) && isPlainObject(parsed.photo) ? parsed.photo : null;
+}
+
+function photoTemplateFrame(slot) {
+    return {
+        x: toFiniteNumber(slot.frame_x) ?? 0,
+        y: toFiniteNumber(slot.frame_y) ?? 0,
+        width: Math.max(1, toFiniteNumber(slot.frame_width) ?? 1),
+        height: Math.max(1, toFiniteNumber(slot.frame_height) ?? 1),
+    };
+}
+
+function photoSlotDisplayMetrics(template, slot) {
+    const frame = photoTemplateFrame(slot);
+    const displayWidth = Math.max(1, frame.width * template.overscan);
+    const displayHeight = Math.max(1, frame.height * template.overscan);
+
+    return {
+        frame,
+        displayWidth,
+        displayHeight,
+        maxOffsetX: Math.max(0, (displayWidth - frame.width) / 2),
+        maxOffsetY: Math.max(0, (displayHeight - frame.height) / 2),
+    };
+}
+
+/**
+ * Build the clip for one photo frame.
+ *
+ * Top-edge frames are full circles in the config but only their lower cap is
+ * visible on the paper. Without a cap clip the photo paints over the white
+ * page above the paper edge. The path starts at the left edge intersection,
+ * follows the bottom arc, and closes along the paper edge.
+ */
+function photoSlotClipPath(template, slot, metrics) {
+    const { Ellipse, Path, Rect } = fabricLibrary;
+    const frame = metrics.frame;
+    const edge = toOptionalNumber(slot.clip_edge);
+
+    if (slot.clip !== 'rect' && edge !== null) {
+        const rx = frame.width / 2;
+        const ry = frame.height / 2;
+        const offset = edge - frame.y;
+
+        if (offset >= ry) {
+            return new Rect({
+                left: frame.x,
+                top: frame.y,
+                originX: 'center',
+                originY: 'center',
+                width: 0.001,
+                height: 0.001,
+                absolutePositioned: true,
+                selectable: false,
+                evented: false,
+            });
+        }
+
+        if (offset > -ry) {
+            const half = rx * Math.sqrt(Math.max(0, 1 - (offset * offset) / (ry * ry)));
+
+            if (half > 0.01) {
+                const left = roundNumber(frame.x - half);
+                const right = roundNumber(frame.x + half);
+                const top = roundNumber(edge);
+
+                return new Path(
+                    `M ${left} ${top} A ${roundNumber(rx)} ${roundNumber(ry)} 0 0 0 ${right} ${top} Z`,
+                    {
+                        absolutePositioned: true,
+                        selectable: false,
+                        evented: false,
+                    },
+                );
+            }
+        }
+    }
+
+    return slot.clip === 'rect'
+        ? new Rect({
+              left: frame.x,
+              top: frame.y,
+              originX: 'center',
+              originY: 'center',
+              width: frame.width,
+              height: frame.height,
+              absolutePositioned: true,
+              selectable: false,
+              evented: false,
+          })
+        : new Ellipse({
+              left: frame.x,
+              top: frame.y,
+              originX: 'center',
+              originY: 'center',
+              rx: frame.width / 2,
+              ry: frame.height / 2,
+              absolutePositioned: true,
+              selectable: false,
+              evented: false,
+          });
+}
+
+
 export function createDesignEditor(configuration = {}) {
     const config = isPlainObject(configuration) ? configuration : {};
     const { stickerMap, safeStickers } = normalizeStickerConfiguration(config.stickers);
@@ -1195,6 +1609,10 @@ export function createDesignEditor(configuration = {}) {
           }
         : { front: null, back: null };
     const normalizationContext = { stickerMap, imageSources, usedIds: new Set(), maxElements };
+    const photoTemplate = normalizePhotoTemplate(config.photoTemplate);
+    const initialPhotoState = photoTemplate === null
+        ? null
+        : normalizePhotoState(designPhotoRecord(initialDesign), photoTemplate);
 
     let initialStates = { front: [], back: [] };
     let initialError = '';
@@ -1228,6 +1646,14 @@ export function createDesignEditor(configuration = {}) {
     let previewModeValue = false;
     let destroyed = false;
     let allowNextCartAction = false;
+    let photoState = initialPhotoState;
+    let photoSelectedSlotId = initialPhotoState?.slots[0]?.id ?? photoTemplate?.slots[0]?.id ?? null;
+    let photoElementCache = null;
+    let photoRenderToken = 0;
+    let photoDetectionNote = '';
+    const photoSlotObjects = new Map();
+    let photoOverlayObject = null;
+    let photoBackgroundObject = null;
     const activeRequests = new Set();
     const formBindings = [];
     const canvasBindings = [];
@@ -1241,6 +1667,266 @@ export function createDesignEditor(configuration = {}) {
 
     function rawDesignObject(value) {
         return metadataFor(unwrapReactive(value)) ? unwrapReactive(value) : null;
+    }
+
+    function editableObjectCount() {
+        return canvas ? canvas.getObjects().filter((object) => metadataFor(object) !== null).length : 0;
+    }
+
+    function activePhotoSlot() {
+        if (!photoState) {
+            return null;
+        }
+
+        return photoState.slots.find((slot) => slot.id === photoSelectedSlotId) ?? photoState.slots[0] ?? null;
+    }
+
+    function photoSlotObject(slotId) {
+        return photoSlotObjects.get(slotId) ?? null;
+    }
+
+    function markPhotoChanged(editor) {
+        editor.photoRevision += 1;
+    }
+
+    function selectPhotoSlot(editor, slotId) {
+        if (!photoState?.slots.some((slot) => slot.id === slotId)) {
+            return false;
+        }
+
+        photoSelectedSlotId = slotId;
+        editor.photoSelectedSlotId = slotId;
+        markPhotoChanged(editor);
+
+        const object = photoSlotObject(slotId);
+
+        if (object && canvas) {
+            canvas.setActiveObject(object);
+            canvas.requestRenderAll();
+        }
+
+        return true;
+    }
+
+    function syncPhotoSelection(editor) {
+        const object = canvas?.getActiveObject?.() ?? null;
+
+        if (object?.photoSlot === true) {
+            photoSelectedSlotId = object.photoSlotId;
+            editor.photoSelectedSlotId = object.photoSlotId;
+            markPhotoChanged(editor);
+        }
+    }
+
+    async function photoSourceElement(src) {
+        if (photoElementCache !== null && photoElementCache.src === src) {
+            return photoElementCache.element;
+        }
+
+        const { util } = await loadFabric();
+        const element = await util.loadImage(src, { crossOrigin: 'anonymous' });
+
+        photoElementCache = { src, element };
+
+        return element;
+    }
+
+    function createPhotoSlotObject(slot, element) {
+        const { FabricImage } = fabricLibrary;
+        const metrics = photoSlotDisplayMetrics(photoTemplate, slot);
+        const frameCenterX = metrics.frame.x;
+        const frameCenterY = metrics.frame.y;
+        const cropWidth = Math.max(1, toFiniteNumber(slot.crop_width) ?? 1);
+        const cropHeight = Math.max(1, toFiniteNumber(slot.crop_height) ?? 1);
+        const clipPath = photoSlotClipPath(photoTemplate, slot, metrics);
+        const object = new FabricImage(element, {
+            originX: 'center',
+            originY: 'center',
+            left: frameCenterX + (toFiniteNumber(slot.offset_x) ?? 0),
+            top: frameCenterY + (toFiniteNumber(slot.offset_y) ?? 0),
+            width: cropWidth,
+            height: cropHeight,
+            cropX: toFiniteNumber(slot.crop_x) ?? 0,
+            cropY: toFiniteNumber(slot.crop_y) ?? 0,
+            scaleX: metrics.displayWidth / cropWidth,
+            scaleY: metrics.displayHeight / cropHeight,
+            angle: toFiniteNumber(slot.rotation) ?? 0,
+            selectable: !previewModeValue,
+            evented: !previewModeValue,
+            hasControls: false,
+            hasBorders: true,
+            borderColor: '#e11d2e',
+            borderScaleFactor: 2,
+            lockScalingX: true,
+            lockScalingY: true,
+            lockRotation: true,
+            lockSkewingX: true,
+            lockSkewingY: true,
+            objectCaching: true,
+            hoverCursor: 'move',
+            moveCursor: 'move',
+            clipPath,
+        });
+
+        object.photoSlot = true;
+        object.photoSlotId = slot.id;
+        object.setCoords();
+
+        return object;
+    }
+
+    function updatePhotoSlotObject(object, slot) {
+        if (!object || !photoTemplate) {
+            return;
+        }
+
+        const metrics = photoSlotDisplayMetrics(photoTemplate, slot);
+        const cropWidth = Math.max(1, toFiniteNumber(slot.crop_width) ?? 1);
+        const cropHeight = Math.max(1, toFiniteNumber(slot.crop_height) ?? 1);
+
+        object.set({
+            left: metrics.frame.x + (toFiniteNumber(slot.offset_x) ?? 0),
+            top: metrics.frame.y + (toFiniteNumber(slot.offset_y) ?? 0),
+            width: cropWidth,
+            height: cropHeight,
+            cropX: toFiniteNumber(slot.crop_x) ?? 0,
+            cropY: toFiniteNumber(slot.crop_y) ?? 0,
+            scaleX: metrics.displayWidth / cropWidth,
+            scaleY: metrics.displayHeight / cropHeight,
+            angle: toFiniteNumber(slot.rotation) ?? 0,
+        });
+        object.dirty = true;
+        object.setCoords();
+    }
+
+    function updateAllPhotoSlotObjects() {
+        if (!photoState) {
+            return;
+        }
+
+        for (const slot of photoState.slots) {
+            updatePhotoSlotObject(photoSlotObject(slot.id), slot);
+        }
+
+        canvas?.requestRenderAll();
+    }
+
+    function keepAbovePhotoOverlay(object) {
+        if (!canvas || !photoOverlayObject) {
+            return;
+        }
+
+        const objects = canvas.getObjects();
+        const index = objects.indexOf(object);
+        const overlayIndex = objects.indexOf(photoOverlayObject);
+
+        if (index >= 0 && overlayIndex >= 0 && index <= overlayIndex) {
+            canvas.moveObjectTo(object, overlayIndex + 1);
+        }
+    }
+
+    function clampPhotoSlotObject(editor, object) {
+        if (!photoState || object?.photoSlot !== true) {
+            return;
+        }
+
+        const slot = photoState.slots.find((candidate) => candidate.id === object.photoSlotId);
+
+        if (!slot) {
+            return;
+        }
+
+        const metrics = photoSlotDisplayMetrics(photoTemplate, slot);
+        const centerX = metrics.frame.x;
+        const centerY = metrics.frame.y;
+        const left = clamp(toFiniteNumber(object.left) ?? centerX, centerX - metrics.maxOffsetX, centerX + metrics.maxOffsetX);
+        const top = clamp(toFiniteNumber(object.top) ?? centerY, centerY - metrics.maxOffsetY, centerY + metrics.maxOffsetY);
+
+        object.set({ left: roundNumber(left), top: roundNumber(top) });
+        object.setCoords();
+        slot.offset_x = roundNumber(left - centerX);
+        slot.offset_y = roundNumber(top - centerY);
+        markPhotoChanged(editor);
+    }
+
+    function syncPhotoOffsetsFromObjects() {
+        if (!photoState) {
+            return;
+        }
+
+        for (const slot of photoState.slots) {
+            const object = photoSlotObject(slot.id);
+
+            if (!object) {
+                continue;
+            }
+
+            const metrics = photoSlotDisplayMetrics(photoTemplate, slot);
+            slot.offset_x = roundNumber((toFiniteNumber(object.left) ?? 0) - metrics.frame.x);
+            slot.offset_y = roundNumber((toFiniteNumber(object.top) ?? 0) - metrics.frame.y);
+        }
+    }
+
+    async function rebuildPhotoSlots(editor) {
+        if (!canvas || !photoTemplate) {
+            return false;
+        }
+
+        const token = ++photoRenderToken;
+
+        for (const object of photoSlotObjects.values()) {
+            canvas.remove(object);
+        }
+
+        photoSlotObjects.clear();
+
+        if (photoState) {
+            const element = await photoSourceElement(photoState.src);
+
+            if (token !== photoRenderToken || destroyed || !canvas) {
+                return false;
+            }
+
+            const width = Math.max(1, element.naturalWidth || element.width || 1);
+            const height = Math.max(1, element.naturalHeight || element.height || 1);
+
+            if (photoState.source_width <= 1 || photoState.source_height <= 1) {
+                photoState.source_width = width;
+                photoState.source_height = height;
+                photoState.base_crop = centerCrop(width, height);
+                photoState.slots = photoTemplate.slots.map((config) =>
+                    photoSlotState(photoTemplate, config, photoState.base_crop, width, height),
+                );
+            }
+
+            const slots = [...photoState.slots].sort((first, second) => first.layer - second.layer);
+
+            slots.forEach((slot, index) => {
+                const object = createPhotoSlotObject(slot, element);
+                photoSlotObjects.set(slot.id, object);
+                canvas.insertAt(index, object);
+            });
+        }
+
+        const selected = photoState?.slots.find((slot) => slot.id === photoSelectedSlotId) ?? photoState?.slots[0] ?? null;
+
+        if (selected) {
+            photoSelectedSlotId = selected.id;
+            editor.photoSelectedSlotId = selected.id;
+            const object = photoSlotObject(selected.id);
+
+            if (object && !previewModeValue) {
+                canvas.setActiveObject(object);
+            }
+        } else {
+            canvas.discardActiveObject();
+        }
+
+        applyInteractionState(editor);
+        canvas.requestRenderAll();
+        markPhotoChanged(editor);
+
+        return true;
     }
 
     /**
@@ -1329,8 +2015,11 @@ export function createDesignEditor(configuration = {}) {
         canvas.defaultCursor = previewModeValue ? 'default' : 'move';
 
         for (const object of canvas.getObjects()) {
-            object.selectable = !previewModeValue && object.visible !== false;
-            object.evented = !previewModeValue && object.visible !== false;
+            const isPhotoSlot = object.photoSlot === true;
+            const isEditable = !previewModeValue && object.visible !== false && (isPhotoSlot || metadataFor(object) !== null);
+
+            object.selectable = isEditable;
+            object.evented = isEditable;
             object.setCoords();
         }
 
@@ -1356,6 +2045,9 @@ export function createDesignEditor(configuration = {}) {
         }
 
         const previousBoundary = canvas.clipPath;
+        const bounds = photoTemplate === null
+            ? { width: canvas.getWidth(), height: canvas.getHeight() }
+            : { width: photoTemplate.width, height: photoTemplate.height };
 
         canvas.clipPath = new fabricLibrary.Rect({
             left: 0,
@@ -1365,8 +2057,8 @@ export function createDesignEditor(configuration = {}) {
             absolutePositioned: true,
             selectable: false,
             evented: false,
-            width: canvas.getWidth(),
-            height: canvas.getHeight(),
+            width: bounds.width,
+            height: bounds.height,
         });
         previousBoundary?.dispose?.();
     }
@@ -1375,12 +2067,41 @@ export function createDesignEditor(configuration = {}) {
      * Size the canvas to the host box (the `.design-canvas-host` element), not the
      * canvas element itself, because Fabric sets the canvas' intrinsic size. Measuring
      * the host keeps a crisp 1:1 buffer and correct pointer mapping at any breakpoint.
+     *
+     * Template products use a fixed 1024px design space. The canvas backstore stays at
+     * the displayed pixel size so Fabric's pointer maths remains exact; a viewport
+     * transform maps the design space onto that backstore.
      */
     function measureCanvasElement(element, activeCanvas) {
         const host = canvasHost ?? element;
         const rect = host.getBoundingClientRect?.();
+
+        if (photoTemplate !== null) {
+            const size = Math.max(1, Math.round(rect?.width ?? 0) || 600);
+
+            if (activeCanvas.getWidth() !== size || activeCanvas.getHeight() !== size) {
+                activeCanvas.setDimensions({ width: size, height: size });
+            }
+
+            activeCanvas.designBounds = { width: photoTemplate.width, height: photoTemplate.height };
+            activeCanvas.setViewportTransform([
+                size / photoTemplate.width,
+                0,
+                0,
+                size / photoTemplate.height,
+                0,
+                0,
+            ]);
+            updateBoundary();
+            activeCanvas.getObjects().forEach((object) => clampObjectToCanvas(object, activeCanvas));
+
+            return;
+        }
+
         const width = Math.max(1, Math.round(rect?.width ?? 0) || 600);
         const height = Math.max(1, Math.round(rect?.height ?? 0) || Math.round(width * 0.7));
+
+        activeCanvas.designBounds = null;
 
         if (activeCanvas.getWidth() !== width || activeCanvas.getHeight() !== height) {
             activeCanvas.setDimensions({ width, height });
@@ -1401,7 +2122,11 @@ export function createDesignEditor(configuration = {}) {
         }
 
         const listener = (event) => {
-            if (event.target === editor.$refs?.previewInput || event.target === editor.$refs?.imageInput) {
+            if (
+                event.target === editor.$refs?.previewInput ||
+                event.target === editor.$refs?.imageInput ||
+                event.target === editor.$refs?.photoInput
+            ) {
                 return;
             }
 
@@ -1584,17 +2309,20 @@ export function createDesignEditor(configuration = {}) {
     }
 
     function fitImageToCanvas(imageObject) {
-        const maxWidth = Math.max(20, canvas.getWidth() * 0.6);
-        const maxHeight = Math.max(20, canvas.getHeight() * 0.6);
+        const bounds = canvasDesignBounds(canvas);
+        const maxWidth = Math.max(20, bounds.width * 0.6);
+        const maxHeight = Math.max(20, bounds.height * 0.6);
         const naturalWidth = Math.max(1, toFiniteNumber(imageObject.width) ?? maxWidth);
         const naturalHeight = Math.max(1, toFiniteNumber(imageObject.height) ?? maxHeight);
         const scale = Math.min(1, maxWidth / naturalWidth, maxHeight / naturalHeight);
 
         imageObject.set({
+            left: bounds.width / 2,
+            top: bounds.height / 2,
             scaleX: scale,
             scaleY: scale,
         });
-        canvas.centerObject(imageObject);
+        imageObject.setCoords();
     }
 
     const editor = {
@@ -1606,6 +2334,12 @@ export function createDesignEditor(configuration = {}) {
         mockups,
         stickers: safeStickers,
         hasBack,
+        photoTemplate,
+        photoSelectedSlotId,
+        photoRevision: 0,
+        photoDetecting: false,
+        faceChooserOpen: false,
+        faceCandidates: [],
         continueLabel: typeof config.continueLabel === 'string' ? config.continueLabel : 'Lanjut ke cart',
         maxElements,
         maxImageBytes,
@@ -1688,6 +2422,93 @@ export function createDesignEditor(configuration = {}) {
             return metadataFor(activeDesignObject())?.id ?? null;
         },
 
+        get hasPhoto() {
+            void this.photoRevision;
+
+            return photoState !== null;
+        },
+
+        get photoSrc() {
+            void this.photoRevision;
+
+            return photoState?.src ?? '';
+        },
+
+        get photoStatusLabel() {
+            void this.photoRevision;
+
+            if (photoState === null) {
+                return '';
+            }
+
+            if (photoState.face_detected) {
+                return photoState.face_count > 1 ? 'Wajah dipilih' : 'Wajah terdeteksi';
+            }
+
+            return 'Potongan tengah';
+        },
+
+        get photoFrameLabel() {
+            void this.photoRevision;
+            void this.photoSelectedSlotId;
+
+            if (photoState === null) {
+                return 'Belum ada foto.';
+            }
+
+            const count = photoState.slots.length;
+            const index = photoState.slots.findIndex((slot) => slot.id === photoSelectedSlotId);
+
+            return index >= 0
+                ? `${count} frame terisi · Frame ${index + 1}`
+                : `${count} frame terisi`;
+        },
+
+        get photoZoomPercent() {
+            void this.photoRevision;
+            void this.photoSelectedSlotId;
+
+            const slot = activePhotoSlot();
+
+            return slot === null ? 100 : Math.round(slot.zoom * 100);
+        },
+
+        get photoFrameCount() {
+            void this.photoRevision;
+
+            return photoState?.slots.length ?? 0;
+        },
+
+        get photoWarning() {
+            void this.photoRevision;
+
+            if (photoState === null) {
+                return '';
+            }
+
+            const warnings = [];
+
+            if (photoDetectionNote !== '') {
+                warnings.push(photoDetectionNote);
+            } else if (!photoState.face_detected) {
+                warnings.push(
+                    photoState.face_count > 1
+                        ? 'Beberapa wajah terdeteksi. Potongan tengah dipakai; ganti foto untuk memilih wajah lain.'
+                        : 'Wajah tidak terdeteksi. Foto dipakai dengan potongan tengah; Anda masih bisa menggeser dan memperbesar.',
+                );
+            }
+
+            const shortestSide = Math.min(photoState.source_width, photoState.source_height);
+
+            if (shortestSide > 0 && shortestSide < photoTemplate.minSourceDimension) {
+                warnings.push(
+                    `Resolusi foto ${photoState.source_width}×${photoState.source_height} px di bawah anjuran ${photoTemplate.minSourceDimension} px untuk sisi terpendek. Wajah bisa terlihat kurang tajam.`,
+                );
+            }
+
+            return warnings.join(' ');
+        },
+
         init() {
             if (this._initialized || destroyed) {
                 return Promise.resolve();
@@ -1710,6 +2531,17 @@ export function createDesignEditor(configuration = {}) {
 
                 imageInput.addEventListener('change', listener);
                 formBindings.push({ target: imageInput, name: 'change', listener });
+            }
+
+            const photoInput = this.$refs?.photoInput;
+
+            if (typeof photoInput?.addEventListener === 'function') {
+                const listener = () => {
+                    void this._consumePhotoInput();
+                };
+
+                photoInput.addEventListener('change', listener);
+                formBindings.push({ target: photoInput, name: 'change', listener });
             }
 
             return new Promise((resolve) => {
@@ -1773,18 +2605,32 @@ export function createDesignEditor(configuration = {}) {
                 }
 
                 refreshLayers(this);
+                syncPhotoSelection(this);
             });
-            bindCanvasEvent(this, 'selection:updated', () => refreshLayers(this));
+            bindCanvasEvent(this, 'selection:updated', () => {
+                refreshLayers(this);
+                syncPhotoSelection(this);
+            });
             bindCanvasEvent(this, 'selection:cleared', () => refreshLayers(this));
 
             for (const eventName of ['object:moving', 'object:scaling', 'object:rotating']) {
                 bindCanvasEvent(this, eventName, ({ target }) => {
+                    if (target?.photoSlot === true) {
+                        clampPhotoSlotObject(this, target);
+                        return;
+                    }
+
                     clampObjectToCanvas(target, canvas);
                 });
             }
 
             bindCanvasEvent(this, 'object:modified', ({ target }) => {
-                clampObjectToCanvas(target, canvas);
+                if (target?.photoSlot === true) {
+                    clampPhotoSlotObject(this, target);
+                } else {
+                    clampObjectToCanvas(target, canvas);
+                }
+
                 this._markDirty();
                 refreshLayers(this);
             });
@@ -1819,11 +2665,84 @@ export function createDesignEditor(configuration = {}) {
             }
 
             applyInteractionState(this);
+            await this._setupPhotoTemplate();
             await this._loadSide('front');
 
             if (this.error === '' && this.statusMessage === '') {
-                this.statusMessage = 'Editor siap. Tambahkan gambar, teks, atau stiker.';
+                this.statusMessage = photoTemplate === null
+                    ? 'Editor siap. Tambahkan gambar, teks, atau stiker.'
+                    : (photoState === null
+                          ? 'Editor siap. Unggah satu foto untuk mengisi semua frame.'
+                          : 'Editor siap. Pilih frame lalu geser foto untuk mengatur potongan.');
             }
+        },
+
+        async _setupPhotoTemplate() {
+            if (photoTemplate === null || !canvas) {
+                return false;
+            }
+
+            const { FabricImage, util } = await loadFabric();
+
+            if (photoTemplate.background !== null) {
+                try {
+                    const backgroundElement = await util.loadImage(photoTemplate.background, { crossOrigin: 'anonymous' });
+
+                    if (destroyed || !canvas) {
+                        return false;
+                    }
+
+                    const background = new FabricImage(backgroundElement, {
+                        originX: 'left',
+                        originY: 'top',
+                        left: 0,
+                        top: 0,
+                        width: photoTemplate.width,
+                        height: photoTemplate.height,
+                        selectable: false,
+                        evented: false,
+                    });
+
+                    background.excludeFromClamp = true;
+                    canvas.backgroundImage = background;
+                    canvas.backgroundVpt = true;
+                    photoBackgroundObject = background;
+                } catch {
+                    this.statusMessage = 'Latar template gagal dimuat. Desain tetap dapat dilanjutkan.';
+                }
+            }
+
+            if (photoTemplate.overlay !== null) {
+                try {
+                    const overlayElement = await util.loadImage(photoTemplate.overlay, { crossOrigin: 'anonymous' });
+
+                    if (destroyed || !canvas) {
+                        return false;
+                    }
+
+                    const overlay = new FabricImage(overlayElement, {
+                        originX: 'left',
+                        originY: 'top',
+                        left: 0,
+                        top: 0,
+                        width: photoTemplate.width,
+                        height: photoTemplate.height,
+                        selectable: false,
+                        evented: false,
+                    });
+
+                    overlay.excludeFromClamp = true;
+                    photoOverlayObject = overlay;
+                    canvas.insertAt(0, overlay);
+                } catch {
+                    this.statusMessage = 'Overlay bingkai gagal dimuat. Desain tetap dapat dilanjutkan.';
+                }
+            }
+
+            await rebuildPhotoSlots(this);
+            applyInteractionState(this);
+
+            return true;
         },
 
         _markDirty() {
@@ -1901,7 +2820,17 @@ export function createDesignEditor(configuration = {}) {
                 this.sideStates = { ...this.sideStates, [side]: [] };
 
                 if (canvas && this.currentSide === side) {
-                    clearCanvas(canvas);
+                    if (photoTemplate === null) {
+                        clearCanvas(canvas);
+                    } else {
+                        canvas.getObjects()
+                            .filter((object) => metadataFor(object) !== null)
+                            .forEach((object) => {
+                                canvas.remove(object);
+                                object.dispose?.();
+                            });
+                    }
+
                     this._refreshLayers();
                 }
 
@@ -1912,6 +2841,10 @@ export function createDesignEditor(configuration = {}) {
         },
 
         async switchSide(side) {
+            if (photoTemplate !== null) {
+                return false;
+            }
+
             const targetSide = typeof side === 'string' ? side.trim().toLowerCase() : '';
 
             if (!['front', 'back'].includes(targetSide)) {
@@ -1945,18 +2878,19 @@ export function createDesignEditor(configuration = {}) {
                 return null;
             }
 
-            if (canvas.getObjects().length >= maxElements) {
+            if (editableObjectCount() >= maxElements) {
                 this.error = `Maksimal ${maxElements} elemen per sisi. Hapus elemen sebelum menambah yang baru.`;
                 return null;
             }
 
             const { Textbox } = fabricLibrary;
-            const width = clamp(canvas.getWidth() * 0.6, 80, 320);
+            const bounds = canvasDesignBounds(canvas);
+            const width = clamp(bounds.width * 0.6, 80, 320);
             const textObject = new Textbox(
                 DEFAULT_TEXT,
                 editorObjectOptions({
-                    left: canvas.getWidth() / 2,
-                    top: canvas.getHeight() / 2,
+                    left: bounds.width / 2,
+                    top: bounds.height / 2,
                     width,
                     fontSize: DEFAULT_FONT_SIZE,
                     fontFamily: DEFAULT_FONT_FAMILY,
@@ -2093,14 +3027,15 @@ export function createDesignEditor(configuration = {}) {
                 return this._replaceImageObject(target, Math.max(0, targetIndex), asset);
             }
 
-            if (canvas.getObjects().length >= maxElements) {
+            if (editableObjectCount() >= maxElements) {
                 throw new EditorRequestError(`Maksimal ${maxElements} elemen per sisi.`);
             }
 
+            const bounds = canvasDesignBounds(canvas);
             const id = createElementId();
             const record = {
-                x: canvas.getWidth() / 2,
-                y: canvas.getHeight() / 2,
+                x: bounds.width / 2,
+                y: bounds.height / 2,
                 rotation: 0,
                 flipX: false,
                 flipY: false,
@@ -2145,10 +3080,11 @@ export function createDesignEditor(configuration = {}) {
         },
 
         async _replaceImageObject(target, targetIndex, asset) {
+            const bounds = canvasDesignBounds(canvas);
             const id = metadataFor(target).id;
             const record = {
-                x: toFiniteNumber(target.left) ?? canvas.getWidth() / 2,
-                y: toFiniteNumber(target.top) ?? canvas.getHeight() / 2,
+                x: toFiniteNumber(target.left) ?? bounds.width / 2,
+                y: toFiniteNumber(target.top) ?? bounds.height / 2,
                 rotation: toFiniteNumber(target.angle) ?? 0,
                 flipX: target.flipX === true,
                 flipY: target.flipY === true,
@@ -2184,7 +3120,7 @@ export function createDesignEditor(configuration = {}) {
                 return null;
             }
 
-            if (canvas.getObjects().length >= maxElements) {
+            if (editableObjectCount() >= maxElements) {
                 this.error = `Maksimal ${maxElements} elemen per sisi. Hapus elemen sebelum menambah yang baru.`;
                 return null;
             }
@@ -2211,9 +3147,10 @@ export function createDesignEditor(configuration = {}) {
             try {
                 const { FabricImage } = await loadFabric();
                 const id = createElementId();
+                const bounds = canvasDesignBounds(canvas);
                 const record = {
-                    x: canvas.getWidth() / 2,
-                    y: canvas.getHeight() / 2,
+                    x: bounds.width / 2,
+                    y: bounds.height / 2,
                     rotation: 0,
                     flipX: false,
                     flipY: false,
@@ -2226,7 +3163,7 @@ export function createDesignEditor(configuration = {}) {
                     fittedImageOptions(record, record.x, record.y),
                 );
 
-                if (destroyed || !canvas || this.currentSide !== side || canvas.getObjects().length >= maxElements) {
+                if (destroyed || !canvas || this.currentSide !== side || editableObjectCount() >= maxElements) {
                     imageObject.dispose?.();
                     throw new EditorRequestError('Sisi desain berubah atau batas elemen tercapai.');
                 }
@@ -2502,6 +3439,7 @@ export function createDesignEditor(configuration = {}) {
             const changed = canvas[method](object) === true;
 
             if (changed) {
+                keepAbovePhotoOverlay(object);
                 object.setCoords();
                 canvas.requestRenderAll();
                 this._markDirty();
@@ -2563,6 +3501,345 @@ export function createDesignEditor(configuration = {}) {
             this.zoomPercent = canvas ? Math.round(canvas.getZoom() * 100) : 100;
         },
 
+        openPhotoPicker() {
+            if (photoTemplate === null) {
+                this.error = 'Produk ini tidak mendukung foto otomatis.';
+                return false;
+            }
+
+            const photoInput = this.$refs?.photoInput;
+
+            if (!isBrowserInstance('HTMLInputElement', photoInput) || this.previewMode) {
+                this.error = 'Pemilih foto tidak tersedia pada mode ini.';
+                return false;
+            }
+
+            photoInput.value = '';
+            photoInput.click();
+
+            return true;
+        },
+
+        async _consumePhotoInput() {
+            const photoInput = this.$refs?.photoInput;
+            const file = photoInput?.files?.[0] ?? null;
+
+            if (photoInput) {
+                photoInput.value = '';
+            }
+
+            if (file === null || photoTemplate === null) {
+                return null;
+            }
+
+            try {
+                validateImageFile(file, maxImageBytes);
+                await this.saveDraft();
+
+                if (destroyed || !canvas) {
+                    return null;
+                }
+
+                if (this.draftId === null || this.draftId === undefined || this.draftId === '') {
+                    throw new EditorRequestError('Draft desain belum tersimpan. Silakan coba kembali.');
+                }
+
+                this.uploading = true;
+                this.photoDetecting = true;
+                photoDetectionNote = '';
+                markPhotoChanged(this);
+
+                const detectionPromise = detectFaceCandidates(file, {
+                    wasmPath: photoTemplate.wasmPath,
+                    modelPath: photoTemplate.modelPath,
+                    facePadding: photoTemplate.facePadding,
+                    minSourceDimension: photoTemplate.minSourceDimension,
+                }).then(
+                    (result) => ({ result, error: null }),
+                    (error) => ({ result: null, error }),
+                );
+                const url = endpointFor(assetUploadEndpointTemplate, this.draftId, 'unggah aset');
+                const payload = await uploadImageFile({
+                    file,
+                    url,
+                    csrfToken,
+                    requests: activeRequests,
+                    signalState: requestState,
+                });
+
+                if (destroyed || !canvas) {
+                    return null;
+                }
+
+                const asset = extractUploadedAsset(payload);
+                const detectionOutcome = await detectionPromise;
+                let width = detectionOutcome.result?.width ?? 0;
+                let height = detectionOutcome.result?.height ?? 0;
+
+                if (!width || !height) {
+                    const dimensions = await readImageDimensions(file);
+                    width = dimensions.width;
+                    height = dimensions.height;
+                }
+
+                if (destroyed || !canvas) {
+                    return null;
+                }
+
+                const faces = Array.isArray(detectionOutcome.result?.faces) ? detectionOutcome.result.faces : [];
+                let baseCrop = centerCrop(width, height);
+                let faceDetected = false;
+
+                if (faces.length === 1) {
+                    baseCrop = faces[0].crop;
+                    faceDetected = true;
+                    this.faceCandidates = [];
+                    this.faceChooserOpen = false;
+                } else if (faces.length > 1) {
+                    this.faceCandidates = faces;
+                    this.faceChooserOpen = true;
+                } else {
+                    this.faceCandidates = [];
+                    this.faceChooserOpen = false;
+
+                    if (detectionOutcome.error) {
+                        photoDetectionNote = 'Deteksi wajah tidak dapat dijalankan. Foto dipakai dengan potongan tengah.';
+                    }
+                }
+
+                await this._installPhotoState({
+                    asset,
+                    width,
+                    height,
+                    baseCrop,
+                    faceDetected,
+                    faceCount: faces.length,
+                });
+                markSuccessful(this);
+                this.statusMessage = faces.length > 1
+                    ? 'Pilih wajah yang akan dipakai pada semua frame.'
+                    : 'Foto dipasang ke seluruh frame. Geser di dalam frame untuk mengatur potongan.';
+                this._markDirty();
+                this._refreshLayers();
+
+                return true;
+            } catch (error) {
+                this.error = friendlyError(error, 'Foto gagal dipasang.');
+                this.statusMessage = '';
+
+                return null;
+            } finally {
+                this.uploading = false;
+                this.photoDetecting = false;
+                markPhotoChanged(this);
+            }
+        },
+
+        async _installPhotoState({ asset, width, height, baseCrop, faceDetected, faceCount }) {
+            if (photoTemplate === null) {
+                return false;
+            }
+
+            const sourceWidth = Math.max(1, Math.floor(width));
+            const sourceHeight = Math.max(1, Math.floor(height));
+            const normalizedBase = clampCrop(baseCrop, sourceWidth, sourceHeight);
+            const slots = photoTemplate.slots.map((config) =>
+                photoSlotState(photoTemplate, config, normalizedBase, sourceWidth, sourceHeight),
+            );
+
+            photoState = {
+                asset_id: asset.assetId,
+                src: asset.source,
+                source_width: sourceWidth,
+                source_height: sourceHeight,
+                template: photoTemplate.key,
+                template_version: photoTemplate.version,
+                face_detected: faceDetected === true,
+                face_count: Math.max(0, Math.floor(toFiniteNumber(faceCount) ?? 0)),
+                face_padding: photoTemplate.facePadding,
+                base_crop: {
+                    x: roundNumber(normalizedBase.x),
+                    y: roundNumber(normalizedBase.y),
+                    width: roundNumber(normalizedBase.width),
+                    height: roundNumber(normalizedBase.height),
+                },
+                slots,
+            };
+            photoSelectedSlotId = slots[0]?.id ?? null;
+            this.photoSelectedSlotId = photoSelectedSlotId;
+            markPhotoChanged(this);
+            await rebuildPhotoSlots(this);
+
+            return true;
+        },
+
+        async _applyPhotoBaseCrop(baseCrop, faceDetected) {
+            if (photoState === null || photoTemplate === null) {
+                return false;
+            }
+
+            const normalized = clampCrop(baseCrop, photoState.source_width, photoState.source_height);
+            photoState.base_crop = {
+                x: roundNumber(normalized.x),
+                y: roundNumber(normalized.y),
+                width: roundNumber(normalized.width),
+                height: roundNumber(normalized.height),
+            };
+            photoState.face_detected = faceDetected === true;
+            photoState.slots = photoTemplate.slots.map((config) =>
+                photoSlotState(photoTemplate, config, normalized, photoState.source_width, photoState.source_height),
+            );
+
+            if (!photoState.slots.some((slot) => slot.id === photoSelectedSlotId)) {
+                photoSelectedSlotId = photoState.slots[0]?.id ?? null;
+                this.photoSelectedSlotId = photoSelectedSlotId;
+            }
+
+            markPhotoChanged(this);
+            await rebuildPhotoSlots(this);
+            this._markDirty();
+            this._refreshLayers();
+
+            return true;
+        },
+
+        async chooseFace(faceId) {
+            const face = this.faceCandidates.find((candidate) => candidate.id === faceId);
+
+            if (!face || photoState === null) {
+                return false;
+            }
+
+            this.faceChooserOpen = false;
+            this.faceCandidates = [];
+            await this._applyPhotoBaseCrop(face.crop, true);
+            this.statusMessage = 'Wajah dipilih dan dipasang ke seluruh frame.';
+            markSuccessful(this);
+
+            return true;
+        },
+
+        cancelFaceChooser() {
+            if (!this.faceChooserOpen && this.faceCandidates.length === 0) {
+                return false;
+            }
+
+            this.faceChooserOpen = false;
+            this.faceCandidates = [];
+            this.statusMessage = 'Potongan tengah dipakai. Geser foto di dalam frame untuk mengaturnya.';
+
+            return true;
+        },
+
+        selectPhotoFrame(direction) {
+            if (photoState === null || photoState.slots.length === 0) {
+                return false;
+            }
+
+            const step = (toFiniteNumber(direction) ?? 0) < 0 ? -1 : 1;
+            const slots = photoState.slots;
+            const currentIndex = slots.findIndex((slot) => slot.id === photoSelectedSlotId);
+            const nextIndex = currentIndex < 0
+                ? 0
+                : (currentIndex + step + slots.length) % slots.length;
+
+            return selectPhotoSlot(this, slots[nextIndex].id);
+        },
+
+        setPhotoZoom(value) {
+            const slot = activePhotoSlot();
+
+            if (slot === null || photoState === null) {
+                return false;
+            }
+
+            const targetZoom = clamp((toFiniteNumber(value) ?? 100) / 100, MIN_PHOTO_ZOOM, MAX_PHOTO_ZOOM);
+            const currentCrop = {
+                x: slot.crop_x,
+                y: slot.crop_y,
+                width: Math.max(1, slot.crop_width),
+            };
+            const result = cropAtZoom(
+                currentCrop,
+                slot.zoom,
+                targetZoom,
+                photoState.source_width,
+                photoState.source_height,
+            );
+
+            slot.crop_x = roundNumber(result.x);
+            slot.crop_y = roundNumber(result.y);
+            slot.crop_width = roundNumber(result.width);
+            slot.crop_height = roundNumber(result.width);
+            slot.zoom = roundNumber(clampNumber(targetZoom, MIN_PHOTO_ZOOM, MAX_PHOTO_ZOOM));
+            updatePhotoSlotObject(photoSlotObject(slot.id), slot);
+            canvas?.requestRenderAll();
+            markPhotoChanged(this);
+            this._markDirty();
+
+            return true;
+        },
+
+        resetPhotoFrame() {
+            const slot = activePhotoSlot();
+
+            if (slot === null || photoState === null || photoTemplate === null) {
+                return false;
+            }
+
+            const crop = initialSlotCrop(
+                photoState.base_crop,
+                photoTemplate.overscan,
+                photoState.source_width,
+                photoState.source_height,
+            );
+
+            slot.crop_x = roundNumber(crop.x);
+            slot.crop_y = roundNumber(crop.y);
+            slot.crop_width = roundNumber(crop.width);
+            slot.crop_height = roundNumber(crop.width);
+            slot.zoom = 1;
+            slot.offset_x = 0;
+            slot.offset_y = 0;
+            updatePhotoSlotObject(photoSlotObject(slot.id), slot);
+            canvas?.requestRenderAll();
+            markPhotoChanged(this);
+            this._markDirty();
+            this.statusMessage = 'Frame dipilih diatur ulang.';
+
+            return true;
+        },
+
+        applyPhotoToAll() {
+            const source = activePhotoSlot();
+
+            if (source === null || photoState === null) {
+                return false;
+            }
+
+            for (const slot of photoState.slots) {
+                slot.crop_x = source.crop_x;
+                slot.crop_y = source.crop_y;
+                slot.crop_width = source.crop_width;
+                slot.crop_height = source.crop_height;
+                slot.zoom = source.zoom;
+                slot.offset_x = source.offset_x;
+                slot.offset_y = source.offset_y;
+            }
+
+            updateAllPhotoSlotObjects();
+            canvas?.requestRenderAll();
+            markPhotoChanged(this);
+            this._markDirty();
+            this.statusMessage = 'Potongan foto diterapkan ke semua frame.';
+
+            return true;
+        },
+
+        _syncPhotoStateFromObjects() {
+            syncPhotoOffsetsFromObjects();
+        },
+
         async saveDraft() {
             if (savePromise) {
                 return savePromise;
@@ -2609,6 +3886,16 @@ export function createDesignEditor(configuration = {}) {
                 front: { elements: this.sideStates.front.map((element) => ({ ...element })) },
                 back: { elements: this.sideStates.back.map((element) => ({ ...element })) },
             };
+
+            if (photoState !== null) {
+                this._syncPhotoStateFromObjects();
+                const photo = serializePhotoState(photoState);
+
+                if (photo !== null) {
+                    design.photo = photo;
+                }
+            }
+
             const body = {
                 product_id: this.productId,
                 specification: sanitizeSpecificationValue(this.specification) ?? {},
@@ -2699,7 +3986,7 @@ export function createDesignEditor(configuration = {}) {
                     return;
                 }
 
-                const blob = await exportPreviewBlob(canvas);
+                const blob = await exportPreviewBlob(canvas, photoTemplate);
                 attachPreviewFile(this.$refs?.previewInput, blob, this.currentSide);
                 updateDraftHiddenInput(this, this.draftId);
 
@@ -2738,6 +4025,11 @@ export function createDesignEditor(configuration = {}) {
             this._destroyed = true;
             requestState.destroyed = true;
             abortSideLoad();
+            photoRenderToken += 1;
+            photoSlotObjects.clear();
+            photoOverlayObject = null;
+            photoBackgroundObject = null;
+            photoElementCache = null;
             unbindAll();
             resizeObserver?.disconnect();
             resizeObserver = null;

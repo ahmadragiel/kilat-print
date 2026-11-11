@@ -125,6 +125,54 @@ class CartTest extends TestCase
         Storage::disk('local')->assertMissing($path);
     }
 
+    public function test_removing_a_cart_item_keeps_a_file_referenced_by_an_order_design(): void
+    {
+        Storage::fake('local');
+        $customer = $this->makeCustomer();
+        $product = $this->makeProduct();
+        $order = $this->makeOrder($customer);
+        $path = 'design-references/'.$customer->user_id.'/final-order.png';
+        $bytes = 'final order design bytes';
+        Storage::disk('local')->put($path, $bytes);
+        $design = $this->makeDesign($order, ['path' => $path, 'size' => strlen($bytes)]);
+        $item = $this->makeCartItem($this->makeCart($customer), $product, 1, [
+            'design_reference' => $path,
+        ]);
+
+        $this->actingAs($customer->user)
+            ->delete(route('cart.destroy', $item))
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseMissing('cart_items', ['id' => $item->id]);
+        $this->assertDatabaseHas('design_files', ['id' => $design->id, 'path' => $path]);
+        Storage::disk('local')->assertExists($path);
+    }
+
+    public function test_editing_a_cart_item_keeps_a_file_referenced_by_an_order_design(): void
+    {
+        Storage::fake('local');
+        $customer = $this->makeCustomer();
+        $product = $this->makeProduct();
+        $order = $this->makeOrder($customer);
+        $oldPath = 'design-references/'.$customer->user_id.'/final-order.png';
+        $bytes = 'final order design bytes';
+        Storage::disk('local')->put($oldPath, $bytes);
+        $this->makeDesign($order, ['path' => $oldPath, 'size' => strlen($bytes)]);
+        $item = $this->makeCartItem($this->makeCart($customer), $product, 1, [
+            'design_reference' => $oldPath,
+        ]);
+
+        $this->actingAs($customer->user)->post(route('cart.store'), [
+            'product_id' => $product->id,
+            'quantity' => 1,
+            'editing_cart_item_id' => $item->id,
+            'design_file' => UploadedFile::fake()->create('replacement.pdf', 10, 'application/pdf'),
+        ])->assertRedirect(route('cart.index'));
+
+        Storage::disk('local')->assertExists($oldPath);
+        Storage::disk('local')->assertExists($item->fresh()->design_reference);
+    }
+
     public function test_customer_cannot_update_or_remove_another_customers_cart_item(): void
     {
         $owner = $this->makeCustomer();

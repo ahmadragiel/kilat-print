@@ -78,7 +78,7 @@ class CustomDesignDraft extends Model
         return is_array($elements) ? array_values($elements) : [];
     }
 
-    /** Every `asset_id` referenced by either canvas side. */
+    /** Every `asset_id` referenced by either canvas side or the auto-fit photo. */
     public function referencedAssetIds(): array
     {
         $ids = [];
@@ -95,6 +95,12 @@ class CustomDesignDraft extends Model
                     $ids[] = $id;
                 }
             }
+        }
+
+        $photoAssetId = $this->design['photo']['asset_id'] ?? null;
+
+        if (is_string($photoAssetId) && $photoAssetId !== '') {
+            $ids[] = $photoAssetId;
         }
 
         return array_values(array_unique($ids));

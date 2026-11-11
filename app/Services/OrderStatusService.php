@@ -31,7 +31,8 @@ class OrderStatusService
         'admin' => [
             'PENDING_PAYMENT' => ['CANCELLED'],
             'PAYMENT_CONFIRMED' => ['IN_PRODUCTION', 'CANCELLED'],
-            'IN_PRODUCTION' => ['COMPLETED', 'CANCELLED'],
+            // Completion is owned by the production workflow after QC PASS.
+            'IN_PRODUCTION' => ['CANCELLED'],
         ],
         // Transitions driven by the payment provider, never by a browser request.
         'system' => [
@@ -107,6 +108,11 @@ class OrderStatusService
                 abort_unless($locked->production()->whereNotNull('operator_id')->exists(), 422, 'Operator produksi harus ditugaskan sebelum status produksi diubah.');
             }
             if ($newValue === OrderStatus::Completed->value) {
+                abort_unless(
+                    $locked->production()->whereHas('qualityChecks', fn ($query) => $query->where('result', 'PASS'))->exists(),
+                    422,
+                    'Order hanya dapat diselesaikan setelah quality control PASS.',
+                );
                 $locked->update(['completed_at' => now()]);
             }
 

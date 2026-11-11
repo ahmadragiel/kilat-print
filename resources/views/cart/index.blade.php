@@ -28,11 +28,23 @@
                             $lineTotal = (float) data_get($item, 'price_at_addition', data_get($item, 'line_total', data_get($item, 'subtotal', data_get($item, 'total'))));
                             $itemQuantity = max(1, (int) data_get($item, 'quantity', 1));
                             $unitPrice = $lineTotal / $itemQuantity;
+                            $designReference = data_get($item, 'design_reference');
+                            $designPreviewLink = is_string($designReference) && $designReference !== ''
+                                ? route('cart.design-preview', $item)
+                                : null;
+                            $designPreviewImage = $designPreviewLink !== null
+                                && preg_match('/\.(png|jpe?g|webp)$/i', $designReference) === 1;
                         @endphp
                         <div class="grid gap-4 p-4 sm:grid-cols-[1fr_120px_150px_44px] sm:items-center sm:p-5">
                             <div class="flex min-w-0 gap-4">
                                 <div class="w-20 shrink-0 overflow-hidden rounded-lg border border-ink-200 sm:w-24">
-                                    <x-product-image :src="$image" :alt="$productName" fit="contain" class="aspect-square" />
+                                    @if ($designPreviewImage)
+                                        <a href="{{ $designPreviewLink }}" target="_blank" rel="noopener" class="block aspect-square bg-ink-50" aria-label="Buka pratinjau desain {{ $productName }}">
+                                            <img src="{{ $designPreviewLink }}" alt="Pratinjau desain final {{ $productName }}" class="h-full w-full object-contain" loading="lazy" decoding="async">
+                                        </a>
+                                    @else
+                                        <x-product-image :src="$image" :alt="$productName" fit="contain" class="aspect-square" />
+                                    @endif
                                 </div>
                                 <div class="min-w-0 py-0.5">
                                     <h2 class="font-bold text-ink-950">{{ $productName }}</h2>
@@ -41,6 +53,11 @@
                                     @endif
                                     @if(data_get($item, 'custom_design_draft_id'))
                                         <span class="mt-1.5 inline-flex"><x-badge color="brand">Desain editor</x-badge></span>
+                                    @endif
+                                    @if ($designPreviewLink)
+                                        <a href="{{ $designPreviewLink }}" target="_blank" rel="noopener" class="action-link mt-2 !text-xs">
+                                            <x-icon name="eye" class="h-3.5 w-3.5" /> Lihat desain final
+                                        </a>
                                     @endif
                                     <p class="mt-2 text-sm text-ink-600">
                                         <x-money :value="$unitPrice" /> / item

@@ -91,6 +91,14 @@ class ProductController extends Controller
             'front' => $this->mockupUrl($product->editor_background_image),
             'back' => $this->mockupUrl($product->back_mockup),
         ];
+        $photoTemplate = CustomDesignService::photoTemplateFor($product);
+
+        if ($photoTemplate !== null) {
+            $photoTemplate['background'] = MediaPath::url($photoTemplate['background']);
+            $photoTemplate['overlay'] = MediaPath::url($photoTemplate['overlay']);
+            $photoTemplate['wasm_path'] = url('/vendor/mediapipe/wasm');
+            $photoTemplate['model_path'] = url('/models/blaze_face_short_range.tflite');
+        }
         $stickers = collect(glob(public_path('images/stickers/*.svg')) ?: [])
             ->sort()
             ->map(fn (string $path) => [
@@ -107,6 +115,7 @@ class ProductController extends Controller
             'initialDesign' => $design,
             'initialSpecification' => $specification,
             'mockups' => $mockups,
+            'photoTemplate' => $photoTemplate,
             'hasBackMockup' => filled($mockups['back']),
             'stickers' => $stickers,
         ]);

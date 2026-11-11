@@ -52,9 +52,19 @@ class OrderController extends Controller
     public function repeat(Request $request, Order $order, RepeatOrderService $repeats): RedirectResponse
     {
         $this->authorize('view', $order);
-        $repeats->repeat($request->user()->customer, $order->load('items.product'));
+        $result = $repeats->repeat($request->user()->customer, $order->load('items.product'));
 
-        return redirect()->route('cart.index')->with('success', 'Konfigurasi order disalin ke keranjang dengan harga terbaru.');
+        if ($result->missingDesigns !== []) {
+            return redirect()->route('cart.index')->with(
+                'warning',
+                'Seluruh isi keranjang diganti. Desain final untuk '.implode(', ', $result->missingDesigns).' tidak ditemukan. Unggah ulang desain sebelum checkout.',
+            );
+        }
+
+        return redirect()->route('cart.index')->with(
+            'success',
+            'Seluruh isi keranjang diganti dengan konfigurasi pesanan ini. Harga dihitung ulang sesuai tarif terbaru.',
+        );
     }
 
     public function cancel(Request $request, Order $order, OrderStatusService $statuses): RedirectResponse

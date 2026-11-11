@@ -4,11 +4,10 @@ namespace App\Http\Controllers\Admin;
 
 use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
-use App\Enums\ProductionStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Customer;
+use App\Models\Operator;
 use App\Models\Order;
-use App\Notifications\OrderNotification;
 use App\Services\OrderStatusService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
@@ -62,7 +61,13 @@ class OrderController extends Controller
             array_unshift($statusOptions, $currentStatus);
         }
 
-        return view('admin.orders.show', compact('order', 'statusOptions'));
+        $operators = Operator::with('user')
+            ->where('is_active', true)
+            ->whereHas('user', fn (Builder $query) => $query->where('is_active', true))
+            ->orderBy('id')
+            ->get();
+
+        return view('admin.orders.show', compact('order', 'statusOptions', 'operators'));
     }
 
     public function status(Request $request, Order $order, OrderStatusService $statuses): RedirectResponse
@@ -74,16 +79,7 @@ class OrderController extends Controller
         ]);
         $status = OrderStatus::tryFrom($data['status']);
         abort_unless($status, 422, 'Status tidak valid.');
-        $order = $statuses->transition($order, $status, $request->user(), $data['note'] ?? null);
-
-        if ($status === OrderStatus::Completed && $order->production) {
-            $production = $order->production;
-            $oldProductionStatus = $production->status;
-            $production->update(['status' => ProductionStatus::Completed, 'completed_at' => now(), 'progress' => 100]);
-            $production->statusHistories()->create(['changed_by' => $request->user()->id, 'old_status' => $oldProductionStatus, 'new_status' => ProductionStatus::Completed, 'progress' => 100, 'note' => $data['note'] ?? 'Produksi dan order selesai.']);
-            $order->update(['completed_at' => now()]);
-            $order->customer?->user?->notify(new OrderNotification('Pesanan selesai', "Pesanan {$order->number} telah selesai. Terima kasih!", route('customer.orders.show', $order), 'success'));
-        }
+        $statuses->transition($order, $status, $request->user(), $data['note'] ?? null);
 
         return back()->with('success', 'Status order berhasil diperbarui.');
     }

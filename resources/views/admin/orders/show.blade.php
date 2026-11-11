@@ -14,7 +14,7 @@
     $statusUrl = \Illuminate\Support\Facades\Route::has('orders.status') ? route('orders.status', $order) : route('admin.orders.status', $order);
     $paymentProofUrl = data_get($orderPayment, 'proof_url') ?? (\Illuminate\Support\Facades\Route::has('admin.payments.proof') && data_get($orderPayment, 'proof_path') ? route('admin.payments.proof', $order) : null);
     $designDownloadUrl = $orderDesign ? (\Illuminate\Support\Facades\Route::has('design.download') && data_get($orderDesign, 'path') ? route('design.download', $orderDesign) : (\Illuminate\Support\Facades\Route::has('admin.designs.download') && data_get($orderDesign, 'path') ? route('admin.designs.download', $orderDesign) : data_get($orderDesign, 'file_url'))) : null;
-    $productionAssignUrl = $production ? (\Illuminate\Support\Facades\Route::has('production.assign') ? route('production.assign', $production) : route('admin.production.assign', $production)) : (\Illuminate\Support\Facades\Route::has('production.assign') ? route('production.assign', $order) : null);
+    $productionAssignUrl = $production ? route('admin.production.assign', $production) : null;
     $shippingMethod = (string) data_get($order, 'shipping_method', '');
     $shippingMethodLabel = match ($shippingMethod) {
         'pickup' => 'Ambil di lokasi (pesanan lama)',
